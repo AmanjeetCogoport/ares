@@ -9,5 +9,5 @@ data class PaymentMapResponse(
     var id: Long,
     var mappingType: PaymentInvoiceMappingType,
     var amount: BigDecimal,
-    var ledAmount: BigDecimal,
+    var ledAmount: BigDecimal
 )

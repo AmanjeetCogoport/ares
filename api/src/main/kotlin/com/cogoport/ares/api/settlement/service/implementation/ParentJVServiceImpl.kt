@@ -11,6 +11,7 @@ import com.cogoport.ares.api.common.enums.ThirdPartyResponseCode
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
+import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
@@ -62,6 +63,7 @@ import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.json.JSONObject
 import org.json.XML
+import java.math.BigDecimal
 import java.math.RoundingMode
 import java.sql.SQLException
 import java.sql.Timestamp
@@ -824,5 +826,56 @@ open class ParentJVServiceImpl : ParentJVService {
             thirdPartyApiAuditService.createAudit(ThirdPartyApiAudit(null, ThirdPartyApiNames.DELETE_JV_FROM_SAGE.value, ThirdPartyApiType.JOURNAL_VOUCHERS.value, jvId, ThirdPartyObjectName.JOURNAL_VOUCHER.value, ThirdPartyResponseCode.FAILURE.value, jvNum, err.toString(), false))
         }
         return false
+    }
+
+    @Transactional
+    override suspend fun createTdsAsJvForBills(
+        currency: String?,
+        ledCurrency: String,
+        tdsAmount: BigDecimal,
+        tdsLedAmount: BigDecimal,
+        createdBy: UUID?,
+        createdByUserType: String?,
+        accountUtilization: AccountUtilization?,
+        exchangeRate: BigDecimal?,
+        paymentTransactionDate: Date,
+        lineItemProps: MutableList<HashMap<String, Any?>>,
+        utr: String?,
+        payCurrTds: BigDecimal?,
+        payLocTds: BigDecimal?
+    ): Long? {
+        var parentJournalVoucher = ParentJournalVoucher(
+            id = null,
+            status = JVStatus.APPROVED,
+            category = "VTDS",
+            jvNum = accountUtilization?.documentValue,
+            // picking date of payments
+            transactionDate = paymentTransactionDate,
+            validityDate = accountUtilization?.transactionDate,
+            currency = currency,
+            ledCurrency = ledCurrency,
+            entityCode = accountUtilization?.entityCode,
+            exchangeRate = exchangeRate?.setScale(AresConstants.DECIMAL_NUMBER_UPTO, RoundingMode.HALF_DOWN),
+            description = utr,
+            createdBy = createdBy,
+            updatedBy = createdBy,
+            jvCodeNum = "VTDS",
+            isUtilized = true
+        )
+
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.PARENT_JOURNAL_VOUCHERS,
+                objectId = parentJournalVoucher.id,
+                actionName = AresConstants.CREATE,
+                data = parentJournalVoucher,
+                performedBy = createdBy.toString(),
+                performedByUserType = createdByUserType
+            )
+        )
+
+        parentJournalVoucher = parentJVRepository.save(parentJournalVoucher)
+
+        return journalVoucherService.createTdsJvLineItems(parentJournalVoucher, accountUtilization, lineItemProps, tdsAmount, tdsLedAmount, createdByUserType, payCurrTds, payLocTds)
     }
 }

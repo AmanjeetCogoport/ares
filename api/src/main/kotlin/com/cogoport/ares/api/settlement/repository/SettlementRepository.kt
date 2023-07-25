@@ -198,17 +198,17 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
             UPDATE settlements SET deleted_at = NOW(), updated_at = NOW(), updated_by = :updatedBy WHERE id in (:id) and is_void = false
         """
     )
-    suspend fun deleleSettlement(id: List<Long>, updatedBy: UUID? = null)
+    suspend fun deleleSettlement(id: List<Long?>, updatedBy: UUID? = null)
 
     @NewSpan
     @Query(
         """
-          SELECT id FROM settlements WHERE source_id = :sourceId AND destination_id = :destinationId AND 
+          SELECT * FROM settlements WHERE source_id in (:sourceIds) AND destination_id = :destinationId AND 
           deleted_at is null and is_void = false
               
         """
     )
-    suspend fun getSettlementByDestinationId(destinationId: Long, sourceId: Long): List<Long>
+    suspend fun getSettlementByDestinationId(destinationId: Long, sourceIds: List<Long?>): List<Settlement>
 
     @NewSpan
     @Query(
@@ -430,13 +430,17 @@ ORDER BY
     @NewSpan
     @Query(
         """
-                SELECT id  FROM settlements
+                SELECT 
+                DISTINCT
+                id  
+                FROM settlements s
+                INNER JOIN account_utilizations aau on s.destination_id = aau.document_no and aau.is_proforma = false
                 WHERE settlement_status::varchar = 'CREATED'
-                AND deleted_at IS NULL
-                AND led_currency != 'VND'
-                AND source_type not in ('SECH', 'PAY', 'VTDS', 'PCN')
-                AND destination_type not in ('PINV', 'PREIMB')
-                AND created_at >= :date
+                AND s.deleted_at IS NULL
+                AND s.led_currency != 'VND'
+                AND s.source_type not in ('SECH', 'PECH')
+                AND s.created_at >= :date
+                AND CASE WHEN aau.acc_mode = 'AR' THEN created_at <= now() else created_at <= CURRENT_DATE - INTERVAL '7 days' end 
             """
     )
     suspend fun getSettlementIdForCreatedStatus(date: Timestamp): List<Long>?
@@ -513,7 +517,6 @@ ORDER BY
                 And(p.acc_mode = 'AP' OR p.acc_mode IS NULL)
                 AND s.destination_type in('PINV', 'PREIMB', 'VTDS')
                 and s.deleted_at is null
-                and (p.payment_code = 'PAY'  OR s.source_type = 'PCN')
             ORDER BY
                 s.created_at DESC
 
