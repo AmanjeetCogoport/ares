@@ -64,7 +64,7 @@ interface OrganizationStakeholderRepo : CoroutineCrudRepository<OrganizationStak
     @NewSpan
     @Query(
         """
-        SELECT COALESCE(organization_segment,null) FROM organization_stakeholders WHERE organization_id::UUID = :organizationId::UUID AND is_active = true
+        SELECT COALESCE((ARRAY_AGG(organization_segment))[1], null) FROM organization_stakeholders WHERE organization_id::UUID = :organizationId::UUID AND is_active = true
     """
     )
     suspend fun getOrgSegment(organizationId: UUID): String?
