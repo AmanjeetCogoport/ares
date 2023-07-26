@@ -108,7 +108,7 @@ class DunningController(
         return dunningService.deleteOrUpdateMasterException(id, updatedBy, actionType)
     }
 
-    @Put("/update-status")
+    @Put("/status")
     suspend fun updateStatusDunningCycle(
         @Valid @Body
         updateDunningCycleExecutionStatusReq: UpdateDunningCycleStatusReq
@@ -195,7 +195,7 @@ class DunningController(
         return dunningService.createDunningPaymentLink(token)
     }
 
-    @Post("/dunning-relevant-user")
+    @Post("/create-dunning-relevant-user")
     suspend fun createRelevantUser(@Body request: CreateUserRequest): String? {
         return dunningService.createRelevantUser(request)
     }
