@@ -7,7 +7,6 @@ import com.cogoport.ares.api.common.client.CogoBackLowLevelClient
 import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.common.enums.TokenTypes
 import com.cogoport.ares.api.dunning.DunningConstants
-import com.cogoport.ares.api.dunning.DunningConstants.CREDIT_DAYS_MAPPING
 import com.cogoport.ares.api.dunning.DunningConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING
 import com.cogoport.ares.api.dunning.DunningConstants.SEGMENT_MAPPING
 import com.cogoport.ares.api.dunning.DunningConstants.TIME_ZONE_DIFFERENCE_FROM_GMT
@@ -463,12 +462,6 @@ open class DunningServiceImpl(
     }
 
     override suspend fun listMasterException(request: ListExceptionReq): ResponseList<MasterExceptionResp> {
-        var creditDaysFrom: Long? = null
-        var creditDaysTo: Long? = null
-        if (request.creditDays != null) {
-            creditDaysFrom = CREDIT_DAYS_MAPPING[request.creditDays]?.first
-            creditDaysTo = CREDIT_DAYS_MAPPING[request.creditDays]?.second
-        }
         if (request.segmentation != null) {
             request.segmentation = SEGMENT_MAPPING[request.segmentation]
         }
@@ -482,8 +475,6 @@ open class DunningServiceImpl(
             request.segmentation,
             request.pageIndex,
             request.pageSize,
-            creditDaysFrom,
-            creditDaysTo,
             request.sortBy ?: "DESC",
             request.sortType ?: "dueAmount"
         )
@@ -494,8 +485,6 @@ open class DunningServiceImpl(
             q,
             request.entities,
             request.segmentation,
-            creditDaysFrom,
-            creditDaysTo
         )
         val totalPages = Utilities.getTotalPages(totalCount, request.pageSize)
         return ResponseList(

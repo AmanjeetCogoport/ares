@@ -668,7 +668,6 @@ class ScheduleServiceImpl(
         )
     }
 
-    // isko bhi dekhna hai
     private suspend fun getReplyToMessageId(userEmailId: String): String? {
         val dataFromRails = railsClient.listCommunication(userEmailId).list
         if (dataFromRails.isEmpty()) {

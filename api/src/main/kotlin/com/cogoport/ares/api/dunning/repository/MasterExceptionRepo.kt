@@ -24,9 +24,7 @@ interface MasterExceptionRepo : CoroutineCrudRepository<MasterExceptions, Long> 
             me.trade_party_name AS name,
             me.registration_number,
             me.organization_segment::VARCHAR AS org_segment,
-            me.credit_days,
             me.entity_code,
-            me.credit_amount,
             COALESCE(SUM((amount_loc - pay_loc) * sign_flag), 0) AS total_due_amount,
             COALESCE((array_agg(led_currency))[1], 'INR') AS currency
         FROM
@@ -43,14 +41,9 @@ interface MasterExceptionRepo : CoroutineCrudRepository<MasterExceptions, Long> 
          (:query IS NULL OR name ILIKE :query OR registration_number ILIKE :query)
          AND (:segment IS NULL OR org_segment::VARCHAR = :segment)
          AND (COALESCE(:entities) IS NULL OR entity_code IN (:entities))
-         AND (:creditDateFrom IS NULL OR :creditDaysTo IS NULL OR credit_days BETWEEN :creditDateFrom AND :creditDaysTo)
     ORDER BY
     CASE WHEN :sortType = 'ASC' AND :sortBy = 'dueAmount' THEN total_due_amount END ASC,
-    CASE WHEN :sortType = 'DESC' AND :sortBy = 'dueAmount' THEN total_due_amount END DESC,
-    CASE WHEN :sortType = 'ASC' AND :sortBy = 'creditDays' THEN credit_days END ASC,
-    CASE WHEN :sortType = 'DESC' AND :sortBy = 'creditDays' THEN credit_days END DESC,
-    CASE WHEN :sortType = 'ASC' AND :sortBy = 'creditAmount' THEN credit_amount END ASC,
-    CASE WHEN :sortType = 'DESC' AND :sortBy = 'creditAmount' THEN credit_amount END DESC
+    CASE WHEN :sortType = 'DESC' AND :sortBy = 'dueAmount' THEN total_due_amount END DESC
     OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize)) LIMIT :pageSize   
     """
     )
@@ -60,8 +53,6 @@ interface MasterExceptionRepo : CoroutineCrudRepository<MasterExceptions, Long> 
         segment: String?,
         pageIndex: Int,
         pageSize: Int,
-        creditDateFrom: Long?,
-        creditDaysTo: Long?,
         sortBy: String,
         sortType: String
     ): List<MasterExceptionResp>
@@ -78,16 +69,12 @@ interface MasterExceptionRepo : CoroutineCrudRepository<MasterExceptions, Long> 
                 AND (:query IS NULL OR trade_party_name ILIKE :query OR registration_number ILIKE :query)
                 AND (:segment IS NULL OR organization_segment::VARCHAR = :segment)
                 AND (COALESCE(:entities) IS NULL OR entity_code IN (:entities))
-                AND (:creditDateFrom IS NULL OR :creditDaysTo IS NULL OR credit_days BETWEEN :creditDateFrom AND :creditDaysTo)
-
         """
     )
     suspend fun listMasterExceptionTotalCount(
         query: String?,
         entities: List<Long>?,
-        segment: String?,
-        creditDateFrom: Long?,
-        creditDaysTo: Long?
+        segment: String?
     ): Long
 
     @NewSpan
