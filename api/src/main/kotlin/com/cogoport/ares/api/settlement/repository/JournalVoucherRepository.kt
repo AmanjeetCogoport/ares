@@ -99,4 +99,14 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
             """
     )
     suspend fun deletingLineItemsWithParentJvId(parentJVId: Long)
+
+    suspend fun saveAll(req: List<JournalVoucher>): List<JournalVoucher>
+
+    @NewSpan
+    @Query(
+        """
+        select * from journal_vouchers where description = :description and acc_mode is not null
+    """
+    )
+    suspend fun findByDescription(description: String): JournalVoucher?
 }
