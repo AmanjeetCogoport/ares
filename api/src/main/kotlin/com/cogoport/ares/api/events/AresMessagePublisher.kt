@@ -95,4 +95,7 @@ interface AresMessagePublisher {
 
     @Binding("ares.send.email")
     suspend fun sendEmail(req: CreateCommunicationRequest)
+
+    @Binding("ares.sage.tds.jv.migration")
+    suspend fun emitTDSJournalVoucherMigration(journalVoucherRecord: JVParentDetails)
 }

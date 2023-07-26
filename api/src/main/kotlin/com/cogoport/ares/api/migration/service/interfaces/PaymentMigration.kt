@@ -26,4 +26,6 @@ interface PaymentMigration {
     suspend fun migrateSagePaymentNum(request: SagePaymentNumMigrationResponse)
 
     suspend fun partialPaymentMismatchDocument(documentNo: Long)
+
+    suspend fun migrateTDSJV(journalVoucherRecord: JVParentDetails)
 }
