@@ -1,22 +1,22 @@
 package com.cogoport.ares.api.dunning.service.implementation
 
-import com.cogoport.ares.api.common.AresConstants.COLLECTION_ACCOUNT_EMAIL
-import com.cogoport.ares.api.common.AresConstants.COLLECTION_ACCOUNT_NAME
-import com.cogoport.ares.api.common.AresConstants.DUNNING_BALANCE_CONFIRMATION_MAIL_TEMPLATE
-import com.cogoport.ares.api.common.AresConstants.DUNNING_BANK_DETAILS
-import com.cogoport.ares.api.common.AresConstants.DUNNING_EXCLUDE_WORK_SCOPES
-import com.cogoport.ares.api.common.AresConstants.DUNNING_NEW_INVOICE_GENERATION_TEMPLATE
-import com.cogoport.ares.api.common.AresConstants.DUNNING_VALID_TEMPLATE_NAMES
-import com.cogoport.ares.api.common.AresConstants.DUNNING_WORK_SCOPES
-import com.cogoport.ares.api.common.AresConstants.DUNNING__SOA_MAIL_TEMPLATE
 import com.cogoport.ares.api.common.AresConstants.ENTITY_101
-import com.cogoport.ares.api.common.AresConstants.EXCLUDED_CREDIT_CONTROLLERS
 import com.cogoport.ares.api.common.AresConstants.LEDGER_CURRENCY
 import com.cogoport.ares.api.common.AresConstants.TAGGED_ENTITY_ID_MAPPINGS
 import com.cogoport.ares.api.common.client.CogoCareClient
 import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.common.enums.TokenObjectTypes
 import com.cogoport.ares.api.common.enums.TokenTypes
+import com.cogoport.ares.api.dunning.DunningConstants.COLLECTION_ACCOUNT_EMAIL
+import com.cogoport.ares.api.dunning.DunningConstants.COLLECTION_ACCOUNT_NAME
+import com.cogoport.ares.api.dunning.DunningConstants.DUNNING_BALANCE_CONFIRMATION_MAIL_TEMPLATE
+import com.cogoport.ares.api.dunning.DunningConstants.DUNNING_BANK_DETAILS
+import com.cogoport.ares.api.dunning.DunningConstants.DUNNING_EXCLUDE_WORK_SCOPES
+import com.cogoport.ares.api.dunning.DunningConstants.DUNNING_NEW_INVOICE_GENERATION_TEMPLATE
+import com.cogoport.ares.api.dunning.DunningConstants.DUNNING_SOA_MAIL_TEMPLATE
+import com.cogoport.ares.api.dunning.DunningConstants.DUNNING_VALID_TEMPLATE_NAMES
+import com.cogoport.ares.api.dunning.DunningConstants.DUNNING_WORK_SCOPES
+import com.cogoport.ares.api.dunning.DunningConstants.EXCLUDED_CREDIT_CONTROLLERS
 import com.cogoport.ares.api.dunning.entity.AresTokens
 import com.cogoport.ares.api.dunning.entity.DunningCycleExecution
 import com.cogoport.ares.api.dunning.entity.DunningEmailAudit
@@ -318,7 +318,7 @@ class ScheduleServiceImpl(
             }
             val idForPaymentToken = (outstanding.tradePartyId ?: UUID.randomUUID()).toString()
             var paymentToken: String? = null
-            if (templateName == DUNNING__SOA_MAIL_TEMPLATE) {
+            if (templateName == DUNNING_SOA_MAIL_TEMPLATE) {
                 paymentToken = Utilities.getEncodedToken(idForPaymentToken)
             }
             val ticketTokenReq = getTicketTokenRequest(toUserData!!, outstanding.tradePartyId)

@@ -12,7 +12,7 @@ import io.micronaut.data.model.DataType
 import java.sql.Timestamp
 import javax.persistence.GeneratedValue
 
-@MappedEntity(value = "ares_tokens")
+@MappedEntity(value = "tokens")
 data class AresTokens(
     @field:Id @GeneratedValue
     var id: Long?,

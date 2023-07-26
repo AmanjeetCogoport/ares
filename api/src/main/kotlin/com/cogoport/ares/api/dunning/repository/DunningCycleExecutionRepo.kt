@@ -14,7 +14,7 @@ interface DunningCycleExecutionRepo : CoroutineCrudRepository<DunningCycleExecut
     @NewSpan
     @Query(
         """
-            UPDATE dunning_cycle_executions SET status = :status WHERE id = :id
+            UPDATE dunning_cycle_executions SET status = :status, updated_at = NOW() WHERE id = :id
         """
     )
     suspend fun updateStatus(id: Long, status: String)
@@ -22,7 +22,7 @@ interface DunningCycleExecutionRepo : CoroutineCrudRepository<DunningCycleExecut
     @NewSpan
     @Query(
         """
-            UPDATE dunning_cycle_executions SET service_id = :serviceId where id = :id
+            UPDATE dunning_cycle_executions SET service_id = :serviceId, updated_at = NOW() where id = :id
         """
     )
     suspend fun updateServiceId(id: Long, serviceId: String)
@@ -42,8 +42,8 @@ interface DunningCycleExecutionRepo : CoroutineCrudRepository<DunningCycleExecut
     @NewSpan
     @Query(
         """
-        SELECT COUNT(*) FROM dunning_cycle_executions where dunning_cycle_id = :dunningId AND status = 'SCHEDULED'
+        SELECT EXISTS(SELECT * FROM dunning_cycle_executions where dunning_cycle_id = :dunningId AND status = 'SCHEDULED')
     """
     )
-    suspend fun isScheduledExecutionExist(dunningId: Long): Long
+    suspend fun isScheduledExecutionExist(dunningId: Long): Boolean
 }

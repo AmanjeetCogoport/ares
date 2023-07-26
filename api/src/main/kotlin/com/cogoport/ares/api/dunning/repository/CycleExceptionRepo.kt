@@ -17,11 +17,11 @@ interface CycleExceptionRepo : CoroutineCrudRepository<CycleExceptions, Long> {
     @NewSpan
     @Query(
         """
-            UPDATE dunning_cycle_exceptions SET deleted_at = NOW() WHERE dunning_cycle_id = :cycleId
-             AND trade_party_detail_id IN (:detailsIds) AND deleted_at IS NULL
+            UPDATE dunning_cycle_exceptions SET deleted_at = NOW(), updated_at = NOW()  WHERE dunning_cycle_id = :cycleId
+             AND trade_party_detail_id IN (:tradePartyDetailIds) AND deleted_at IS NULL
         """
     )
-    suspend fun deleteExceptionByCycleId(cycleId: Long, detailsIds: MutableList<UUID>): Long
+    suspend fun deleteExceptionByCycleId(cycleId: Long, tradePartyDetailIds: MutableList<UUID>): Long
 
     @NewSpan
     @Query(

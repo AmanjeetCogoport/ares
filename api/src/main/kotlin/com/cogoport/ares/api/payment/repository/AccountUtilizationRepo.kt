@@ -165,14 +165,14 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 max(organization_name) as organization_name,
                 sum(
                     CASE WHEN acc_type::varchar IN (:accType)
-                        and(due_date >= now()::date) THEN
+                        and(due_date > now()::date) THEN
                         sign_flag * (amount_loc - pay_loc)
                     ELSE
                         0
                     END) AS not_due_led_amount,      
                 sum(
                     CASE WHEN acc_type::varchar IN (:accType)
-                        and(now()::date - due_date) BETWEEN 1 AND 30 THEN
+                        and(now()::date - due_date) BETWEEN 0 AND 30 THEN
                         sign_flag * (amount_loc - pay_loc)
                     ELSE
                         0
@@ -234,14 +234,14 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     END) AS total_led_outstanding,
                 sum(
                     CASE WHEN acc_type::varchar IN (:accType)
-                        and(due_date >= now()::date) THEN
+                        and(due_date > now()::date) THEN
                         sign_flag * (amount_curr - pay_curr)
                     ELSE
                         0
                     END) AS not_due_curr_amount,      
                 sum(
                     CASE WHEN acc_type::varchar IN (:accType)
-                        and(now()::date - due_date) BETWEEN 1 AND 30 THEN
+                        and(now()::date - due_date) BETWEEN 0 AND 30 THEN
                         sign_flag * (amount_curr - pay_curr)
                     ELSE
                         0
@@ -302,13 +302,13 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                         0
                     END) AS total_curr_outstanding,
                 sum(
-                    CASE WHEN due_date >= now()::date AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
+                    CASE WHEN due_date > now()::date AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
                     END) AS not_due_count,
                 sum(
-                    CASE WHEN (now()::date - due_date) BETWEEN 1 AND 30 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
+                    CASE WHEN (now()::date - due_date) BETWEEN 0 AND 30 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
@@ -382,14 +382,14 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 max(organization_name) as organization_name,
                 sum(
                     CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')
-                        and(transaction_date >= now()::date) THEN
+                        and(transaction_date > now()::date) THEN
                         sign_flag * (amount_loc - pay_loc)
                     ELSE
                         0
                     END) AS not_due_led_amount,      
                 sum(
                     CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')
-                        and(now()::date - transaction_date) BETWEEN 1 AND 30 THEN
+                        and(now()::date - transaction_date) BETWEEN 0 AND 30 THEN
                         sign_flag * (amount_loc - pay_loc)
                     ELSE
                         0
@@ -451,7 +451,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     END) AS total_led_outstanding,
                 sum(
                     CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')
-                        and(transaction_date >= now()::date) THEN
+                        and(transaction_date > now()::date) THEN
                         sign_flag * (amount_curr - pay_curr)
                     ELSE
                         0
@@ -520,10 +520,10 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     END) AS total_curr_outstanding,
                 SUM(
                     CASE 
-                        WHEN transaction_date >= now()::date 
+                        WHEN transaction_date > now()::date 
                             AND acc_type IN ('REC', 'CTDS') 
                             AND ABS(amount_curr - pay_curr) > 0.001 THEN 1 
-                        WHEN transaction_date >= now()::date 
+                        WHEN transaction_date > now()::date 
                             AND acc_type IN ('BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') 
                             AND amount_curr - pay_curr <> 0 THEN 1 
                         ELSE 0 
@@ -531,10 +531,10 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 )  AS not_due_count,
                 SUM(
                     CASE 
-                        WHEN (now()::date - transaction_date) BETWEEN 1 AND 30 
+                        WHEN (now()::date - transaction_date) BETWEEN 0 AND 30 
                             AND acc_type IN ('REC', 'CTDS') 
                             AND ABS(amount_curr - pay_curr) > 0.001 THEN 1 
-                        WHEN (now()::date - transaction_date) BETWEEN 1 AND 30 
+                        WHEN (now()::date - transaction_date) BETWEEN 0 AND 30 
                             AND acc_type IN ('BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') 
                             AND amount_curr - pay_curr <> 0 THEN 1 
                         ELSE 0 
@@ -957,7 +957,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             AND deleted_at IS NULL
             AND amount_loc - pay_loc > 0
             ORDER BY transaction_date DESC
-            LIMIT 50
+            LIMIT 100
         """
     )
     suspend fun getPaymentsForDunning(entityCode: Int, tradePartyDetailId: UUID): List<DunningPayments>
@@ -965,7 +965,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
     @NewSpan
     @Query(
         """
-                WITH a AS (
+                WITH outstanding_data AS (
                             SELECT
                                 organization_id as trade_party_detail_id,
                                 entity_code,
@@ -996,7 +996,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                                     CASE
                                         WHEN :ageingStartDay != :ageingLastDay THEN sum(
                                             CASE
-                                                WHEN acc_type :: varchar IN ('REC', 'CTDS')
+                                                WHEN acc_type :: varchar IN ('REC', 'CTDS', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC', 'PAY')
                                                 and(now() :: date - transaction_date) BETWEEN :ageingStartDay
                                                 AND :ageingLastDay THEN sign_flag * (amount_loc - pay_loc)
                                                 ELSE 0
@@ -1004,7 +1004,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                                         )
                                         ELSE sum(
                                             CASE
-                                                WHEN acc_type in ('REC', 'CTDS')
+                                                WHEN acc_type in ('REC', 'CTDS', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC', 'PAY')
                                                     and(now() :: date - transaction_date) >= :ageingStartDay
                                                 THEN sign_flag * (amount_loc - pay_loc)
                                                 ELSE 0
@@ -1025,14 +1025,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                                 AND amount_loc - pay_loc > 0
                                 AND entity_code = :entityCode
                                 AND (:query IS NULL OR LOWER(organization_name) ILIKE :query)
-                                AND acc_type in (
-                                    'REC',
-                                    'CTDS',
-                                    'SINV',
-                                    'SCN',
-                                    'SREIMB',
-                                    'SREIMBCN'
-                                )
+                                AND acc_type in ('SINV','SCN','SREIMB','SREIMBCN','REC', 'CTDS', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC', 'PAY')
                                 AND deleted_at IS NULL 
                             GROUP BY
                                 organization_id,
@@ -1050,7 +1043,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                         ( outstanding_amount + on_account_amount ) AS outstanding_amount,
                         on_account_amount
                 FROM
-                        a
+                        outstanding_data
                 WHERE
                     (COALESCE(:totalDueOutstanding) IS NULL OR (outstanding_amount + on_account_amount) > :totalDueOutstanding)
                 OFFSET 
@@ -1108,7 +1101,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                                     CASE
                                         WHEN :ageingStartDay != :ageingLastDay THEN sum(
                                             CASE
-                                                WHEN acc_type :: varchar IN ('REC', 'CTDS')
+                                                WHEN acc_type :: varchar IN ('REC', 'CTDS', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC', 'PAY')
                                                 and(now() :: date - transaction_date) BETWEEN :ageingStartDay
                                                 AND :ageingLastDay THEN sign_flag * (amount_loc - pay_loc)
                                                 ELSE 0
@@ -1116,7 +1109,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                                         )
                                         ELSE sum(
                                             CASE
-                                                WHEN acc_type in ('REC', 'CTDS')
+                                                WHEN acc_type in ('REC', 'CTDS', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC', 'PAY')
                                                     and(now() :: date - transaction_date) >= :ageingStartDay
                                                 THEN sign_flag * (amount_loc - pay_loc)
                                                 ELSE 0
@@ -1137,14 +1130,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                                 AND amount_loc - pay_loc > 0
                                 AND entity_code = :entityCode
                                 AND (:query IS NULL OR LOWER(organization_name) ILIKE :query)
-                                AND acc_type in (
-                                    'REC',
-                                    'CTDS',
-                                    'SINV',
-                                    'SCN',
-                                    'SREIMB',
-                                    'SREIMBCN'
-                                )
+                                AND acc_type in ('SINV','SCN','SREIMB','SREIMBCN','REC', 'CTDS', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC', 'PAY')
                                 AND deleted_at IS NULL 
                             GROUP BY
                                 organization_id,

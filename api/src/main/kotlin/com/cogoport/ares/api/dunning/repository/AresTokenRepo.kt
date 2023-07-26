@@ -15,7 +15,7 @@ interface AresTokenRepo : CoroutineCrudRepository<AresTokens, Long> {
     @NewSpan
     @Query(
         """
-        SELECT * FROM ares_tokens WHERE token = :token AND token_type::VARCHAR = :tokenType
+        SELECT * FROM tokens WHERE token = :token AND token_type::VARCHAR = :tokenType
     """
     )
     suspend fun findByTokens(token: String, tokenType: String): AresTokens?

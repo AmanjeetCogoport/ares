@@ -1,9 +1,8 @@
 package com.cogoport.ares.model.dunning.enum
 
-enum class FREQUENCY {
+enum class Frequency {
     ONE_TIME,
     DAILY,
     MONTHLY,
-    WEEKLY,
-    BI_WEEKLY
+    WEEKLY
 }

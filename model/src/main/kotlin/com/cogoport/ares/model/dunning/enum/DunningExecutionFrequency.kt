@@ -4,6 +4,5 @@ enum class DunningExecutionFrequency {
     ONE_TIME,
     DAILY,
     MONTHLY,
-    WEEKLY,
-    BI_WEEKLY
+    WEEKLY
 }

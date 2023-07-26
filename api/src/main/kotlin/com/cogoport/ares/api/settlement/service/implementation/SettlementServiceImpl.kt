@@ -2523,7 +2523,7 @@ open class SettlementServiceImpl : SettlementService {
         )
 
         val objectName = "UNFREEZE_CREDIT"
-//        payLaterUtilizationAndKnockOffCall(paymentRequest, request.destinationId, objectName)
+        payLaterUtilizationAndKnockOffCall(paymentRequest, request.destinationId, objectName)
     }
 
     override suspend fun sendInvoiceDataToDebitConsumption(request: AccountUtilization) {
@@ -2562,7 +2562,7 @@ open class SettlementServiceImpl : SettlementService {
         )
 
         val objectName = "UNFREEZE_CREDIT_DELETED"
-//        payLaterUtilizationAndKnockOffCall(paymentRequest, request.documentNo, objectName)
+        payLaterUtilizationAndKnockOffCall(paymentRequest, request.documentNo, objectName)
     }
 
     private suspend fun payLaterUtilizationAndKnockOffCall(request: com.cogoport.plutus.model.invoice.CreditPaymentRequest, invoiceId: Long, objectName: String) {

@@ -1,14 +1,16 @@
 package com.cogoport.ares.api.dunning.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
-import com.cogoport.ares.api.common.AresConstants.CREDIT_DAYS_MAPPING
 import com.cogoport.ares.api.common.AresConstants.LEDGER_CURRENCY
-import com.cogoport.ares.api.common.AresConstants.SEGMENT_MAPPING
-import com.cogoport.ares.api.common.AresConstants.TIME_ZONE_DIFFERENCE_FROM_GMT
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.client.CogoBackLowLevelClient
 import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.common.enums.TokenTypes
+import com.cogoport.ares.api.dunning.DunningConstants
+import com.cogoport.ares.api.dunning.DunningConstants.CREDIT_DAYS_MAPPING
+import com.cogoport.ares.api.dunning.DunningConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING
+import com.cogoport.ares.api.dunning.DunningConstants.SEGMENT_MAPPING
+import com.cogoport.ares.api.dunning.DunningConstants.TIME_ZONE_DIFFERENCE_FROM_GMT
 import com.cogoport.ares.api.dunning.entity.CycleExceptions
 import com.cogoport.ares.api.dunning.entity.DunningCycle
 import com.cogoport.ares.api.dunning.entity.DunningCycleExecution
@@ -54,7 +56,7 @@ import com.cogoport.ares.model.dunning.enum.CycleExecutionStatus
 import com.cogoport.ares.model.dunning.enum.DunningCategory
 import com.cogoport.ares.model.dunning.enum.DunningCycleType
 import com.cogoport.ares.model.dunning.enum.DunningExecutionFrequency
-import com.cogoport.ares.model.dunning.enum.FREQUENCY
+import com.cogoport.ares.model.dunning.enum.Frequency
 import com.cogoport.ares.model.dunning.enum.OrganizationSegment
 import com.cogoport.ares.model.dunning.enum.OrganizationStakeholderType
 import com.cogoport.ares.model.dunning.enum.TriggerType
@@ -175,23 +177,21 @@ open class DunningServiceImpl(
 
     @Transactional
     override suspend fun createDunningCycle(createDunningCycleRequest: CreateDunningCycleRequest): Long {
-        if (createDunningCycleRequest.name.length < 5) throw AresException(AresError.ERR_1544, "")
-        if (createDunningCycleRequest.scheduleRule.scheduleTime.length != 5) throw AresException(AresError.ERR_1547, "")
 
-        if (TriggerType.valueOf(createDunningCycleRequest.triggerType) == TriggerType.ONE_TIME && FREQUENCY.valueOf(createDunningCycleRequest.frequency) != FREQUENCY.ONE_TIME) {
+        if (TriggerType.valueOf(createDunningCycleRequest.triggerType) == TriggerType.ONE_TIME && Frequency.valueOf(createDunningCycleRequest.frequency) != Frequency.ONE_TIME) {
             throw AresException(AresError.ERR_1003, "")
-        } else if (TriggerType.valueOf(createDunningCycleRequest.triggerType) == TriggerType.PERIODIC && FREQUENCY.valueOf(createDunningCycleRequest.frequency) == FREQUENCY.ONE_TIME
+        } else if (TriggerType.valueOf(createDunningCycleRequest.triggerType) == TriggerType.PERIODIC && Frequency.valueOf(createDunningCycleRequest.frequency) == Frequency.ONE_TIME
         ) {
             throw AresException(AresError.ERR_1003, "")
         }
 
         if (TriggerType.valueOf(createDunningCycleRequest.triggerType) == TriggerType.PERIODIC &&
-            FREQUENCY.valueOf(createDunningCycleRequest.frequency) == FREQUENCY.MONTHLY &&
+            Frequency.valueOf(createDunningCycleRequest.frequency) == Frequency.MONTHLY &&
             (
                 DunningExecutionFrequency.valueOf(createDunningCycleRequest.scheduleRule.dunningExecutionFrequency) != DunningExecutionFrequency.MONTHLY ||
                     createDunningCycleRequest.scheduleRule.dayOfMonth == null ||
                     createDunningCycleRequest.scheduleRule.dayOfMonth!! < 1 ||
-                    createDunningCycleRequest.scheduleRule.dayOfMonth!! > AresConstants.MAX_DAY_IN_MONTH_FOR_DUNNING
+                    createDunningCycleRequest.scheduleRule.dayOfMonth!! > DunningConstants.MAX_DAY_IN_MONTH_FOR_DUNNING
                 )
         ) {
             throw AresException(AresError.ERR_1003, "")
@@ -199,7 +199,7 @@ open class DunningServiceImpl(
 
         if (
             TriggerType.valueOf(createDunningCycleRequest.triggerType) == TriggerType.PERIODIC &&
-            FREQUENCY.valueOf(createDunningCycleRequest.frequency) == FREQUENCY.WEEKLY &&
+            Frequency.valueOf(createDunningCycleRequest.frequency) == Frequency.WEEKLY &&
             (
                 DunningExecutionFrequency.valueOf(createDunningCycleRequest.scheduleRule.dunningExecutionFrequency) != DunningExecutionFrequency.WEEKLY ||
                     createDunningCycleRequest.scheduleRule.week == null
@@ -214,8 +214,8 @@ open class DunningServiceImpl(
                 name = createDunningCycleRequest.name,
                 cycleType = DunningCycleType.valueOf(createDunningCycleRequest.cycleType).toString(),
                 triggerType = TriggerType.valueOf(createDunningCycleRequest.triggerType).toString(),
-                frequency = FREQUENCY.valueOf(createDunningCycleRequest.frequency).toString(),
-                severityLevel = AresConstants.DUNNING_SEVERITY_LEVEL[SeverityEnum.valueOf(createDunningCycleRequest.severityLevel)]!!,
+                frequency = Frequency.valueOf(createDunningCycleRequest.frequency).toString(),
+                severityLevel = DunningConstants.DUNNING_SEVERITY_LEVEL[SeverityEnum.valueOf(createDunningCycleRequest.severityLevel)]!!,
                 entityCode = AresConstants.TAGGED_ENTITY_ID_MAPPINGS[createDunningCycleRequest.filters.cogoEntityId.toString()]!!,
                 filters = createDunningCycleRequest.filters,
                 scheduleRule = createDunningCycleRequest.scheduleRule,
@@ -231,33 +231,7 @@ open class DunningServiceImpl(
         )
 
         if (!createDunningCycleRequest.exceptionTradePartyDetailIds.isNullOrEmpty()) {
-            var organizationTradePartyDetailResponse: GetOrganizationTradePartyDetailResponse? = null
-            val request = GetOrganizationTradePartyDetailRequest(organizationTradePartyDetailIds = createDunningCycleRequest.exceptionTradePartyDetailIds!!)
-            try {
-                organizationTradePartyDetailResponse = authClient.getOrganizationTradePartyDetail(request)
-            } catch (err: Exception) {
-                recordFailedThirdPartyApiAudits(dunningCycleResponse.id!!, request.toString(), err.toString(), "list_organization_trade_party_business_finance", "dunning_cycle", "organization")
-                logger().error(err.toString())
-                throw err
-            }
-
-            val dunningCycleExceptionList: MutableList<CycleExceptions> = mutableListOf()
-            organizationTradePartyDetailResponse?.list?.forEach { organizationTradePartyDetail ->
-                dunningCycleExceptionList.add(
-                    CycleExceptions(
-                        id = null,
-                        dunningCycleId = dunningCycleResponse.id!!,
-                        tradePartyDetailId = organizationTradePartyDetail.organizationTradePartDetailId!!,
-                        registrationNumber = organizationTradePartyDetail.registrationNumber!!,
-                        deletedAt = null,
-                        createdBy = dunningCycleResponse.createdBy,
-                        updatedBy = dunningCycleResponse.updatedBy,
-                        createdAt = null,
-                        updatedAt = null
-                    )
-                )
-            }
-            cycleExceptionRepo.saveAll(dunningCycleExceptionList)
+            saveExceptionTradeParties(createDunningCycleRequest, dunningCycleResponse)
         }
         saveAndScheduleExecution(dunningCycleResponse)
         auditRepository.save(
@@ -273,6 +247,36 @@ open class DunningServiceImpl(
             )
         )
         return dunningCycleResponse.id!!
+    }
+
+    private suspend fun saveExceptionTradeParties(dunningCycleRequest: CreateDunningCycleRequest, dunningCycleResponse: DunningCycle) {
+        var organizationTradePartyDetailResponse: GetOrganizationTradePartyDetailResponse? = null
+        val request = GetOrganizationTradePartyDetailRequest(organizationTradePartyDetailIds = dunningCycleRequest.exceptionTradePartyDetailIds!!)
+        try {
+            organizationTradePartyDetailResponse = authClient.getOrganizationTradePartyDetail(request)
+        } catch (err: Exception) {
+            recordFailedThirdPartyApiAudits(dunningCycleResponse.id!!, request.toString(), err.toString(), "list_organization_trade_party_business_finance", "dunning_cycle", "organization")
+            logger().error(err.toString())
+            throw err
+        }
+
+        val dunningCycleExceptionList: MutableList<CycleExceptions> = mutableListOf()
+        organizationTradePartyDetailResponse?.list?.forEach { organizationTradePartyDetail ->
+            dunningCycleExceptionList.add(
+                CycleExceptions(
+                    id = null,
+                    dunningCycleId = dunningCycleResponse.id!!,
+                    tradePartyDetailId = organizationTradePartyDetail.organizationTradePartDetailId!!,
+                    registrationNumber = organizationTradePartyDetail.registrationNumber!!,
+                    deletedAt = null,
+                    createdBy = dunningCycleResponse.createdBy,
+                    updatedBy = dunningCycleResponse.updatedBy,
+                    createdAt = null,
+                    updatedAt = null
+                )
+            )
+        }
+        cycleExceptionRepo.saveAll(dunningCycleExceptionList)
     }
 
     @Transactional
@@ -335,8 +339,9 @@ open class DunningServiceImpl(
 
         var taggedOrganizationIds: List<UUID>? = listOf()
         if (request.organizationStakeholderIds != null) {
-            taggedOrganizationIds = organizationStakeholderRepo.listOrganizationIdBasedOnOrganizationStakeholderIds(
-                organizationStakeholderIds = request.organizationStakeholderIds
+            taggedOrganizationIds = organizationStakeholderRepo.getOrgsByStakeHolders(
+                organizationStakeholderIds = request.organizationStakeholderIds,
+                stakeHolderType = "CREDIT_CONTROLLER"
             )
         }
 
@@ -536,7 +541,7 @@ open class DunningServiceImpl(
     @Transactional
     override suspend fun deleteCycle(id: String, updatedBy: UUID): Boolean {
         val dunningId = Hashids.decode(id)[0]
-        val isScheduledExecutionExist = dunningExecutionRepo.isScheduledExecutionExist(dunningId) > 0
+        val isScheduledExecutionExist = dunningExecutionRepo.isScheduledExecutionExist(dunningId)
         if (isScheduledExecutionExist) {
             throw AresException(AresError.ERR_1548, "")
         } else {
@@ -629,7 +634,7 @@ open class DunningServiceImpl(
         if (request.query != null)
             query = "%${request.query}%"
 
-        return organizationStakeholderRepo.listDistinctOrganizationStakeholders(query)
+        return organizationStakeholderRepo.listDistinctOrganizationStakeholders(query, "CREDIT_CONTROLLER")
     }
 
     override suspend fun listDunningCycles(request: ListDunningCycleReq): ResponseList<DunningCycleResponse> {
@@ -877,7 +882,7 @@ open class DunningServiceImpl(
         }
 
         val actualTimestampInRespectiveTimeZone = scheduleTimeStampInGMT.time.minus(
-            TIME_ZONE_DIFFERENCE_FROM_GMT[AresConstants.TimeZone.valueOf(scheduleRule.scheduleTimeZone)]
+            TIME_ZONE_DIFFERENCE_FROM_GMT[DunningConstants.TimeZone.valueOf(scheduleRule.scheduleTimeZone)]
                 ?: throw AresException(AresError.ERR_1002, "")
         )
 
@@ -915,7 +920,7 @@ open class DunningServiceImpl(
         scheduleDateCal.set(Calendar.HOUR_OF_DAY, scheduleHour.toInt())
         scheduleDateCal.set(Calendar.MINUTE, scheduleMinute.toInt())
 
-        val localTimestampWRTZone: Long = System.currentTimeMillis().plus(AresConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
+        val localTimestampWRTZone: Long = System.currentTimeMillis().plus(EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
 
         if (scheduleDateCal.timeInMillis < localTimestampWRTZone) {
             throw AresException(AresError.ERR_1551, "")
@@ -930,7 +935,7 @@ open class DunningServiceImpl(
         scheduleMinute: String
     ): Timestamp {
         val todayCal = Calendar.getInstance()
-        todayCal.timeInMillis = TIME_ZONE_DIFFERENCE_FROM_GMT[AresConstants.TimeZone.valueOf(scheduleRule.scheduleTimeZone)]?.plus(System.currentTimeMillis())!!
+        todayCal.timeInMillis = TIME_ZONE_DIFFERENCE_FROM_GMT[DunningConstants.TimeZone.valueOf(scheduleRule.scheduleTimeZone)]?.plus(System.currentTimeMillis())!!
 
         if (todayCal.get(Calendar.HOUR_OF_DAY) > scheduleHour.toInt()) {
             todayCal.add(Calendar.DAY_OF_MONTH, 1)

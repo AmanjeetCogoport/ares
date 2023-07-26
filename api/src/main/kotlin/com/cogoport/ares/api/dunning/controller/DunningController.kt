@@ -27,7 +27,6 @@ import com.cogoport.ares.model.dunning.response.DunningCycleExecutionResponse
 import com.cogoport.ares.model.dunning.response.DunningCycleResponse
 import com.cogoport.ares.model.dunning.response.MonthWiseStatisticsOfAccountUtilizationResponse
 import com.cogoport.ares.model.dunning.response.OverallOutstandingAndOnAccountResponse
-import com.cogoport.brahma.authentication.Auth
 import com.cogoport.brahma.hashids.Hashids
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
@@ -117,7 +116,7 @@ class DunningController(
         return dunningService.updateStatusDunningCycle(updateDunningCycleExecutionStatusReq)
     }
 
-    @Delete("/delete-dunning-cycle")
+    @Delete("/dunning-cycle")
     suspend fun deleteCycle(
         @QueryValue("id") id: String,
         @QueryValue("updatedBy") updatedBy: UUID
@@ -145,7 +144,6 @@ class DunningController(
         )
     }
 
-    @Auth
     @Get("/list-overall-outstanding-and-on-account-per-trade-party{?request*}")
     suspend fun overallOutstandingAndOnAccountPerTradeParty(
         @Valid
@@ -173,12 +171,12 @@ class DunningController(
         )
     }
 
-    @Post("check-schedule-time")
+    @Post("/check-schedule-time")
     suspend fun calculateNextScheduleTime(@Body scheduleRule: DunningScheduleRule): Date {
         return dunningService.calculateNextScheduleTime(scheduleRule)
     }
 
-    @Post("send-mail-of-all-communication-to-trade-party")
+    @Post("/send-mail-of-all-communication-to-trade-party")
     suspend fun sendMailOfAllCommunicationToTradeParty(
         @Valid @Body
         sendMailOfAllCommunicationToTradePartyReq: SendMailOfAllCommunicationToTradePartyReq
@@ -192,16 +190,16 @@ class DunningController(
         )
     }
 
-    @Get("create-payment-link")
+    @Post("payment-link")
     suspend fun createDunningPaymentLink(@QueryValue("token") token: String): String {
         return dunningService.createDunningPaymentLink(token)
     }
 
-    @Post("create-dunning-relevant-user")
+    @Post("/dunning-relevant-user")
     suspend fun createRelevantUser(@Body request: CreateUserRequest): String? {
         return dunningService.createRelevantUser(request)
     }
-    @Get("card-data")
+    @Get("/card-data")
     suspend fun dunningCardData(@QueryValue("entityCode") entityCode: MutableList<Int>?): DunningCardData {
         return dunningService.dunningCardData(entityCode)
     }

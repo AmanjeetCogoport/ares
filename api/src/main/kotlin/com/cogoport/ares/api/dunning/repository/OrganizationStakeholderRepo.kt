@@ -21,27 +21,36 @@ interface OrganizationStakeholderRepo : CoroutineCrudRepository<OrganizationStak
                 FROM
                     organization_stakeholders
                 WHERE
-                    (:query IS NULL OR LOWER(organization_stakeholder_name) ILIKE :query)
-                ORDER BY
-                    organization_stakeholder_id
+                    is_active = true
+                    AND organization_stakeholder_type::VARCHAR = :stakeHolderType
+                    AND (:query IS NULL OR LOWER(organization_stakeholder_name) ILIKE :query)
+                    OFFSET 
+                    GREATEST(0, ((:pageIndex - 1) * :pageSize))
+                LIMIT 
+                    :pageSize
             """
     )
     suspend fun listDistinctOrganizationStakeholders(
-        query: String?
+        query: String?,
+        stakeHolderType: String,
+        pageIndex: Int? = 1,
+        pageSize: Long? = 100
     ): List<CreditControllerResponse>
 
     @NewSpan
     @Query(
         """
            SELECT
-                organization_id
-            from
+                DISTINCT(organization_id)
+            FROM
                 organization_stakeholders
             WHERE
                 organization_stakeholder_id :: UUID in (:organizationStakeholderIds)
+                AND is_active = true
+                AND organization_stakeholder_type::VARCHAR = :stakeHolderType
         """
     )
-    suspend fun listOrganizationIdBasedOnOrganizationStakeholderIds(organizationStakeholderIds: List<UUID>?): List<UUID>
+    suspend fun getOrgsByStakeHolders(organizationStakeholderIds: List<UUID>?, stakeHolderType: String): List<UUID>
 
     @NewSpan
     @Query(

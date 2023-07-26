@@ -127,12 +127,16 @@ interface DunningCycleRepo : CoroutineCrudRepository<DunningCycle, Long> {
             WHERE 
             (:dunningCycleId IS NULL OR dunning_cycle_id = :dunningCycleId)
             AND (:serviceId IS NULL OR service_id::uuid = :serviceId)
-            ORDER BY created_at DESC       
+            ORDER BY created_at DESC
+            OFFSET GREATEST(0, ((:pageIndex - 1) * :pageSize))
+           LIMIT :pageSize
         """
     )
     suspend fun listDunningCycleExecution(
         dunningCycleId: Long? = null,
-        serviceId: UUID? = null
+        serviceId: UUID? = null,
+        pageIndex: Int? = 1,
+        pageSize: Int? = 1000
     ): List<DunningCycleExecutionResponse>
 
     @NewSpan

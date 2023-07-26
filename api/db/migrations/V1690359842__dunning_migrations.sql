@@ -7,7 +7,7 @@ CREATE TYPE public."organization_segment" AS ENUM (
 CREATE TYPE PUBLIC."stakeholder_type" AS ENUM ('CREDIT_CONTROLLER');
 CREATE TYPE CYCLE_TYPE AS ENUM ('SOA', 'WIS', 'BALANCE_CONFIRMATION');
 CREATE TYPE TRIGGER_TYPE AS ENUM ('ONE_TIME', 'PERIODIC');
-CREATE TYPE FREQUENCY AS ENUM ('ONE_TIME', 'DAILY', 'MONTHLY', 'WEEKLY', 'BI_WEEKLY');
+CREATE TYPE FREQUENCY AS ENUM ('ONE_TIME', 'DAILY', 'MONTHLY', 'WEEKLY');
 CREATE TYPE CYCLE_EXECUTION_STATUS AS ENUM ('SCHEDULED','CANCELLED','COMPLETED','IN_PROGRESS','FAILED');
 CREATE TYPE CATEGORY AS ENUM ('CYCLE','MANUAL');
 CREATE TYPE OBJECT_TYPE AS ENUM ('DUNNING');
@@ -26,7 +26,7 @@ CREATE TYPE TOKEN_TYPE AS ENUM ('RELEVANT_USER', 'DUNNING_PAYMENT');
 
 
  CREATE TABLE public.organization_stakeholders (
- 	id                                bigserial               NOT NULL,
+ 	id                                BIGSERIAL               NOT NULL,
  	organization_stakeholder_name     VARCHAR(200)            NOT NULL,
  	organization_stakeholder_id       UUID                    NOT NULL,
  	organization_stakeholder_type     STAKEHOLDER_TYPE        NOT NULL,
@@ -126,7 +126,7 @@ error_reason            TEXT,
 created_at 				TIMESTAMP 	DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE ares_tokens (
+CREATE TABLE tokens (
 id  					BIGSERIAL 		NOT NULL PRIMARY KEY,
 object_id 				BIGINT 			NOT NULL,
 object_type				OBJECT_TYPE		NOT NULL,
