@@ -42,5 +42,7 @@ data class AccountPayablesFile(
     var createdBy: UUID?,
     var updatedBy: UUID?,
     var performedByType: String?,
-    var paymentDocumentStatus: PaymentDocumentStatus? = PaymentDocumentStatus.CREATED
+    var paymentDocumentStatus: PaymentDocumentStatus? = PaymentDocumentStatus.CREATED,
+    var currTdsAmount: BigDecimal,
+    var ledTdsAmount: BigDecimal
 )
