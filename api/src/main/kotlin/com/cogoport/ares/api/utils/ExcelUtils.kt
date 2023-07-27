@@ -48,7 +48,7 @@ object ExcelUtils {
         val file = File(fileNme)
         val inp: InputStream = ByteArrayInputStream(response.body().readAllBytes())
         val path = Paths.get(file.path) as Path
-        val result = Files.copy(inp, path, StandardCopyOption.REPLACE_EXISTING)
+        Files.copy(inp, path, StandardCopyOption.REPLACE_EXISTING)
         return file
     }
 }

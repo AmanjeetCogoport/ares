@@ -21,6 +21,7 @@ import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Date
+import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
@@ -173,7 +174,7 @@ class Utilities {
 
             val hexString = StringBuilder()
             for (byte in digestBytes) {
-                val hex = String.format("%02x", byte.toInt() and 0xFF)
+                val hex = String.format(Locale("en", "IN"), "%02x", byte.toInt() and 0xFF)
                 hexString.append(hex)
             }
             return hexString.toString()

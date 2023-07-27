@@ -36,6 +36,8 @@ import com.cogoport.ares.api.dunning.repository.MasterExceptionRepo
 import com.cogoport.ares.api.dunning.service.interfaces.DunningService
 import com.cogoport.ares.api.dunning.service.interfaces.ScheduleService
 import com.cogoport.ares.api.events.AresMessagePublisher
+import com.cogoport.ares.api.exception.AresError
+import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
@@ -109,6 +111,7 @@ class ScheduleServiceImpl(
             dunningExecutionRepo.updateStatus(executionId, CycleExecutionStatus.COMPLETED.name)
         } catch (err: Exception) {
             dunningExecutionRepo.updateStatus(executionId, CycleExecutionStatus.FAILED.name)
+            logger().error(err.toString())
         }
         // logic for next execution creation
         saveAndScheduleNextDunning(executionDetails!!)
@@ -267,6 +270,7 @@ class ScheduleServiceImpl(
                     emailUsers = try {
                         userList.filter { it.workScopes!!.contains(scopes) } as MutableList<UserData>
                     } catch (err: Exception) {
+                        logger().error(err.toString())
                         mutableListOf()
                     }
                     if (userList.isNotEmpty()) break
@@ -287,7 +291,7 @@ class ScheduleServiceImpl(
             if (emailUsers.isEmpty()) {
                 dunningEmailAuditObject.errorReason = "no user found"
                 createDunningAudit(dunningEmailAuditObject)
-                throw Exception("no user found")
+                throw AresException(AresError.ERR_1002, "no user found")
             }
             val bankDetails = DUNNING_BANK_DETAILS[entityCode]
 
@@ -310,7 +314,7 @@ class ScheduleServiceImpl(
                 1 -> SeverityEnum.LOW.severity
                 2 -> SeverityEnum.MEDIUM.severity
                 3 -> SeverityEnum.HIGH.severity
-                else -> throw Error("Severity is Invalid")
+                else -> throw AresException(AresError.ERR_1002, "Severity is Invalid")
             }
             val userIdForToken = (toUserId ?: UUID.randomUUID()).toString()
             var addUserToken: String? = null
@@ -394,7 +398,7 @@ class ScheduleServiceImpl(
             try {
                 communicationResponse = railsClient.createCommunication(communicationRequest)
                 if (communicationResponse?.id == null) {
-                    throw Exception("mail could not be sent")
+                    throw AresException(AresError.ERR_1001, "mail could not be sent")
                 }
                 logger().info("mail sent to user $toUserEmail and customer $tradePartyDetailId and execution $executionId")
             } catch (err: Exception) {
@@ -408,7 +412,7 @@ class ScheduleServiceImpl(
                 val auditId = createDunningAudit(dunningEmailAuditObject)
                 saveTokens(listOf(Pair(addUserToken, TokenTypes.RELEVANT_USER), Pair(paymentToken, TokenTypes.DUNNING_PAYMENT)), auditId)
             } catch (err: Exception) {
-                logger().info("mail sent to user $toUserEmail and customer $tradePartyDetailId and execution $executionId but after operation could not happend with communicationId ${communicationResponse.id}")
+                logger().info("mail sent to user $toUserEmail and customer $tradePartyDetailId and execution $executionId but after operation could not happend with communicationId ${communicationResponse.id} because $err")
             }
         } catch (err: Exception) {
             logger().info("dunning processing failed for ${request.tradePartyDetailId} and execution id ${request.cycleExecutionId} with $err")
@@ -678,11 +682,14 @@ class ScheduleServiceImpl(
         if (JSONObject(data).has("reply_to_message_id")) {
             return JSONObject(data).get("reply_to_message_id").toString()
         }
-        return try {
-            JSONObject(data).getJSONObject("third_party_response").getString("message_id")
+        var response: String? = null
+        try {
+            response = JSONObject(data).getJSONObject("third_party_response").getString("message_id")
         } catch (err: JSONException) {
-            null
+            response = null
+            logger().info(err.toString())
         }
+        return response
     }
 
     private fun formatMoney(amount: BigDecimal?): Map<String, String> {
@@ -698,7 +705,9 @@ class ScheduleServiceImpl(
     }
 
     private fun getPaymentLink(paymentUrl: String): String {
-        return "<div style='text-align:center;'>To make payments click the link below.</div><br/><div style = 'border-radius: 4px;border: 1px solid #2884FB;background:#2884FB;height:24px;width:145px;display: flex;flex-direction: column;justify-content: center;align-items: center;padding: 16px 32px;gap: 10px;margin:auto;'><a href = $paymentUrl><span style = 'color:white;text-decoration:none;margin-left:15px;'>Make Payment</span></a></div>"
+        return "<div style='text-align:center;'>To make payments click the link below." +
+            "</div><br/><div style = 'border-radius: 4px;border: 1px solid #2884FB;background:#2884FB;height:24px;width:145px;display: flex;flex-direction: column;justify-content: center;align-items: center;padding: 16px 32px;gap: 10px;margin:auto;'>" +
+            "<a href = $paymentUrl><span style = 'color:white;text-decoration:none;margin-left:15px;'>Make Payment</span></a></div>"
     }
 
     private suspend fun createDunningAudit(dunningEmailAuditObj: DunningEmailAudit): Long {

@@ -189,7 +189,6 @@ open class DunningServiceImpl(
             (
                 DunningExecutionFrequency.valueOf(createDunningCycleRequest.scheduleRule.dunningExecutionFrequency) != DunningExecutionFrequency.MONTHLY ||
                     createDunningCycleRequest.scheduleRule.dayOfMonth == null ||
-                    createDunningCycleRequest.scheduleRule.dayOfMonth!! < 1 ||
                     createDunningCycleRequest.scheduleRule.dayOfMonth!! > DunningConstants.MAX_DAY_IN_MONTH_FOR_DUNNING
                 )
         ) {
@@ -345,8 +344,9 @@ open class DunningServiceImpl(
         }
 
         var query: String? = null
-        if (request.query != null)
+        if (request.query != null) {
             query = "%${request.query}%"
+        }
 
         return listOnAccountAndOutstandingBasedOnDunningCycleFilters(
             DunningCycleFilterRequest(
@@ -620,8 +620,9 @@ open class DunningServiceImpl(
 
     override suspend fun listDistinctCreditControllers(request: ListOrganizationStakeholderRequest): List<CreditControllerResponse> {
         var query: String? = null
-        if (request.query != null)
+        if (request.query != null) {
             query = "%${request.query}%"
+        }
 
         return organizationStakeholderRepo.listDistinctOrganizationStakeholders(query, "CREDIT_CONTROLLER")
     }
@@ -663,8 +664,9 @@ open class DunningServiceImpl(
         request: OverallOutstandingAndOnAccountRequest
     ): ResponseList<OverallOutstandingAndOnAccountResponse> {
         var query: String? = null
-        if (request.query != null)
+        if (request.query != null) {
             query = "%${request.query}%"
+        }
 
         val totalCount = accountUtilizationRepo.countOverallOutstandingAndOnAccountPerTradeParty(
             query = query,
