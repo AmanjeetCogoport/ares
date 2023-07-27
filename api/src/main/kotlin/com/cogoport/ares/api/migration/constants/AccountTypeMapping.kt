@@ -4,7 +4,8 @@ class AccountTypeMapping {
     companion object {
         private val sageAccountTypeMapping = mapOf(
             "SPINV" to "PINV",
-            "ZSINV" to "SINV"
+            "ZSINV" to "SINV",
+            "VTDS" to "VTDS"
         )
 
         fun getAccountType(sageAccountType: String): String {

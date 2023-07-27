@@ -718,7 +718,7 @@ class SageServiceImpl : SageService {
         val sqlQuery = """
             select FCYLIN_0 as entityCode
             ,GD.NUM_0 as jvNum
-            , GD.TYP_0 as type
+            , 'VTDS' as type
             ,G.VALDAT_0 as validityDate
             ,AMTCUR_0 as amount
             , AMTLED_0 as ledger_amount
