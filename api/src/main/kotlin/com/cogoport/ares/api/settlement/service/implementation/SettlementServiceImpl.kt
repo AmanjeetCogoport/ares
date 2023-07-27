@@ -827,7 +827,7 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     private fun getListOfAccountTypeFromDocType(docType: String?, accMode: AccMode?): List<AccountType> {
-        val jvList = settlementServiceHelper.getJvList(classType = AccountType::class.java)
+        val jvList = settlementServiceHelper.getJvList(classType = AccountType::class.java).filter { it != AccountType.NEWPR }
         return when {
             docType == AresConstants.PAYMENT && accMode == AccMode.AR -> { listOf(AccountType.REC) }
             docType == AresConstants.PAYMENT && accMode == AccMode.AP -> { listOf(AccountType.PAY) }

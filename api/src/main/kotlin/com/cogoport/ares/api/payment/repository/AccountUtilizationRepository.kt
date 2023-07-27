@@ -1223,8 +1223,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             au.document_value,
             p.trans_ref_number AS transaction_ref_number,
             au.led_currency AS ledger_currency,
-            CASE WHEN au.sign_flag < 0 THEN au.amount_loc ELSE 0 END AS debit,
-            CASE WHEN au.sign_flag > 0 THEN au.amount_loc ELSE 0 END AS credit,
+            CASE WHEN au.sign_flag < 0 THEN au.amount_loc ELSE 0 END AS credit,
+            CASE WHEN au.sign_flag > 0 THEN au.amount_loc ELSE 0 END AS debit,
             au.sign_flag * au.amount_loc AS balance 
             FROM account_utilizations au 
             LEFT JOIN payments p ON p.payment_num = au.document_no
@@ -1244,9 +1244,9 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             :commonRow AS document_value,
             NULL AS transaction_ref_number,
             (array_agg(led_currency))[1] AS ledger_currency,
-            COALESCE(SUM(CASE WHEN au.sign_flag < 0 THEN au.amount_loc ELSE 0 END), 0) AS debit,
-            COALESCE(SUM(CASE WHEN au.sign_flag > 0 THEN au.amount_loc ELSE 0 END), 0) AS credit,
-            COALESCE(SUM(au.sign_flag * au.amount_loc), 0) AS balance
+            COALESCE(SUM(CASE WHEN au.sign_flag < 0 THEN (au.amount_loc - au.pay_loc)  ELSE 0 END), 0) AS credit,
+            COALESCE(SUM(CASE WHEN au.sign_flag > 0 THEN (au.amount_loc - au.pay_loc)  ELSE 0 END), 0) AS debit,
+            COALESCE(SUM(au.sign_flag * (au.amount_loc - au.pay_loc)), 0) AS balance
             FROM account_utilizations au 
             WHERE au.acc_mode = :accMode::ACCOUNT_MODE AND au.organization_id = :organizationId::UUID AND document_status = 'FINAL'
             AND au.entity_code IN (:entityCodes) AND au.deleted_at IS NULL AND au.acc_type != 'NEWPR'

@@ -251,4 +251,9 @@ class AresMessageConsumer {
     fun sendEmail(req: CreateCommunicationRequest) = runBlocking {
         authClient.sendCommunication(req)
     }
+
+    @Queue("ares-sage-tds-jv-migration", prefetch = 1)
+    fun migrateTDSJournalVoucher(journalVoucherRecord: JVParentDetails) = runBlocking {
+        paymentMigration.migrateTDSJV(journalVoucherRecord)
+    }
 }
