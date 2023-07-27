@@ -1111,7 +1111,7 @@ class PaymentMigrationImpl : PaymentMigration {
                     ParentJournalVoucherMigration(
                         id = null,
                         status = JVStatus.valueOf(jvParentDetail.jvStatus),
-                        category = AccountTypeMapping.getAccountType(jvParentDetail.jvType),
+                        category = AccountType.VTDS.name,
                         jvNum = jvParentDetail.jvNum,
                         validityDate = jvParentDetail.validityDate,
                         createdAt = jvParentDetail.createdAt,
@@ -1123,7 +1123,7 @@ class PaymentMigrationImpl : PaymentMigration {
                         ledCurrency = jvParentDetail.ledgerCurrency,
                         exchangeRate = jvParentDetail.exchangeRate,
                         description = jvParentDetail.description,
-                        jvCodeNum = jvParentDetail.jvCodeNum,
+                        jvCodeNum = AccountType.VTDS.name,
                         entityCode = jvRecords.firstOrNull()?.entityCode,
                         transactionDate = jvParentDetail.validityDate
                     )
@@ -1145,6 +1145,7 @@ class PaymentMigrationImpl : PaymentMigration {
         }
         storeJVLineItems(jvRecordsWithoutBpr, parentJVId)
         jvRecords.forEach {
+            it.accountType = AccountType.VTDS.name
             this.migrateJournalVoucher(it, parentJVId)
         }
     }

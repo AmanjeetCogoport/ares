@@ -439,9 +439,9 @@ open class PaymentMigrationWrapperImpl(
         if (sageJvId != null) {
             jvIdAsString = getFormattedJVNums(sageJvId)
         }
-        val jvParentRecords = sageService.getJVDetails(startDate, endDate, jvNumAsString, jvIdAsString)
+        val jvParentRecords = sageService.getTDSJVDetails(startDate, endDate, jvNumAsString, jvIdAsString)
         jvParentRecords.forEach {
-            aresMessagePublisher.emitJournalVoucherMigration(it)
+            aresMessagePublisher.emitTDSJournalVoucherMigration(it)
         }
         return jvParentRecords.size
     }

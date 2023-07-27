@@ -43,4 +43,6 @@ interface SageService {
     suspend fun getMTCJVDetails(startDate: String?, endDate: String?): List<JVParentDetails>
 
     suspend fun getTDSJournalVoucherFromSageCorrected(startDate: String?, endDate: String?, jvNums: String?, jvType: String?): ArrayList<JournalVoucherRecord>
+
+    suspend fun getTDSJVDetails(startDate: String?, endDate: String?, jvNum: String?, sageJvId: String?): List<JVParentDetails>
 }

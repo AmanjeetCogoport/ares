@@ -254,6 +254,6 @@ class AresMessageConsumer {
 
     @Queue("ares-sage-tds-jv-migration", prefetch = 1)
     fun migrateTDSJournalVoucher(journalVoucherRecord: JVParentDetails) = runBlocking {
-        paymentMigration.migrateJV(journalVoucherRecord)
+        paymentMigration.migrateTDSJV(journalVoucherRecord)
     }
 }
