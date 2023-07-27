@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.settlement.service.interfaces
 
+import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.settlement.entity.GlCode
 import com.cogoport.ares.api.settlement.entity.GlCodeMaster
 import com.cogoport.ares.api.settlement.entity.JournalCode
@@ -10,7 +11,10 @@ import com.cogoport.ares.model.settlement.ParentJournalVoucherResponse
 import com.cogoport.ares.model.settlement.request.JvListRequest
 import com.cogoport.ares.model.settlement.request.ParentJVUpdateRequest
 import com.cogoport.ares.model.settlement.request.ParentJournalVoucherRequest
+import java.math.BigDecimal
+import java.util.Date
 import java.util.UUID
+import kotlin.collections.HashMap
 
 interface ParentJVService {
     suspend fun createJournalVoucher(request: ParentJournalVoucherRequest): String?
@@ -34,4 +38,20 @@ interface ParentJVService {
     suspend fun getJournalCode(q: String?, pageLimit: Int?): List<JournalCode>
 
     suspend fun getAccountMode(q: String?, glCode: String?): List<HashMap<String, String>>
+
+    suspend fun createTdsAsJvForBills(
+        currency: String?,
+        ledCurrency: String,
+        tdsAmount: BigDecimal,
+        tdsLedAmount: BigDecimal,
+        createdBy: UUID?,
+        createdByUserType: String?,
+        accountUtilization: AccountUtilization?,
+        exchangeRate: BigDecimal?,
+        paymentTransactionDate: Date,
+        lineItemProps: MutableList<HashMap<String, Any?>>,
+        utr: String?,
+        payCurrTds: BigDecimal?,
+        payLocTds: BigDecimal?
+    ): Long?
 }

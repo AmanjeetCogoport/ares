@@ -5,6 +5,7 @@ import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.events.KuberMessagePublisher
+import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.Payment
@@ -18,7 +19,10 @@ import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.payment.service.interfaces.KnockoffService
 import com.cogoport.ares.api.settlement.entity.Settlement
+import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
+import com.cogoport.ares.api.settlement.repository.ParentJVRepository
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
+import com.cogoport.ares.api.settlement.service.interfaces.ParentJVService
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.common.AresModelConstants
@@ -45,8 +49,12 @@ import java.math.RoundingMode
 import java.sql.SQLException
 import java.sql.Timestamp
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 import java.util.Date
+import java.util.UUID
 import javax.transaction.Transactional
+import kotlin.collections.HashMap
 
 open class KnockoffServiceImpl : KnockoffService {
 
@@ -80,6 +88,15 @@ open class KnockoffServiceImpl : KnockoffService {
     @Inject
     lateinit var auditService: AuditService
 
+    @Inject
+    lateinit var parentJVRepository: ParentJVRepository
+
+    @Inject
+    lateinit var journalVoucherRepository: JournalVoucherRepository
+
+    @Inject
+    lateinit var parentJVService: ParentJVService
+
     @Transactional(rollbackOn = [SQLException::class, AresException::class, Exception::class], dontRollbackOn = [RabbitClientException::class])
     override suspend fun uploadBillPayment(knockOffRecord: AccountPayablesFile): AccountPayableFileResponse {
 
@@ -101,7 +118,7 @@ open class KnockoffServiceImpl : KnockoffService {
         val paymentEntity = payableFileToPaymentMapper.convertToEntity(knockOffRecord)
         paymentEntity.paymentDocumentStatus = PaymentDocumentStatus.APPROVED
         val savedPaymentRecord = savePayment(
-            paymentEntity, isTDSEntry = false, knockOffRecord.createdBy.toString(), knockOffRecord.performedByType
+            paymentEntity, knockOffRecord.createdBy.toString(), knockOffRecord.performedByType
         )
         val previousSettlements = if (accountUtilization.accType in listOf(AccountType.PINV, AccountType.PREIMB)) {
             settlementRepository.getPaymentsCorrespondingDocumentNos(destinationId = knockOffRecord.documentNo, sourceId = null)
@@ -119,14 +136,67 @@ open class KnockoffServiceImpl : KnockoffService {
         /*UPDATE THE AMOUNT PAID IN THE EXISTING BILL IN ACCOUNT UTILIZATION*/
         val currTotalAmtPaid = knockOffRecord.currencyAmount
         val ledTotalAmtPaid = knockOffRecord.ledgerAmount
+        var amount = BigDecimal(0)
+        var ledgerAmount = BigDecimal(0)
+        var payCurrTds = BigDecimal.ZERO
+        var payLocTds = BigDecimal.ZERO
 
         val isOverPaid = isOverPaid(accountUtilization, knockOffRecord.currencyAmount, knockOffRecord.ledgerAmount)
 
-        if (isOverPaid) {
-            accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, (accountUtilization.amountCurr - accountUtilization.tdsAmount!! - accountUtilization.payCurr), (accountUtilization.amountLoc - accountUtilization.tdsAmountLoc!! - accountUtilization.payLoc))
-        } else {
-            accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, currTotalAmtPaid, ledTotalAmtPaid)
+        /*IF TDS AMOUNT IS PRESENT  SAVE THE TDS SIMILARLY IN PAYMENT AND PAYMENT DISTRIBUTION*/
+        if (knockOffRecord.currTdsAmount > BigDecimal.ZERO && knockOffRecord.ledTdsAmount > BigDecimal.ZERO &&
+            (accountUtilization.isProforma == false) &&
+            (accountUtilization.createdAt!! >= Timestamp.from(LocalDate.of(2023, 7, 28).atStartOfDay().toInstant(ZoneOffset.UTC)))
+        ) {
+            paymentEntity.amount = knockOffRecord.currTdsAmount
+            paymentEntity.ledAmount = knockOffRecord.ledTdsAmount
+
+            if ((accountUtilization.tdsAmount?.minus(tdsAmountPaid)!! < knockOffRecord.currTdsAmount) && (accountUtilization.tdsAmountLoc?.minus(tdsAmountPaid * (accountUtilization.amountLoc.divide(accountUtilization.amountCurr)))!! < knockOffRecord.ledTdsAmount)) {
+                payCurrTds = accountUtilization.tdsAmount!! - tdsAmountPaid
+                payLocTds = accountUtilization.tdsAmountLoc!! - tdsAmountPaid * (accountUtilization.amountLoc.divide(accountUtilization.amountCurr))
+            } else {
+                payCurrTds = knockOffRecord.currTdsAmount
+                payLocTds = knockOffRecord.ledTdsAmount
+            }
+
+            // creating jv for tds on invoice
+            val jvIdAsSourceId = saveTdsAsJv(
+                knockOffRecord.currency,
+                knockOffRecord.ledgerCurrency,
+                tdsAmount = knockOffRecord.currTdsAmount,
+                tdsLedAmount = knockOffRecord.ledTdsAmount,
+                createdBy = knockOffRecord.createdBy,
+                knockOffRecord.performedByType,
+                accountUtilization,
+                exchangeRate = knockOffRecord.ledgerAmount.divide(knockOffRecord.currencyAmount)
+                    .setScale(AresConstants.DECIMAL_NUMBER_UPTO, RoundingMode.HALF_DOWN),
+                paymentTransactionDate = knockOffRecord.transactionDate,
+                utr = knockOffRecord.transRefNumber,
+                payCurrTds,
+                payLocTds
+            )
+
+            saveSettlements(
+                knockOffRecord,
+                destinationId = knockOffRecord.documentNo,
+                sourceId = jvIdAsSourceId,
+                true,
+                amount = payCurrTds,
+                ledAmount = payLocTds
+            )
+            saveInvoicePaymentMapping(jvIdAsSourceId!!, knockOffRecord, isTDSEntry = true, knockOffRecord.documentNo, payCurrTds, payLocTds)
         }
+
+        if (isOverPaid) {
+            amount = accountUtilization.amountCurr - accountUtilization.tdsAmount!! - accountUtilization.payCurr
+            ledgerAmount = accountUtilization.amountLoc - accountUtilization.tdsAmountLoc!! - accountUtilization.payLoc
+        } else {
+            amount = currTotalAmtPaid
+            ledgerAmount = ledTotalAmtPaid
+        }
+
+        accountUtilizationRepository.updateInvoicePayment(accountUtilization.id!!, amount + payCurrTds, ledgerAmount + payLocTds)
+
         auditService.createAudit(
             AuditRequest(
                 objectType = AresConstants.ACCOUNT_UTILIZATIONS,
@@ -138,24 +208,20 @@ open class KnockoffServiceImpl : KnockoffService {
             )
         )
 
-        val settlementNum = saveSettlements(knockOffRecord, accountUtilization.documentNo, savedPaymentRecord.paymentNum, isOverPaid, accountUtilization)
-        /* SAVE THE ACCOUNT UTILIZATION FOR THE NEWLY PAYMENT DONE*/
+        var settlementNum: String? = null
 
-        if (isOverPaid) {
-            saveAccountUtilization(
-                savedPaymentRecord.paymentNum!!, savedPaymentRecord.paymentNumValue!!, knockOffRecord, accountUtilization,
-                currTotalAmtPaid, ledTotalAmtPaid, (accountUtilization.amountCurr - accountUtilization.tdsAmount!! - accountUtilization.payCurr),
-                (accountUtilization.amountLoc - accountUtilization.tdsAmountLoc!! - accountUtilization.payLoc)
-            )
-        } else {
-            saveAccountUtilization(
-                savedPaymentRecord.paymentNum!!, savedPaymentRecord.paymentNumValue!!, knockOffRecord, accountUtilization,
-                currTotalAmtPaid, ledTotalAmtPaid, currTotalAmtPaid, ledTotalAmtPaid
-            )
+        if (amount > BigDecimal.ZERO && ledgerAmount > BigDecimal.ZERO) {
+            settlementNum = saveSettlements(knockOffRecord, accountUtilization.documentNo, savedPaymentRecord.paymentNum, false, amount, ledgerAmount)
         }
 
+        saveAccountUtilization(
+            savedPaymentRecord.paymentNum!!, savedPaymentRecord.paymentNumValue!!, knockOffRecord, accountUtilization,
+            currTotalAmtPaid, ledTotalAmtPaid, amount,
+            ledgerAmount
+        )
+
         /*SAVE THE PAYMENT DISTRIBUTION AGAINST THE INVOICE */
-        saveInvoicePaymentMapping(savedPaymentRecord.id!!, knockOffRecord) // TODO(LED AMOUNT)
+        saveInvoicePaymentMapping(savedPaymentRecord.id!!, knockOffRecord, false, knockOffRecord.documentNo, amount, ledgerAmount) // TODO(LED AMOUNT)
 
         var paymentStatus = KnockOffStatus.PARTIAL.name
         val leftAmount = (accountUtilization.amountLoc - accountUtilization.tdsAmountLoc!!) - (accountUtilization.payLoc + ledTotalAmtPaid)
@@ -190,19 +256,18 @@ open class KnockoffServiceImpl : KnockoffService {
         kuberMessagePublisher.emitBillPaymentStatus(event)
     }
 
-    private suspend fun savePayment(paymentEntity: Payment, isTDSEntry: Boolean, performedBy: String? = null, performedByType: String? = null): Payment {
-        paymentEntity.paymentCode = if (!isTDSEntry) PaymentCode.PAY else PaymentCode.VTDS
-        paymentEntity.accCode = if (!isTDSEntry) AresModelConstants.AP_ACCOUNT_CODE else AresModelConstants.TDS_AP_ACCOUNT_CODE
+    private suspend fun savePayment(paymentEntity: Payment, performedBy: String? = null, performedByType: String? = null): Payment {
+        paymentEntity.paymentCode = PaymentCode.PAY
+        paymentEntity.accCode = AresModelConstants.AP_ACCOUNT_CODE
         paymentEntity.createdAt = Timestamp.from(Instant.now())
         paymentEntity.updatedAt = Timestamp.from(Instant.now())
         paymentEntity.signFlag = SignSuffix.PAY.sign
 
         /*GENERATING A UNIQUE RECEIPT NUMBER FOR PAYMENT*/
-        if (!isTDSEntry) {
-            paymentEntity.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.PAYMENT.prefix)
-            val financialYearSuffix = sequenceGeneratorImpl.getFinancialYearSuffix()
-            paymentEntity.paymentNumValue = SequenceSuffix.PAYMENT.prefix + financialYearSuffix + paymentEntity.paymentNum
-        }
+        val financialYearSuffix = sequenceGeneratorImpl.getFinancialYearSuffix()
+        paymentEntity.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.PAYMENT.prefix)
+        paymentEntity.paymentNumValue = SequenceSuffix.PAYMENT.prefix + financialYearSuffix + paymentEntity.paymentNum
+
         paymentEntity.migrated = false
         /* CREATE A NEW RECORD FOR THE PAYMENT AND SAVE THE PAYMENT IN DATABASE*/
         paymentEntity.paymentDocumentStatus = paymentEntity.paymentDocumentStatus ?: PaymentDocumentStatus.CREATED
@@ -220,18 +285,18 @@ open class KnockoffServiceImpl : KnockoffService {
         return paymentObj
     }
 
-    private suspend fun saveInvoicePaymentMapping(paymentId: Long, knockOffRecord: AccountPayablesFile) {
-        var invoicePayMap = PaymentInvoiceMapping(
+    private suspend fun saveInvoicePaymentMapping(paymentId: Long, knockOffRecord: AccountPayablesFile, isTDSEntry: Boolean, documentNo: Long, payCurrTds: BigDecimal?, payLocTds: BigDecimal?) {
+        val invoicePayMap = PaymentInvoiceMapping(
             id = null,
             accountMode = AccMode.AP,
-            documentNo = knockOffRecord.documentNo,
+            documentNo = documentNo,
             paymentId = paymentId,
-            mappingType = PaymentInvoiceMappingType.BILL.name,
+            mappingType = if (!isTDSEntry) PaymentInvoiceMappingType.BILL.name else PaymentInvoiceMappingType.TDS.name,
             currency = knockOffRecord.currency,
             ledCurrency = knockOffRecord.ledgerCurrency,
             signFlag = SignSuffix.PAY.sign,
-            amount = knockOffRecord.currencyAmount,
-            ledAmount = knockOffRecord.ledgerAmount,
+            amount = payCurrTds!!,
+            ledAmount = payLocTds!!,
             transactionDate = knockOffRecord.transactionDate,
             createdAt = Timestamp.from(Instant.now()),
             updatedAt = Timestamp.from(Instant.now())
@@ -264,7 +329,7 @@ open class KnockoffServiceImpl : KnockoffService {
             tradePartyMappingId = knockOffRecord.tradePartyMappingId,
             organizationName = knockOffRecord.organizationName,
             accCode = AresModelConstants.AP_ACCOUNT_CODE,
-            accType = SignSuffix.PAY.accountType,
+            accType = AccountType.PAY,
             accMode = knockOffRecord.accMode,
             signFlag = SignSuffix.PAY.sign,
             currency = knockOffRecord.currency,
@@ -282,7 +347,8 @@ open class KnockoffServiceImpl : KnockoffService {
             updatedAt = Timestamp.from(Instant.now()),
             orgSerialId = knockOffRecord.orgSerialId,
             migrated = false,
-            settlementEnabled = true
+            settlementEnabled = true,
+            isProforma = false
         )
         val accUtilObj = accountUtilizationRepository.save(accountUtilEntity)
 
@@ -311,11 +377,11 @@ open class KnockoffServiceImpl : KnockoffService {
         knockOffRecord: AccountPayablesFile,
         destinationId: Long?,
         sourceId: Long?,
-        isOverPaid: Boolean,
-        accountUtilization: AccountUtilization
+        isTDSEntry: Boolean,
+        amount: BigDecimal,
+        ledAmount: BigDecimal
     ): String? {
-
-        val settlement = generateSettlementEntity(knockOffRecord, destinationId, sourceId, isOverPaid, accountUtilization)
+        val settlement = generateSettlementEntity(knockOffRecord, destinationId, sourceId, isTDSEntry, amount, ledAmount)
         settlement.settlementNum = sequenceGeneratorImpl.getSettlementNumber()
         val settleObj = settlementRepository.save(settlement)
         auditService.createAudit(
@@ -335,30 +401,21 @@ open class KnockoffServiceImpl : KnockoffService {
         knockOffRecord: AccountPayablesFile,
         destinationId: Long?,
         sourceId: Long?,
-        isOverPaid: Boolean,
-        accountUtilization: AccountUtilization
+        isTDSEntry: Boolean,
+        amount: BigDecimal,
+        ledAmount: BigDecimal
     ): Settlement {
-        val ledAmount: BigDecimal
-        val amount: BigDecimal
-        if (isOverPaid) {
-            ledAmount = accountUtilization.amountLoc - accountUtilization.tdsAmountLoc!! - accountUtilization.payLoc
-            amount = accountUtilization.amountCurr - accountUtilization.tdsAmount!! - accountUtilization.payCurr
-        } else {
-            ledAmount = knockOffRecord.ledgerAmount
-            amount = knockOffRecord.currencyAmount
-        }
-
         return Settlement(
             id = null,
             sourceId = sourceId,
-            sourceType = SettlementType.PAY,
+            sourceType = if (isTDSEntry) SettlementType.VTDS else SettlementType.PAY,
             destinationId = destinationId!!,
             destinationType = SettlementType.PINV,
             ledCurrency = knockOffRecord.ledgerCurrency,
             ledAmount = ledAmount,
             currency = knockOffRecord.currency,
             amount = amount,
-            signFlag = 1,
+            signFlag = if (isTDSEntry) -1 else 1,
             createdAt = Timestamp.from(Instant.now()),
             updatedAt = Timestamp.from(Instant.now()),
             createdBy = knockOffRecord.createdBy,
@@ -372,38 +429,56 @@ open class KnockoffServiceImpl : KnockoffService {
     override suspend fun reverseUtr(reverseUtrRequest: ReverseUtrRequest) {
         val accountUtilization = accountUtilizationRepository.findRecord(documentNo = reverseUtrRequest.documentNo, accMode = AccMode.AP.name)
         val payments = paymentRepository.findByTransRef(reverseUtrRequest.transactionRef)
+        val tdsJvRecord = journalVoucherRepository.findByDescription(reverseUtrRequest.transactionRef)
         var tdsPaid = 0.toBigDecimal()
         var ledTdsPaid = 0.toBigDecimal()
-        var amountPaid: BigDecimal = 0.toBigDecimal()
-        var ledTotalAmtPaid: BigDecimal = 0.toBigDecimal()
+
+        if (payments.isNullOrEmpty()) {
+            throw AresException(AresError.ERR_1542, "")
+        }
+
+        val sourceIdsForSettlement = listOfNotNull(payments[0].paymentNum, tdsJvRecord?.id)
+        val settlementData = settlementRepository.getSettlementByDestinationId(reverseUtrRequest.documentNo, sourceIdsForSettlement)
+
+        if (settlementData.any { it.settlementStatus == SettlementStatus.POSTED }) {
+            throw AresException(AresError.ERR_1541, "")
+        }
+
+        val settlementIds = settlementData.map { it.id }
 
         for (payment in payments) {
             val paymentInvoiceMappingData = invoicePayMappingRepo.findByPaymentId(reverseUtrRequest.documentNo, payment.id)
             paymentRepository.deletePayment(payment.id)
-
-            if (paymentInvoiceMappingData.mappingType == PaymentInvoiceMappingType.BILL) {
-                amountPaid = paymentInvoiceMappingData.amount
-                ledTotalAmtPaid = paymentInvoiceMappingData.ledAmount
-            } else if (paymentInvoiceMappingData.mappingType == PaymentInvoiceMappingType.TDS) {
-                tdsPaid = paymentInvoiceMappingData.amount
-                ledTdsPaid = paymentInvoiceMappingData.ledAmount
-            }
             invoicePayMappingRepo.deletePaymentMappings(paymentInvoiceMappingData.id)
             createAudit(AresConstants.PAYMENTS, payment.id, AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
             createAudit("payment_invoice_map", paymentInvoiceMappingData.id, AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
         }
 
-        val settlementIds = settlementRepository.getSettlementByDestinationId(reverseUtrRequest.documentNo, payments[0]?.paymentNum!!)
-        settlementRepository.deleleSettlement(settlementIds)
+        if (tdsJvRecord != null) {
+            val tdsJvMappingData = invoicePayMappingRepo.findByPaymentId(reverseUtrRequest.documentNo, tdsJvRecord.id)
+            val tdsJvAccountUtilRecord = accountUtilizationRepository.findRecord(tdsJvRecord.id!!, tdsJvRecord.category, tdsJvRecord.accMode?.name)
+            tdsPaid = tdsJvAccountUtilRecord?.payCurr!!
+            ledTdsPaid = tdsJvAccountUtilRecord.payLoc
+            invoicePayMappingRepo.deletePaymentMappings(tdsJvMappingData.id)
+            createAudit("payment_invoice_map", tdsJvMappingData.id, AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
+            parentJVRepository.deleteJournalVoucherById(tdsJvRecord.parentJvId!!, reverseUtrRequest.updatedBy!!)
+            createAudit("parent_journal_vouchers", tdsJvRecord.parentJvId, AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
+            journalVoucherRepository.deleteJvLineItemByParentJvId(tdsJvRecord.parentJvId!!, reverseUtrRequest.updatedBy!!)
+            createAudit("journal_vouchers", tdsJvRecord.id, AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
+            accountUtilizationRepository.deleteAccountUtilization(tdsJvAccountUtilRecord.id!!)
+            createAudit("account_utillizations", tdsJvAccountUtilRecord.id, AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
+        }
 
+        settlementRepository.deleleSettlement(settlementIds)
         createAudit(AresConstants.SETTLEMENT, settlementIds[0], AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
         if (settlementIds.size > 1) {
             createAudit(AresConstants.SETTLEMENT, settlementIds[1], AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
         }
+
         val accountUtilizationPaymentData = accountUtilizationRepository.getDataByPaymentNum(payments[0].paymentNum)
         accountUtilizationRepository.deleteAccountUtilization(accountUtilizationPaymentData.id)
-        var leftAmountPayCurr: BigDecimal? = accountUtilization?.payCurr?.minus(accountUtilizationPaymentData.payCurr)
-        var leftAmountLedgerCurr: BigDecimal? = accountUtilization?.payLoc?.minus(accountUtilizationPaymentData.payLoc)
+        var leftAmountPayCurr: BigDecimal? = accountUtilization?.payCurr?.minus(accountUtilizationPaymentData.payCurr)?.minus(tdsPaid)
+        var leftAmountLedgerCurr: BigDecimal? = accountUtilization?.payLoc?.minus(accountUtilizationPaymentData.payLoc)?.minus(ledTdsPaid)
 
         leftAmountPayCurr = if (leftAmountPayCurr?.setScale(2, RoundingMode.HALF_UP) == 0.toBigDecimal()) {
             0.toBigDecimal()
@@ -432,7 +507,7 @@ open class KnockoffServiceImpl : KnockoffService {
         }
         accountUtilizationRepository.updateAccountUtilization(accountUtilization?.id!!, accountUtilization.documentStatus!!, leftAmountPayCurr!!, leftAmountLedgerCurr!!)
         createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilizationPaymentData.id, AresConstants.DELETE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
-        createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilization?.id!!, AresConstants.UPDATE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
+        createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilization.id!!, AresConstants.UPDATE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
 
         aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilization.organizationId))
 
@@ -514,7 +589,7 @@ open class KnockoffServiceImpl : KnockoffService {
 
         val settlementIdForDelete = mutableListOf<Long>()
 
-        for (index in indexToStop.until(settlementDetails.size)!!) {
+        for (index in indexToStop.until(settlementDetails.size)) {
             settlementIdForDelete.add(settlementDetails[index]?.id!!)
             val key = settlementDetails[index]?.sourceId
             val amount = settlementDetails[index]?.amount
@@ -549,5 +624,50 @@ open class KnockoffServiceImpl : KnockoffService {
         settlement.ledAmount = ledgerAmount
         settlementRepository.deleleSettlement(arrayListOf(settlement.id!!))
         return settlementRepository.save(settlement)
+    }
+
+    private suspend fun saveTdsAsJv(
+        currency: String?,
+        ledCurrency: String,
+        tdsAmount: BigDecimal,
+        tdsLedAmount: BigDecimal,
+        createdBy: UUID?,
+        createdByUserType: String?,
+        accountUtilization: AccountUtilization?,
+        exchangeRate: BigDecimal?,
+        paymentTransactionDate: Date,
+        utr: String?,
+        payCurrTds: BigDecimal?,
+        payLocTds: BigDecimal?
+    ): Long? {
+        val lineItemProps: MutableList<HashMap<String, Any?>> = mutableListOf(
+            hashMapOf(
+                "accMode" to "AP",
+                "glCode" to "321000",
+                "type" to "CREDIT",
+                "signFlag" to -1
+            ),
+            hashMapOf(
+                "accMode" to null,
+                "glCode" to "324001",
+                "type" to "DEBIT",
+                "signFlag" to 1
+            )
+        )
+        return parentJVService.createTdsAsJvForBills(
+            currency,
+            ledCurrency,
+            tdsAmount,
+            tdsLedAmount,
+            createdBy,
+            createdByUserType,
+            accountUtilization,
+            exchangeRate,
+            paymentTransactionDate,
+            lineItemProps,
+            utr,
+            payCurrTds,
+            payLocTds
+        )
     }
 }

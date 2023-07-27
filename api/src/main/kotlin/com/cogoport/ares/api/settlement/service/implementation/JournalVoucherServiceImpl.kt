@@ -2,6 +2,7 @@ package com.cogoport.ares.api.settlement.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.client.RailsClient
+import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
@@ -10,6 +11,7 @@ import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.settlement.entity.JournalVoucher
+import com.cogoport.ares.api.settlement.entity.ParentJournalVoucher
 import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
 import com.cogoport.ares.api.settlement.repository.ParentJVRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
@@ -20,6 +22,7 @@ import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.settlement.JvLineItemResponse
+import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.brahma.hashids.Hashids
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -109,7 +112,8 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             updatedAt = Timestamp.from(Instant.now()),
             accCode = accCode,
             migrated = false,
-            settlementEnabled = settlementEnabled
+            settlementEnabled = settlementEnabled,
+            isProforma = false
         )
         val accUtilObj = accountUtilizationRepository.save(accountAccUtilizationRequest)
 
@@ -158,5 +162,112 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         }
 
         return jvLineItems
+    }
+
+    override suspend fun createTdsJvLineItems(
+        parentJvData: ParentJournalVoucher,
+        accountUtilization: AccountUtilization?,
+        jvLineItems: MutableList<HashMap<String, Any?>>,
+        tdsAmount: BigDecimal?,
+        tdsLedAmount: BigDecimal?,
+        createdByUserType: String?,
+        payCurrTds: BigDecimal?,
+        payLocTds: BigDecimal?
+    ): Long? {
+        val jvLineItemData = jvLineItems.map { lineItem ->
+            JournalVoucher(
+                id = null,
+                jvNum = parentJvData.jvNum!!,
+                accMode = if (lineItem["accMode"] != null) AccMode.valueOf(lineItem["accMode"]!!.toString()) else AccMode.OTHER,
+                category = parentJvData.category,
+                createdAt = parentJvData.createdAt,
+                createdBy = parentJvData.createdBy,
+                updatedAt = parentJvData.createdAt,
+                updatedBy = parentJvData.createdBy,
+                currency = parentJvData.currency,
+                ledCurrency = parentJvData.ledCurrency!!,
+                amount = tdsAmount,
+                ledAmount = tdsLedAmount,
+                description = parentJvData.description,
+                entityCode = parentJvData.entityCode,
+                entityId = UUID.fromString(AresConstants.ENTITY_ID[parentJvData.entityCode]),
+                exchangeRate = parentJvData.exchangeRate,
+                glCode = lineItem["glCode"].toString(),
+                parentJvId = parentJvData.id,
+                type = lineItem["type"].toString(),
+                signFlag = lineItem["signFlag"]?.toString()?.toShort(),
+                status = JVStatus.APPROVED,
+                tradePartyId = accountUtilization?.organizationId,
+                tradePartyName = accountUtilization?.organizationName,
+                validityDate = parentJvData.transactionDate,
+                migrated = false,
+                deletedAt = null
+            )
+        }
+
+        val jvLineItems = journalVoucherRepository.saveAll(jvLineItemData)
+        val jvLineItemWithAccMode = jvLineItems.first { it.accMode != null && it.accMode != AccMode.OTHER }
+
+        createJvAccUtilForTds(jvLineItemWithAccMode, accountUtilization, createdBy = parentJvData.createdBy, createdByUserType, payCurrTds, payLocTds)
+
+        return jvLineItemWithAccMode.id!!
+    }
+
+    private suspend fun createJvAccUtilForTds(
+        journalVoucher: JournalVoucher,
+        accountUtilization: AccountUtilization?,
+        createdBy: UUID?,
+        createdByUserType: String?,
+        payCurrTds: BigDecimal?,
+        payLocTds: BigDecimal?
+    ) {
+        val accountUtilEntity = AccountUtilization(
+            id = null,
+            documentNo = journalVoucher.id!!,
+            documentValue = journalVoucher.jvNum,
+            zoneCode = accountUtilization?.zoneCode.toString(),
+            serviceType = accountUtilization?.serviceType!!,
+            documentStatus = DocumentStatus.FINAL,
+            entityCode = accountUtilization.entityCode,
+            category = accountUtilization.category,
+            sageOrganizationId = null,
+            organizationId = accountUtilization.organizationId!!,
+            taggedOrganizationId = accountUtilization.taggedOrganizationId,
+            tradePartyMappingId = accountUtilization.tradePartyMappingId,
+            organizationName = accountUtilization.organizationName,
+            accCode = AresModelConstants.AP_ACCOUNT_CODE,
+            accType = AccountType.VTDS,
+            accMode = accountUtilization.accMode,
+            signFlag = SignSuffix.VTDS.sign,
+            currency = journalVoucher.currency!!,
+            ledCurrency = journalVoucher.ledCurrency,
+            amountCurr = journalVoucher.amount!!,
+            amountLoc = journalVoucher.ledAmount!!,
+            payCurr = payCurrTds!!,
+            payLoc = payLocTds!!,
+            taxableAmount = BigDecimal.ZERO,
+            tdsAmountLoc = BigDecimal.ZERO,
+            tdsAmount = BigDecimal.ZERO,
+            dueDate = accountUtilization.dueDate,
+            transactionDate = journalVoucher.validityDate,
+            createdAt = Timestamp.from(Instant.now()),
+            updatedAt = Timestamp.from(Instant.now()),
+            orgSerialId = accountUtilization.orgSerialId,
+            migrated = false,
+            settlementEnabled = true,
+            isProforma = false
+        )
+        val accUtilObj = accountUtilizationRepository.save(accountUtilEntity)
+
+        auditService.createAudit(
+            AuditRequest(
+                objectType = AresConstants.ACCOUNT_UTILIZATIONS,
+                objectId = accUtilObj.id,
+                actionName = AresConstants.CREATE,
+                data = accUtilObj,
+                performedBy = createdBy.toString(),
+                performedByUserType = createdByUserType
+            )
+        )
     }
 }

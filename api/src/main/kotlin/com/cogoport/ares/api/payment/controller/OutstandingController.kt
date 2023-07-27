@@ -172,4 +172,9 @@ class OutstandingController {
     suspend fun getTradePartyOutstanding(@Valid request: TradePartyOutstandingReq): List<TradePartyOutstandingRes>? {
         return outStandingService.getTradePartyOutstanding(request)
     }
+
+    @Get("/ledger-summary")
+    suspend fun createLedgerSummary() {
+        return outStandingService.createLedgerSummary()
+    }
 }

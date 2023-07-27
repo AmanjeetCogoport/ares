@@ -122,6 +122,7 @@ class CpSettlementServiceImpl : CpSettlementService {
         }
 
         logger().info(cogoEntities.toString())
+
         val invoiceUtilization =
             accountUtilizationRepository.findRecordByDocumentValue(
                 documentValue = request.invoiceNumber,
@@ -179,7 +180,8 @@ class CpSettlementServiceImpl : CpSettlementService {
                 transactionDate = request.transactionDate,
                 dueDate = request.transactionDate,
                 migrated = false,
-                settlementEnabled = true
+                settlementEnabled = true,
+                isProforma = false
             )
 
         val isTdsApplied =

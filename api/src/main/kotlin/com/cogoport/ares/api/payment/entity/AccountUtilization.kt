@@ -51,5 +51,6 @@ data class AccountUtilization(
     var tdsAmountLoc: BigDecimal? = BigDecimal.ZERO,
     var tdsAmount: BigDecimal? = BigDecimal.ZERO,
     var settlementEnabled: Boolean? = false,
-    var deletedAt: Timestamp? = null
+    var deletedAt: Timestamp? = null,
+    var isProforma: Boolean? = false
 )

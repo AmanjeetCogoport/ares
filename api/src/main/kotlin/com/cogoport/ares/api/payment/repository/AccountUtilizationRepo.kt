@@ -2,6 +2,7 @@ package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.CustomerOutstandingAgeing
+import com.cogoport.ares.api.payment.entity.LedgerSummary
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.api.payment.model.response.DocumentResponse
 import com.cogoport.ares.api.settlement.entity.Document
@@ -616,18 +617,12 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             ORDER BY transaction_date DESC, id
             LIMIT :limit
             OFFSET :offset
-        ), 
-         MAPPINGS AS (
-        	select jsonb_array_elements(account_utilization_ids)::int as id 
-        	from incident_mappings
-        	where incident_status = 'REQUESTED'
-        	and incident_type = 'SETTLEMENT_APPROVAL'
         )
         SELECT 
             au.id,
             s.source_id,
             s.source_type,
-            coalesce(s.amount,0) as settled_tds,
+            COALESCE(s.amount, 0) as settled_tds,
             s.currency as tds_currency,
             au.organization_id,
             au.trade_party_mapping_id as mapping_id,
@@ -644,19 +639,18 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             COALESCE(amount_curr, 0) as after_tds_amount, 
             COALESCE(pay_curr, 0) as settled_amount, 
             COALESCE(amount_curr - pay_curr, 0) as balance_amount,
-            COALESCE(tds_amount, 0) as tds,
+            COALESCE(
+                CASE 
+                WHEN au.acc_mode = 'AP' AND au.created_at < '2023-07-28' THEN 0 
+                ELSE tds_amount
+                END, 0
+            ) as tds,
             au.currency, 
             au.led_currency, 
             au.sign_flag,
             au.acc_mode,
             au.migrated,
-            CASE WHEN 
-            	au.id in (select id from MAPPINGS) 
-        	THEN
-        		false
-        	ELSE
-        		true
-        	END as approved,
+            true as approved,
             COALESCE(
                 CASE WHEN 
                     (p.exchange_rate is not null) 
@@ -945,4 +939,312 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
     """
     )
     suspend fun getLedgerForLSPCount(orgId: String, entityCode: Int?, year: Int, month: Int, accTypes: List<String>): Long
+
+    @NewSpan
+    @Query(
+        """
+            select 
+            null as id,
+            organization_id,
+            entity_code,
+            led_currency,
+            max(organization_name) as organization_name,
+            acc_mode,
+            sum(
+                CASE WHEN (acc_type::varchar in (:invoiceAccType)
+                    and(due_date >= now()::date)) THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS invoice_not_due_amount,
+            sum(
+                CASE WHEN acc_type::varchar in(:invoiceAccType)
+                    and (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS invoice_today_amount,        
+            sum(
+                CASE WHEN acc_type::varchar in (:invoiceAccType)
+                    and(now()::date - due_date) BETWEEN 1 AND 30 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS invoice_thirty_amount,
+            sum(
+                CASE WHEN acc_type::varchar in (:invoiceAccType)
+                    and(now()::date - due_date) BETWEEN 31 AND 60 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS invoice_sixty_amount,
+            sum(
+                CASE WHEN acc_type::varchar in (:invoiceAccType)
+                    and(now()::date - due_date) BETWEEN 61 AND 90 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS invoice_ninety_amount,
+            sum(
+                CASE WHEN acc_type::varchar in(:invoiceAccType)
+                    and(now()::date - due_date) BETWEEN 91 AND 180 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS invoice_one_eighty_amount,
+            sum(
+                CASE WHEN acc_type::varchar in(:invoiceAccType)
+                    and(now()::date - due_date) BETWEEN 181 AND 365  THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS invoice_three_sixty_five_amount,
+            sum(
+                CASE WHEN acc_type::varchar in(:invoiceAccType)
+                    and(now()::date - due_date) > 365 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS invoice_three_sixty_five_plus_amount,
+            sum(
+                CASE WHEN due_date >= now()::date AND acc_type::varchar in (:invoiceAccType) AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS invoice_not_due_count,
+            sum(
+                CASE WHEN (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 AND acc_type::varchar in (:invoiceAccType) AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS invoice_today_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 1 AND 30 AND acc_type::varchar in (:invoiceAccType) AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS invoice_thirty_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 31 AND 60 AND acc_type::varchar in (:invoiceAccType) AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS invoice_sixty_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 61 AND 90 AND acc_type::varchar in (:invoiceAccType) AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS invoice_ninety_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 91 AND 180 AND acc_type::varchar in(:invoiceAccType) AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS invoice_one_eighty_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 181 AND 365 AND acc_type::varchar in (:invoiceAccType) AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS invoice_three_sixty_five_count,
+            sum(
+                CASE WHEN (now()::date - due_date) > 365 AND acc_type::varchar in(:invoiceAccType) AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS invoice_three_sixty_five_plus_count,
+            sum(
+                CASE WHEN (acc_type::varchar in (:creditNoteAccType)) AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS credit_note_count,
+            sum(
+                CASE WHEN (acc_type::varchar in (:onAccountAccountType)
+                    and(due_date >= now()::date)) THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS on_account_not_due_amount,
+            sum(
+                CASE WHEN acc_type::varchar in (:onAccountAccountType)
+                    and (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS on_account_today_amount,        
+            sum(
+                CASE WHEN acc_type::varchar in (:onAccountAccountType)
+                    and(now()::date - due_date) BETWEEN 1 AND 30 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS on_account_thirty_amount,
+            sum(
+                CASE WHEN acc_type::varchar in (:onAccountAccountType)
+                    and(now()::date - due_date) BETWEEN 31 AND 60 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS on_account_sixty_amount,
+            sum(
+                CASE WHEN acc_type::varchar in (:onAccountAccountType)
+                    and(now()::date - due_date) BETWEEN 61 AND 90 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS on_account_ninety_amount,
+            sum(
+                CASE WHEN acc_type::varchar in (:onAccountAccountType)
+                    and(now()::date - due_date) BETWEEN 91 AND 180 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS on_account_one_eighty_amount,
+            sum(
+                CASE WHEN acc_type::varchar in (:onAccountAccountType)
+                    and(now()::date - due_date) BETWEEN 181 AND 365  THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS on_account_three_sixty_five_amount,
+            sum(
+                CASE WHEN acc_type::varchar in (:onAccountAccountType)
+                    and(now()::date - due_date) > 365 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS on_account_three_sixty_five_plus_amount,
+            sum(
+                CASE WHEN due_date >= now()::date AND acc_type::varchar in (:onAccountAccountType) AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS on_account_not_due_count,
+            sum(
+                CASE WHEN (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 AND acc_type::varchar in (:onAccountAccountType) AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS on_account_today_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 1 AND 30 AND acc_type::varchar in (:onAccountAccountType) AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS on_account_thirty_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 31 AND 60 AND acc_type::varchar in (:onAccountAccountType) AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS on_account_sixty_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 61 AND 90 AND acc_type::varchar in (:onAccountAccountType) AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS on_account_ninety_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 91 AND 180 AND acc_type::varchar in (:onAccountAccountType) AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS on_account_one_eighty_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 181 AND 365 AND acc_type::varchar in (:onAccountAccountType) AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS on_account_three_sixty_five_count,
+            sum(
+                CASE WHEN (now()::date - due_date) > 365 AND acc_type::varchar in (:onAccountAccountType) AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS on_account_three_sixty_five_plus_count,
+            sum(
+                CASE WHEN (due_date >= now()::date) THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS not_due_outstanding,
+            sum(
+                CASE WHEN (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS today_outstanding,        
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 1 AND 30 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS thirty_outstanding,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 31 AND 60 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS sixty_outstanding,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 61 AND 90 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS ninety_outstanding,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 91 AND 180 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS one_eighty_outstanding,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 181 AND 365  THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS three_sixty_five_outstanding,
+            sum(
+                CASE WHEN (now()::date - due_date) > 365 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS three_sixty_five_plus_outstanding,
+            sum(
+            CASE WHEN acc_type::varchar in (:invoiceAccType) THEN
+                sign_flag * (amount_loc - pay_loc)
+            ELSE
+                0
+            END) AS total_open_invoice_amount,
+            sum(
+                CASE WHEN acc_type::varchar in (:creditNoteAccType) THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END) AS total_credit_note_amount,
+            sum(
+            CASE WHEN acc_type::varchar in (:onAccountAccountType) THEN
+                sign_flag * (amount_loc - pay_loc)
+            ELSE
+                0
+            END) AS total_on_account_amount,
+            sum(sign_flag * (amount_loc - pay_loc)) AS total_outstanding,
+            CURRENT_DATE as created_at
+            FROM account_utilizations WHERE 
+            acc_mode::VARCHAR = :accMode AND deleted_at IS NULL
+            AND acc_type::varchar in (:accTypes)
+            AND document_status in ('FINAL')
+            AND transaction_date >= '2023-07-28'
+            group by organization_id, entity_code,led_currency, acc_mode
+        """
+    )
+    suspend fun getLedgerSummaryForAp(
+        accTypes: List<String>,
+        accMode: String,
+        invoiceAccType: List<String>,
+        onAccountAccountType: List<String>,
+        creditNoteAccType: List<String>
+    ): List<LedgerSummary>?
 }
