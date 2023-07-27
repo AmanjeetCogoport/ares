@@ -3,7 +3,7 @@ micronaut:
   application:
     name: ares
   server:
-    base-url: http://127.0.0.1:8086
+    base-url: ${SITE_URL:`http://127.0.0.1:8086`}
     port: 8086
     context-path: /payments
     cors:
@@ -25,7 +25,7 @@ micronaut:
 services:
   service:
     - id: bf-rails
-      url: http://rails:5000
+      url: http://host.docker.internal:5000
       enabledLocally: true
   staging: https://api.stage.cogoport.io
   namespace: ${DNS_NAMESPACE:cogoport.stage}
@@ -33,3 +33,10 @@ services:
     alternateRoute: ${AUTH_ALTERNATE_ROUTE:true}
     authDisabled: ${AUTH_DISABLED:true}
     microserviceAuthToken: ${MS_AUTH_TOKEN:c3ad6b5c-a100-46e3-8728-8e2bf83f7de0}
+
+opensearch:
+  host: ${OPENSEARCH_HOST:search.stage.cogoport.io}
+  user: ${OPENSEARCH_USER:awsadmin}
+  pass: ${OPENSEARCH_PASS:Password@123}
+  scheme: http
+  port: 9200
