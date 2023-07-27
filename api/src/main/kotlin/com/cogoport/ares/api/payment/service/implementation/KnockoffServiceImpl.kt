@@ -144,7 +144,10 @@ open class KnockoffServiceImpl : KnockoffService {
         val isOverPaid = isOverPaid(accountUtilization, knockOffRecord.currencyAmount, knockOffRecord.ledgerAmount)
 
         /*IF TDS AMOUNT IS PRESENT  SAVE THE TDS SIMILARLY IN PAYMENT AND PAYMENT DISTRIBUTION*/
-        if (knockOffRecord.currTdsAmount > BigDecimal.ZERO && knockOffRecord.ledTdsAmount > BigDecimal.ZERO && (accountUtilization.isProforma == false) && (accountUtilization.createdAt!! >= Timestamp.from(LocalDate.of(2023, 7, 28).atStartOfDay().toInstant(ZoneOffset.UTC)))) {
+        if (knockOffRecord.currTdsAmount > BigDecimal.ZERO && knockOffRecord.ledTdsAmount > BigDecimal.ZERO &&
+            (accountUtilization.isProforma == false) &&
+            (accountUtilization.createdAt!! >= Timestamp.from(LocalDate.of(2023, 7, 28).atStartOfDay().toInstant(ZoneOffset.UTC)))
+        ) {
             paymentEntity.amount = knockOffRecord.currTdsAmount
             paymentEntity.ledAmount = knockOffRecord.ledTdsAmount
 
