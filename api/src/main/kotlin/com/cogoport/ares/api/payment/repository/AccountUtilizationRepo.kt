@@ -641,7 +641,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             COALESCE(amount_curr - pay_curr, 0) as balance_amount,
             COALESCE(
                 CASE 
-                WHEN au.acc_mode = 'AP' AND au.created_at <= '2023-07-28' THEN 0 
+                WHEN au.acc_mode = 'AP' AND au.created_at < '2023-07-28' THEN 0 
                 ELSE tds_amount
                 END, 0
             ) as tds,
