@@ -896,7 +896,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             document_value,
             document_no,
             CASE WHEN acc_type IN ('PINV','PREIMB','PCN') THEN sign_flag * amount_loc ELSE 0 END as debit,
-            CASE WHEN acc_type IN ('PAY','MISC','OPDIV','BANK','INTER','CONTR','MTCCV','ROFF','MTC') AND acc_code = 321000 THEN sign_flag * amount_loc ELSE 0 END as credit,
+            CASE WHEN acc_type IN ('PAY','MISC','BANK') AND acc_code = 321000 THEN sign_flag * amount_loc ELSE 0 END as credit,
             led_currency as ledger_currency,
             acc_type::text as type
         FROM
