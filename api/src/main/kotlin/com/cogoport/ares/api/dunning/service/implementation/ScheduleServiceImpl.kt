@@ -17,6 +17,7 @@ import com.cogoport.ares.api.dunning.DunningConstants.DUNNING_SOA_MAIL_TEMPLATE
 import com.cogoport.ares.api.dunning.DunningConstants.DUNNING_VALID_TEMPLATE_NAMES
 import com.cogoport.ares.api.dunning.DunningConstants.DUNNING_WORK_SCOPES
 import com.cogoport.ares.api.dunning.DunningConstants.EXCLUDED_CREDIT_CONTROLLERS
+import com.cogoport.ares.api.dunning.DunningConstants.MAX_PAGE_SIZE
 import com.cogoport.ares.api.dunning.entity.AresTokens
 import com.cogoport.ares.api.dunning.entity.DunningCycleExecution
 import com.cogoport.ares.api.dunning.entity.DunningEmailAudit
@@ -129,7 +130,7 @@ class ScheduleServiceImpl(
 
     private suspend fun fetchOrgsAndSendPaymentReminder(executionDetails: DunningCycleExecution) {
         val customerRequest = executionDetails.filters
-        customerRequest.pageSize = 10000
+        customerRequest.pageSize = MAX_PAGE_SIZE
         val tradePartyDetails = dunningService.getCustomersOutstandingAndOnAccount(
             customerRequest
         )

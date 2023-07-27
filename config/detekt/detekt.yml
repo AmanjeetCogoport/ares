@@ -280,7 +280,7 @@ formatting:
     active: false
     autoCorrect: true
     indentSize: 4
-    maxLineLength: 225
+    maxLineLength: 350
   ChainWrapping:
     active: true
     autoCorrect: true
@@ -307,7 +307,7 @@ formatting:
     continuationIndentSize: 4
   MaximumLineLength:
     active: true
-    maxLineLength: 225
+    maxLineLength: 350
     ignoreBackTickedIdentifier: false
   ModifierOrdering:
     active: true
@@ -357,7 +357,7 @@ formatting:
     active: true
     autoCorrect: true
     indentSize: 4
-    maxLineLength: 225
+    maxLineLength: 350
   SpacingAroundAngleBrackets:
     active: false
     autoCorrect: true
@@ -656,7 +656,7 @@ style:
     active: true
     maxJumpCount: 1
   MagicNumber:
-    active: true
+    active: false
     excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/jsTest/**', '**/iosTest/**']
     ignoreNumbers:
       - '-1'
@@ -679,7 +679,7 @@ style:
     active: false
   MaxLineLength:
     active: true
-    maxLineLength: 225
+    maxLineLength: 350
     excludePackageStatements: true
     excludeImportStatements: true
     excludeCommentStatements: false

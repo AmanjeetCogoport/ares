@@ -64,4 +64,6 @@ object DunningConstants {
     const val EXTRA_TIME_TO_PROCESS_DATA_DUNNING = 3600
 
     const val MAX_DAY_IN_MONTH_FOR_DUNNING: Int = 28
+
+    const val MAX_PAGE_SIZE = 10000
 }
