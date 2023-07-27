@@ -234,4 +234,13 @@ class MigratePaymentsController {
             "Request for mtccv jv migration received, total number of parent jv to migrate is $size"
         )
     }
+
+    @Post("/TDS-jv-migrate")
+    suspend fun migrateTDSJVNum(@Body jvNums: List<String>): Response<String> {
+        val size = paymentMigration.migrateJournalVoucherRecordTDS(null, null, jvNums, null)
+        return Response<String>().ok(
+            HttpStatus.OK.name,
+            "Request for journal voucher migration received, total number of jv to migrate is $size"
+        )
+    }
 }

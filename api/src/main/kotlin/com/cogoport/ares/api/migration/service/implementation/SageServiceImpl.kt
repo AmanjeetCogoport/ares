@@ -713,4 +713,108 @@ class SageServiceImpl : SageService {
         val parentDetails = ObjectMapper().readValue(result, JVParentRecordManger::class.java)
         return parentDetails.recordSets!![0]
     }
+
+    fun getTDSJVLineItemWithNoBPR(jvNum: String, jvType: String): List<JVLineItemNoBPR> {
+        val sqlQuery = """
+            select FCYLIN_0 as entityCode
+            ,GD.NUM_0 as jvNum
+            , 'VTDS' as type
+            ,G.VALDAT_0 as validityDate
+            ,AMTCUR_0 as amount
+            , AMTLED_0 as ledger_amount
+            ,GD.CUR_0 as currency
+            , GD.CURLED_0 as ledgerCurrency
+            ,'POSTED' as status
+            , G.RATMLT_0 as exchange_rate
+            , GD.CREDATTIM_0 as created_at
+            , GD.UPDDATTIM_0 as updated_at
+            , GD.DES_0 as description
+            , GD.ROWID as sage_unique_id
+            , GD.SNS_0 as sign_flag
+            , GD.ACC_0 as gl_code 
+            ,GD.BPR_0 as sage_organization_id
+            ,case when SAC_0 = 'SC' then 'AP' else SAC_0 end as acc_mode
+            from COGO2.GACCENTRY G inner join COGO2.GACCENTRYD GD on (G.NUM_0 = GD.NUM_0 and G.TYP_0 = GD.TYP_0)  
+            where BPR_0 = '' and SAC_0 = '' and GD.DES_0 in ('TDS', 'tds')
+            and GD.TYP_0 in ('$jvType')
+            and GD.NUM_0 = '$jvNum'
+            and GD.BPR_0 not in ${MigrationConstants.administrativeExpense}
+        """.trimIndent()
+        val result = Client.sqlQuery(sqlQuery)
+        val jvLineItemNoBPR = ObjectMapper().readValue(result, JVRecordsWithoutBprManager::class.java)
+        return jvLineItemNoBPR.recordSets!![0]
+    }
+
+    override suspend fun getTDSJournalVoucherFromSageCorrected(
+        startDate: String?,
+        endDate: String?,
+        jvNums: String?,
+        jvType: String?
+    ): ArrayList<JournalVoucherRecord> {
+        var sqlQuery = """
+         SELECT G.FCY_0 as entity_code 
+            ,G.BPR_0 as sage_organization_id 
+            ,G.NUM_0 as payment_num
+            ,case when G.SAC_0='AR' then 
+            (select BPCNAM_0 from COGO2.BPCUSTOMER where BPCNUM_0=G.BPR_0)
+            else (select BPSNAM_0 from COGO2.BPSUPPLIER where BPSNUM_0=G.BPR_0) end as organization_name
+            ,GD.ACC_0 as acc_code
+            ,case when G.SAC_0='SC' then 'AP' else G.SAC_0 end as acc_mode
+            ,case when G.PAM_0='BNK' then 'BANK'
+                  when G.PAM_0='CSH' then 'CASH'
+                  else G.PAM_0 end as pay_mode 
+            ,GD.DES_0 as narration
+            ,GC.ACCDAT_0 as transaction_date 
+            ,G.DUDDAT_0 as due_date
+            ,GD.CREDATTIM_0 as created_at
+            ,GD.UPDDATTIM_0 as updated_at
+            ,GC.RATMLT_0 as exchange_rate
+            ,case when G.SAC_0='AR' then 'REC' else 'PAY' end  as payment_code
+            ,G.AMTCUR_0 as account_util_amt_curr    
+            ,G.AMTLOC_0 as account_util_amt_led
+            ,G.PAYCUR_0 as account_util_pay_curr
+            ,G.PAYLOC_0 as account_util_pay_led
+            ,case G.sign_flag when 0 then 1 else G.sign_flag end as sign_flag
+            ,G.CUR_0 as currency
+            ,GC.CURLED_0 as led_currency
+            ,G.TYP_0 as account_type
+            ,GD.ROWID as sage_unique_id
+            from  COGO2.GACCENTRY GC 
+            INNER JOIN           
+            (
+            select TYP_0,NUM_0,FCY_0,CUR_0,SAC_0,BPR_0,DUDDAT_0,PAM_0, AMTCUR_0 as AMTCUR_0, AMTLOC_0 as AMTLOC_0, PAYCUR_0 as PAYCUR_0, PAYLOC_0 as PAYLOC_0
+            ,SNS_0 as sign_flag, LIG_0
+            from  COGO2.GACCDUDATE where SAC_0 in('AR','SC','CSD','PDA','EMD','SUSS','SUSA') and TYP_0 in ('$jvType')
+            ) G 
+            on (GC.NUM_0 = G.NUM_0 and GC.FCY_0=G.FCY_0)
+            INNER JOIN COGO2.GACCENTRYD GD on (GD.NUM_0 = GC.NUM_0 and GD.TYP_0 = G.TYP_0 and GD.SAC_0 = G.SAC_0 and GD.AMTCUR_0 = G.AMTCUR_0 and GD.BPR_0 = G.BPR_0)
+            where G.SAC_0 in('AR','SC','CSD','PDA','EMD','SUSS','SUSA') and G.TYP_0 in ('$jvType') and G.LIG_0 = GD.LIN_0 and GD.DES_0 in ('TDS', 'tds')
+            and G.BPR_0 not in ${MigrationConstants.administrativeExpense}
+            """
+        if (startDate == null && endDate == null) {
+            sqlQuery += """and G.NUM_0 in ($jvNums) order by GC.ACCDAT_0 ASC"""
+        } else {
+            sqlQuery += """and GC.ACCDAT_0 BETWEEN '$startDate' and '$endDate' order by GC.ACCDAT_0 ASC"""
+        }
+        val journalRecords = Client.sqlQuery(sqlQuery)
+        val payments = ObjectMapper().readValue(journalRecords, JournalVoucherRecordManager::class.java)
+        return payments.recordSets!![0]
+    }
+
+    override suspend fun getTDSJVDetails(startDate: String?, endDate: String?, jvNum: String?, sageJvId: String?): List<JVParentDetails> {
+        var sqlQuery = """
+            select NUM_0 as jv_num, TYP_0 as jv_type,'POSTED' as jv_status,CREDAT_0 as created_at, UPDDAT_0 as updated_at, VALDAT_0 as validity_date, CUR_0 as currency, CURLED_0 as ledger_currency
+            ,RATMLT_0 as exchange_rate, 0 as amount, DESVCR_0 as description,JOU_0 as jv_code_num from COGO2.GACCENTRY where TYP_0 in ('BANK','CONTR','INTER','MISC','MTC','MTCCV','OPDIV', 'SPINV')
+        """.trimIndent()
+        sqlQuery += if (sageJvId != null) {
+            """ and ROWID = $sageJvId"""
+        } else if (startDate != null && endDate != null) {
+            """ and CREDAT_0 between '$startDate' and '$endDate'"""
+        } else {
+            """ and NUM_0 in ($jvNum)"""
+        }
+        val result = Client.sqlQuery(sqlQuery)
+        val parentDetails = ObjectMapper().readValue(result, JVParentRecordManger::class.java)
+        return parentDetails.recordSets!![0]
+    }
 }

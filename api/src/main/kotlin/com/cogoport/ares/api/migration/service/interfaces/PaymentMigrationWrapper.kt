@@ -37,4 +37,6 @@ interface PaymentMigrationWrapper {
     suspend fun migrateSagePaymentNum(sageRefNumber: List<String>): Int
 
     suspend fun migrateMTCCVJV(startDate: String?, endDate: String?): Int
+
+    suspend fun migrateJournalVoucherRecordTDS(startDate: String?, endDate: String?, jvNums: List<String>?, sageJvId: List<String>?): Int
 }
