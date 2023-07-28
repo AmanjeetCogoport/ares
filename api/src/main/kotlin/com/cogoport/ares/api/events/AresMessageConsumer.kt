@@ -3,7 +3,7 @@ package com.cogoport.ares.api.events
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.dunning.model.request.CycleExecutionProcessReq
 import com.cogoport.ares.api.dunning.model.request.PaymentReminderReq
-import com.cogoport.ares.api.dunning.service.interfaces.DunningService
+import com.cogoport.ares.api.dunning.service.interfaces.DunningHelperService
 import com.cogoport.ares.api.dunning.service.interfaces.ScheduleService
 import com.cogoport.ares.api.migration.model.JVParentDetails
 import com.cogoport.ares.api.migration.model.JVRecordsScheduler
@@ -91,7 +91,7 @@ class AresMessageConsumer {
     lateinit var scheduleService: ScheduleService
 
     @Inject
-    lateinit var dunningService: DunningService
+    lateinit var dunningHelperService: DunningHelperService
 
     @Queue("ares-update-supplier-details", prefetch = 1)
     fun updateSupplierOutstanding(request: UpdateSupplierOutstandingRequest) = runBlocking {
@@ -282,7 +282,7 @@ class AresMessageConsumer {
     fun sendMailOfAllCommunicationToTradeParty(
         sendMailOfAllCommunicationToTradePartyReq: SendMailOfAllCommunicationToTradePartyReq
     ) = runBlocking {
-        dunningService.sendMailOfAllCommunicationToTradeParty(
+        dunningHelperService.sendMailOfAllCommunicationToTradeParty(
             sendMailOfAllCommunicationToTradePartyReq,
             false
         )
