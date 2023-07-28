@@ -42,6 +42,14 @@ repositories {
         }
     }
 
+    maven {
+        url = uri("https://maven.pkg.github.com/cogoport/heimdall")
+        credentials {
+            username = project.findProperty("gpr.user") ?: System.getenv("GITHUB_USERNAME")
+            password = project.findProperty("gpr.key") ?: System.getenv("GITHUB_TOKEN")
+        }
+    }
+
     maven { url "https://s01.oss.sonatype.org/content/repositories/snapshots/" }
 
     maven {
@@ -83,8 +91,8 @@ dependencies {
     implementation("com.cogoport.loki:loki-model:0.1.45")
 
     //Plutus Client
-    implementation("com.cogoport.plutus:plutus-model:1.1.3")
-    implementation("com.cogoport.plutus:plutus-client:1.2.3")
+    implementation("com.cogoport.plutus:plutus-model:1.1.7")
+    implementation("com.cogoport.plutus:plutus-client:1.2.7")
     //Hades Client & Model
     implementation("com.cogoport.hades:hades-client:0.1.4.3")
     implementation("com.cogoport.hades:hades-model:0.1.6-beta")
@@ -137,6 +145,10 @@ dependencies {
     implementation("io.micronaut:micronaut-tracing:3.3.0-M1")
     runtimeOnly("io.jaegertracing:jaeger-thrift:1.8.1")
     implementation("io.micronaut.tracing:micronaut-tracing-core:4.5.0")
+
+    //heimdall dependencies
+    implementation("com.cogoport.heimdall:heimdall-model:1.0.6")
+    implementation("com.cogoport.heimdall:heimdall-client:1.0.0")
 
     //Junit and Mockito
     testImplementation("org.mockito:mockito-core:4.0.0")

@@ -20,4 +20,8 @@ class Util {
     fun toQueryString(q: String?): String {
         return if (q == null) "%%" else "%$q%"
     }
+
+    fun replaceUnderScore(request: String): String {
+        return request.replace("_", " ").uppercase().replace(" ", "_")
+    }
 }

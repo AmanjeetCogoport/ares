@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.common.client
 
 import com.cogoport.ares.model.payment.TradePartyOutstandingList
+import com.cogoport.ares.model.settlement.ListOrganizationTradePartyDetailsResponse
 import io.micronaut.context.annotation.Value
 import io.micronaut.http.HttpHeaders
 import io.micronaut.http.HttpRequest
@@ -34,6 +35,19 @@ class CogoBackLowLevelClient(private val httpClient: HttpClient) {
             .header("AuthorizationScopeId", authorizationScopeId)
 
         val res = Flux.from(httpClient.exchange(req, TradePartyOutstandingList::class.java)).blockFirst()?.body()
+        return res
+    }
+    fun getTradePartyDetailsByRegistrationNumber(regNums: MutableList<String>, endpoint: String): ListOrganizationTradePartyDetailsResponse? {
+        val uri: URI = URI.create("$apiUrl/$endpoint?filters[registration_number][]=${regNums.joinToString("&filters[registration_number][]=")}&page_limit=100&page=1")
+        val req: HttpRequest<*> = HttpRequest.GET<Any>(uri)
+            .header(HttpHeaders.USER_AGENT, "Ares-Cogo-Client")
+            .header(HttpHeaders.ACCEPT, "application/json")
+            .header(HttpHeaders.AUTHORIZATION, "Bearer: $token")
+            .header(HttpHeaders.CONTENT_TYPE, "application/json")
+            .header("AuthorizationScope", "micro_service")
+            .header("AuthorizationScopeId", authorizationScopeId)
+
+        val res = Flux.from(httpClient.exchange(req, ListOrganizationTradePartyDetailsResponse::class.java)).blockFirst()?.body()
         return res
     }
 }

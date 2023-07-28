@@ -9,6 +9,7 @@ import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.Operator
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.security.MessageDigest
 import java.sql.Timestamp
 import java.text.SimpleDateFormat
 import java.time.Instant
@@ -17,8 +18,10 @@ import java.time.LocalDateTime
 import java.time.Month
 import java.time.ZoneId
 import java.time.ZoneOffset
+import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Date
+import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
@@ -159,6 +162,22 @@ class Utilities {
          */
         fun localDateTimeIntoDate(ldt: LocalDateTime): Date {
             return Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant())
+        }
+
+        fun getEncodedToken(objectId: String): String {
+            val currentTime = ZonedDateTime.now()
+            val timestampString = currentTime.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+            val inputString = objectId + timestampString
+
+            val messageDigest = MessageDigest.getInstance("SHA-256")
+            val digestBytes = messageDigest.digest(inputString.toByteArray())
+
+            val hexString = StringBuilder()
+            for (byte in digestBytes) {
+                val hex = String.format(Locale("en", "IN"), "%02x", byte.toInt() and 0xFF)
+                hexString.append(hex)
+            }
+            return hexString.toString()
         }
     }
 }
