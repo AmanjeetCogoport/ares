@@ -735,7 +735,12 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             COALESCE(amount_curr, 0) as after_tds_amount, 
             COALESCE(pay_curr, 0) as settled_amount, 
             COALESCE(amount_curr - pay_curr, 0) as balance_amount,
-            COALESCE(tds_amount, 0) as tds,
+            COALESCE(
+                CASE 
+                WHEN au.acc_mode = 'AP' AND au.created_at < '2023-07-28' THEN 0 
+                ELSE tds_amount
+                END, 0
+            ) as tds,
             au.currency, 
             au.led_currency, 
             au.sign_flag,
@@ -1245,7 +1250,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             document_value,
             document_no,
             CASE WHEN acc_type IN ('PINV','PREIMB','PCN') THEN sign_flag * amount_loc ELSE 0 END as debit,
-            CASE WHEN acc_type IN ('PAY','MISC','OPDIV','BANK','INTER','CONTR','MTCCV','ROFF','MTC') AND acc_code = 321000 THEN sign_flag * amount_loc ELSE 0 END as credit,
+            CASE WHEN acc_type IN ('PAY','MISC','BANK') AND acc_code = 321000 THEN sign_flag * amount_loc ELSE 0 END as credit,
             led_currency as ledger_currency,
             acc_type::text as type
         FROM
@@ -1810,7 +1815,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             acc_mode::VARCHAR = :accMode AND deleted_at IS NULL
             AND acc_type::varchar in (:accTypes)
             AND document_status in ('FINAL')
-            AND transaction_date >= '2023-08-01'
+            AND transaction_date >= '2023-07-28'
             group by organization_id, entity_code,led_currency, acc_mode
         """
     )

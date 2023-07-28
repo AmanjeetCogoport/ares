@@ -263,6 +263,11 @@ class AresMessageConsumer {
         authClient.sendCommunication(req)
     }
 
+    @Queue("ares-sage-tds-jv-migration", prefetch = 1)
+    fun migrateTDSJournalVoucher(journalVoucherRecord: JVParentDetails) = runBlocking {
+        paymentMigration.migrateTDSJV(journalVoucherRecord)
+    }
+
     @Queue("ares-dunning-scheduler", prefetch = 1)
     fun scheduleDunning(req: CycleExecutionProcessReq) = runBlocking {
         scheduleService.processCycleExecution(req)

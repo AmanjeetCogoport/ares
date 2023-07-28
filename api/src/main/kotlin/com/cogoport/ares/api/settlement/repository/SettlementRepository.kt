@@ -430,18 +430,14 @@ ORDER BY
     @NewSpan
     @Query(
         """
-                SELECT 
-                DISTINCT
-                id  
-                FROM settlements s
-                INNER JOIN account_utilizations aau on s.destination_id = aau.document_no and aau.is_proforma = false
-                WHERE settlement_status::varchar = 'CREATED'
-                AND s.deleted_at IS NULL
-                AND s.led_currency != 'VND'
-                AND s.source_type not in ('SECH', 'PECH')
-                AND s.created_at >= :date
-                AND CASE WHEN aau.acc_mode = 'AR' THEN created_at <= now() else created_at <= CURRENT_DATE - INTERVAL '7 days' end 
-            """
+            SELECT id  FROM settlements
+            WHERE settlement_status::varchar = 'CREATED'
+            AND deleted_at IS NULL
+            AND led_currency != 'VND'
+            AND source_type not in ('SECH', 'PAY', 'VTDS', 'PCN')
+            AND destination_type not in ('PINV', 'PREIMB')
+            AND created_at >= :date
+        """
     )
     suspend fun getSettlementIdForCreatedStatus(date: Timestamp): List<Long>?
 

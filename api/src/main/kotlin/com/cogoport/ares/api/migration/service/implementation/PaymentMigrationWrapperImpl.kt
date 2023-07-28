@@ -424,4 +424,25 @@ open class PaymentMigrationWrapperImpl(
         }
         return jvParentRecords.size
     }
+
+    override suspend fun migrateJournalVoucherRecordTDS(
+        startDate: String?,
+        endDate: String?,
+        jvNums: List<String>?,
+        sageJvId: List<String>?
+    ): Int {
+        var jvNumAsString: String? = null
+        var jvIdAsString: String? = null
+        if (jvNums != null) {
+            jvNumAsString = getFormattedJVNums(jvNums)
+        }
+        if (sageJvId != null) {
+            jvIdAsString = getFormattedJVNums(sageJvId)
+        }
+        val jvParentRecords = sageService.getTDSJVDetails(startDate, endDate, jvNumAsString, jvIdAsString)
+        jvParentRecords.forEach {
+            aresMessagePublisher.emitTDSJournalVoucherMigration(it)
+        }
+        return jvParentRecords.size
+    }
 }

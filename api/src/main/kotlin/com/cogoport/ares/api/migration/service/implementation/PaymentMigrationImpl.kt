@@ -1084,4 +1084,69 @@ class PaymentMigrationImpl : PaymentMigration {
             throw e
         }
     }
+
+    override suspend fun migrateTDSJV(jvParentDetail: JVParentDetails) {
+        var jvParentRecord: ParentJournalVoucherMigration? = null
+        var jvRecords: List<JournalVoucherRecord>? = null
+        var parentJVId = parentJournalVoucherRepo.checkIfParentJVExists(jvParentDetail.jvNum, jvParentDetail.jvType)
+        val jvRecordsWithoutBpr = sageServiceImpl.getTDSJVLineItemWithNoBPR(jvParentDetail.jvNum, jvParentDetail.jvType)
+        try {
+            jvRecords = sageServiceImpl.getTDSJournalVoucherFromSageCorrected(null, null, "'${jvParentDetail.jvNum}'", jvParentDetail.jvType)
+            var sum = BigDecimal.ZERO
+            jvRecords.forEach {
+                sum += (it.accountUtilAmtLed * BigDecimal.valueOf(it.signFlag!!.toLong()))
+            }
+            jvRecordsWithoutBpr.forEach {
+                sum += (it.ledgerAmount * it.signFlag)
+            }
+            if (sum.toBigInteger() != BigDecimal.ZERO.toBigInteger()) {
+                migrationLogService.saveMigrationLogs(
+                    null, null, jvParentDetail.jvNum, null, null,
+                    null, null, null, null, "jv Sum is not zero"
+                )
+                return
+            }
+            if (parentJVId == null) {
+                jvParentRecord = parentJournalVoucherRepo.save(
+                    ParentJournalVoucherMigration(
+                        id = null,
+                        status = JVStatus.valueOf(jvParentDetail.jvStatus),
+                        category = AccountType.VTDS.name,
+                        jvNum = jvParentDetail.jvNum,
+                        validityDate = jvParentDetail.validityDate,
+                        createdAt = jvParentDetail.createdAt,
+                        updatedAt = jvParentDetail.updatedAt,
+                        createdBy = MigrationConstants.createdUpdatedBy,
+                        updatedBy = MigrationConstants.createdUpdatedBy,
+                        migrated = true,
+                        currency = jvParentDetail.currency,
+                        ledCurrency = jvParentDetail.ledgerCurrency,
+                        exchangeRate = jvParentDetail.exchangeRate,
+                        description = jvParentDetail.description,
+                        jvCodeNum = AccountType.VTDS.name,
+                        entityCode = jvRecords.firstOrNull()?.entityCode,
+                        transactionDate = jvParentDetail.validityDate
+                    )
+                )
+                parentJVId = jvParentRecord.id!!
+                migrationLogService.saveMigrationLogs(
+                    null, null, jvParentDetail.jvNum, jvParentDetail.currency,
+                    jvParentDetail.amount, null, null,
+                    null, null, null
+                )
+            }
+        } catch (ex: Exception) {
+            logger().error("$ex")
+            migrationLogService.saveMigrationLogs(
+                null, null, jvParentDetail.jvNum, null, null,
+                null, null, null, null, "Error while storing jv header: ${ex.message}"
+            )
+            return
+        }
+        storeJVLineItems(jvRecordsWithoutBpr, parentJVId)
+        jvRecords.forEach {
+            it.accountType = AccountType.VTDS.name
+            this.migrateJournalVoucher(it, parentJVId)
+        }
+    }
 }
