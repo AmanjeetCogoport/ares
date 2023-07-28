@@ -631,8 +631,8 @@ open class ParentJVServiceImpl : ParentJVService {
                             parentJVId,
                             "JOURNAL_VOUCHER",
                             "404",
-                            "NUM_0: ${parentJVDetails.jvNum}",
-                            "Jv not present on sage",
+                            result.requestString,
+                            result.response,
                             false
                         )
                     )
@@ -844,11 +844,12 @@ open class ParentJVServiceImpl : ParentJVService {
         payCurrTds: BigDecimal?,
         payLocTds: BigDecimal?
     ): Long? {
+        val jvNum = getJvNumber()
         var parentJournalVoucher = ParentJournalVoucher(
             id = null,
             status = JVStatus.APPROVED,
             category = "VTDS",
-            jvNum = accountUtilization?.documentValue,
+            jvNum = jvNum,
             // picking date of payments
             transactionDate = paymentTransactionDate,
             validityDate = accountUtilization?.transactionDate,
@@ -856,7 +857,7 @@ open class ParentJVServiceImpl : ParentJVService {
             ledCurrency = ledCurrency,
             entityCode = accountUtilization?.entityCode,
             exchangeRate = exchangeRate?.setScale(AresConstants.DECIMAL_NUMBER_UPTO, RoundingMode.HALF_DOWN),
-            description = utr,
+            description = "TDS AGAINST ${accountUtilization?.documentNo}",
             createdBy = createdBy,
             updatedBy = createdBy,
             jvCodeNum = "VTDS",
@@ -876,6 +877,6 @@ open class ParentJVServiceImpl : ParentJVService {
 
         parentJournalVoucher = parentJVRepository.save(parentJournalVoucher)
 
-        return journalVoucherService.createTdsJvLineItems(parentJournalVoucher, accountUtilization, lineItemProps, tdsAmount, tdsLedAmount, createdByUserType, payCurrTds, payLocTds)
+        return journalVoucherService.createTdsJvLineItems(parentJournalVoucher, accountUtilization, lineItemProps, tdsAmount, tdsLedAmount, createdByUserType, payCurrTds, payLocTds, utr)
     }
 }

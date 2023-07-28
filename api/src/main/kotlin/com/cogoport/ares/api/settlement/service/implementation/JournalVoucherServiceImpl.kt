@@ -10,6 +10,7 @@ import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
+import com.cogoport.ares.api.settlement.entity.JVAdditionalDetails
 import com.cogoport.ares.api.settlement.entity.JournalVoucher
 import com.cogoport.ares.api.settlement.entity.ParentJournalVoucher
 import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
@@ -172,7 +173,8 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         tdsLedAmount: BigDecimal?,
         createdByUserType: String?,
         payCurrTds: BigDecimal?,
-        payLocTds: BigDecimal?
+        payLocTds: BigDecimal?,
+        utr: String?
     ): Long? {
         val jvLineItemData = jvLineItems.map { lineItem ->
             JournalVoucher(
@@ -201,7 +203,10 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                 tradePartyName = accountUtilization?.organizationName,
                 validityDate = parentJvData.transactionDate,
                 migrated = false,
-                deletedAt = null
+                deletedAt = null,
+                additionalDetails = JVAdditionalDetails(
+                    utr = utr
+                )
             )
         }
 
