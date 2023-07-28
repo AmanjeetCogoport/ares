@@ -1,33 +1,133 @@
-name: SonarQube
-
+name: SonarQube Analysis
 on:
-  workflow_dispatch:
+  pull_request:
+#  push:
+#    branches:
+#      - 'main'
+
+permissions:
+  contents: read
+  packages: write
+  issues: read
+  checks: write
+  pull-requests: write
+  # The "id-token: write" permission is required or Machine ID will not be able to authenticate with the cluster.
+  id-token: write
+
+env:
+  POSTGRES_USER: cogoport
+  POSTGRES_PASSWORD: cogoport123
+  POSTGRES_DB: ares
+  MICRONAUT_ENVIRONMENT: "test"
+  OPENSEARCH_HOST: localhost
+  OPENSEARCH_PORT: 9200
+  OPENSEARCH_USER: admin
+  OPENSEARCH_PASS: admin
+  OPENSEARCH_SCHEME: http
+  AWS_REGION: ap-south-1
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  GH_USER: cogoport-dev
+  GITHUB_USERNAME: $GH_USER
+  GITHUB_TOKEN: ${{ secrets.GH_PERSONAL_TOKEN }}
+  SONAR_TOKEN: ${{ secrets.SONARQUBE_TOKEN }}
+  SONAR_HOST_URL: http://localhost:9000
 
 jobs:
-  build:
-    name: SonarQube Analysis
+  sonarqube:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
-      - name: Set up JDK 17 and Cache Gradle
-        uses: actions/setup-java@master
-        with:
-          java-version: 17
-          distribution: 'adopt'
-          cache: gradle
-      - name: Cache SonarQube packages
-        uses: actions/cache@v1
-        with:
-          path: ~/.sonar/cache
-          key: ${{ runner.os }}-sonar
-          restore-keys: ${{ runner.os }}-sonar
-      - name: Build and analyze
+
+    services:
+      postgres:
+        image: postgres:14.2-alpine3.15
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
         env:
-          GH_USER: cogoport-dev
-          GITHUB_USERNAME: $GH_USER
-          GITHUB_TOKEN: ${{ secrets.GH_PERSONAL_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        run: ./gradlew build -x test sonar --info
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+
+      opensearch:
+        image: opensearchproject/opensearch:2.2.1
+        options: >-
+          --health-cmd "curl -XGET http://localhost:9200 -u 'admin:admin'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 8
+        ports:
+          - 9200:9200
+        env:
+          cluster.name: opensearch-cluster
+          node.name: opensearch-node
+          bootstrap.memory_lock: true
+          OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+          DISABLE_INSTALL_DEMO_CONFIG: true
+          DISABLE_SECURITY_PLUGIN: true
+          discovery.type: single-node
+
+      rabbitmq:
+        image: rabbitmq:3.11-management
+        ports:
+          - '5672:5672'
+          - '15672:15672'
+        env:
+          RABBITMQ_DEFAULT_USER: guest
+          RABBITMQ_DEFAULT_PASS: guest
+        options: >-
+          --health-cmd "rabbitmqctl node_health_check"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        # Docker Hub image
+        image: redis:6.0
+        ports:
+          # Maps port 6379 on service container to the host
+          - 6379:6379
+        # Set health checks to wait until redis has started
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@master
+        with:
+          fetch-depth: 1
+
+      - uses: graalvm/setup-graalvm@v1
+        with:
+          version: 'latest'
+          java-version: '17'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache: 'gradle'
+
+      - name: Run tests with code coverage
+        run: ./gradlew flywayMigrate jacocoTestReport --no-daemon
+        env:
+          GITHUB_USERNAME: cogoport-dev
+          GITHUB_TOKEN: ${{ secrets.COGOPORT_DEV_ADMIN_TOKEN }}
+
+      - name: Fetch Teleport binaries
+        uses: teleport-actions/setup@v1
+        with:
+          version: 13.1.0
+
+      - name: Fetch credentials
+        run: >
+          tbot start
+          -c config/teleport/tbot.yml
+          --oneshot
+
+      - name: sonarqube
+        run: |
+          tbot proxy --destination-dir=/opt/machine-id --proxy=teleport.cogoport.com:443 app --port=9000 sonarqube &
+          ./gradlew build -x test sonar --info
