@@ -66,7 +66,6 @@ import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
 import com.cogoport.ares.model.dunning.request.ListOrganizationStakeholderRequest
 import com.cogoport.ares.model.dunning.request.MonthWiseStatisticsOfAccountUtilizationReuest
 import com.cogoport.ares.model.dunning.request.OverallOutstandingAndOnAccountRequest
-import com.cogoport.ares.model.dunning.request.SendMailOfAllCommunicationToTradePartyReq
 import com.cogoport.ares.model.dunning.request.SyncOrgStakeholderRequest
 import com.cogoport.ares.model.dunning.request.UpdateCycleExecutionRequest
 import com.cogoport.ares.model.dunning.request.UpdateDunningCycleStatusReq
@@ -826,19 +825,6 @@ open class DunningServiceImpl(
         tokenDetails.data?.dunningUserInviteData?.userInvitationId = UUID.fromString(userInvitationId)
         aresTokenRepo.update(tokenDetails)
         return userInvitationId
-    }
-
-    override suspend fun sendMailOfAllCommunicationToTradeParty(
-        sendMailOfAllCommunicationToTradePartyReq: SendMailOfAllCommunicationToTradePartyReq,
-        isSynchronousCall: Boolean
-    ): String {
-
-        if (isSynchronousCall) {
-            return "We got your request. will sent you mail on ${sendMailOfAllCommunicationToTradePartyReq.userEmail} with report."
-        }
-
-        TODO("write code to send mail")
-        return ""
     }
 
     override suspend fun dunningCardData(entityCode: MutableList<Int>?): DunningCardData {

@@ -185,7 +185,7 @@ class DunningController(
     ): Response<String> {
         return Response<String>().ok(
             HttpStatus.OK.name,
-            dunningService.sendMailOfAllCommunicationToTradeParty(
+            dunningHelperService.sendMailOfAllCommunicationToTradeParty(
                 sendMailOfAllCommunicationToTradePartyReq,
                 true
             )

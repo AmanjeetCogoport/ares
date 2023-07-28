@@ -8,6 +8,7 @@ import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.model.dunning.enum.AgeingBucketEnum
 import com.cogoport.ares.model.dunning.enum.DunningExecutionFrequency
 import com.cogoport.ares.model.dunning.request.DunningScheduleRule
+import com.cogoport.ares.model.dunning.request.SendMailOfAllCommunicationToTradePartyReq
 import com.cogoport.ares.model.payment.ServiceType
 import jakarta.inject.Singleton
 import java.sql.Timestamp
@@ -17,7 +18,7 @@ import java.util.Calendar
 import java.util.Date
 
 @Singleton
-class DunningHelperServiceImpl() : DunningHelperService {
+class DunningHelperServiceImpl : DunningHelperService {
 
     override suspend fun listSeverityLevelTemplates(): MutableMap<String, String> {
         val response: MutableMap<String, String> = mutableMapOf()
@@ -25,7 +26,6 @@ class DunningHelperServiceImpl() : DunningHelperService {
         SeverityEnum.values().forEach { severityLeve ->
             response[severityLeve.name] = severityLeve.severity
         }
-
         return response
     }
 
@@ -189,5 +189,18 @@ class DunningHelperServiceImpl() : DunningHelperService {
 
             else -> throw AresException(AresError.ERR_1543, "")
         }
+    }
+
+    override suspend fun sendMailOfAllCommunicationToTradeParty(
+        sendMailOfAllCommunicationToTradePartyReq: SendMailOfAllCommunicationToTradePartyReq,
+        isSynchronousCall: Boolean
+    ): String {
+
+        if (isSynchronousCall) {
+            return "We got your request. will sent you mail on ${sendMailOfAllCommunicationToTradePartyReq.userEmail} with report."
+        }
+
+        TODO("write code to send mail")
+        return ""
     }
 }
