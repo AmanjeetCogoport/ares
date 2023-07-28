@@ -59,7 +59,8 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
                 j.gl_code,
                 j.led_amount,
                 j.sign_flag,
-                j.deleted_at
+                j.deleted_at,
+                j.additional_details
             FROM 
                 journal_vouchers j 
             Where 
@@ -105,8 +106,8 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
     @NewSpan
     @Query(
         """
-        select * from journal_vouchers where description = :description and acc_mode is not null
+        select * from journal_vouchers where additional_details ->> 'utr' = :utr  and acc_mode != 'OTHER' and acc_mode is not null
     """
     )
-    suspend fun findByDescription(description: String): JournalVoucher?
+    suspend fun findByDescription(utr: String): JournalVoucher?
 }

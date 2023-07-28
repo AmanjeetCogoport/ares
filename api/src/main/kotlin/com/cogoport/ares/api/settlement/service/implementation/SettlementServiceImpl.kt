@@ -1710,7 +1710,7 @@ open class SettlementServiceImpl : SettlementService {
         /** Payment ledger amount */
         val paidLedAmount = getExchangeValue(paidAmount, ledgerRate)
         /** Tds Amount in Invoice currency */
-        var invoiceTds = invoice.tds!! - invoice.settledTds
+        var invoiceTds = invoice.tds!!
         /** Tds Amount in Invoice ledger currency */
         val invoiceTdsLed = invoiceTds * (invoice.exchangeRate)
         /** Tds Amount in Payment currency */
@@ -1930,10 +1930,6 @@ open class SettlementServiceImpl : SettlementService {
                     "${document.documentNo}_${document.accountType}"
                 )
         if ((paymentUtilization.amountCurr - paymentUtilization.payCurr) < utilizedAmount.setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.DOWN)) {
-            throw AresException(AresError.ERR_1504, " Document No: ${paymentUtilization.documentValue}")
-        } else if ((paymentUtilization.accType !in listOf(AccountType.SINV, AccountType.SREIMB, AccountType.SCN)) && ((paymentUtilization.amountCurr - paymentUtilization.tdsAmount!!) - paymentUtilization.payCurr) <
-            utilizedAmount.setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.DOWN)
-        ) {
             throw AresException(AresError.ERR_1504, " Document No: ${paymentUtilization.documentValue}")
         }
 
@@ -2469,7 +2465,7 @@ open class SettlementServiceImpl : SettlementService {
             val tdsProfile = tdsProfiles.find { it.id == doc.mappingId }
             val rate = getTdsRate(tdsProfile)
             if (doc.accMode != AccMode.AP) {
-                doc.tds = when (doc.accountType in listOf(AccountType.SINV.name, AccountType.PINV.name) && entityCode != AresConstants.ENTITY_501 && doc.migrated == false) {
+                doc.tds = when (doc.accountType in listOf(AccountType.SINV.name) && entityCode != AresConstants.ENTITY_501 && doc.migrated == false) {
                     true -> calculateTds(
                         rate = rate,
                         settledTds = doc.settledTds!!,
