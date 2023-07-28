@@ -631,8 +631,8 @@ open class ParentJVServiceImpl : ParentJVService {
                             parentJVId,
                             "JOURNAL_VOUCHER",
                             "404",
-                            "NUM_0: ${parentJVDetails.jvNum}",
-                            "Jv not present on sage",
+                            result.requestString,
+                            result.response,
                             false
                         )
                     )
