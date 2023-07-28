@@ -323,6 +323,7 @@ ORDER BY
                 AND s.destination_type NOT in('VTDS')
                 and s.source_type NOT in ('VTDS')
                 and (p.payment_code = 'PAY'  OR s.source_type = 'PCN')
+                and au.deleted_at is null and s.deleted_at is null and p.deleted_at is null
             ORDER BY
                 s.created_at DESC
 
