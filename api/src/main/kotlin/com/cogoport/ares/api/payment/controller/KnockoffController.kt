@@ -21,5 +21,4 @@ class KnockoffController {
     suspend fun knockOffPayables(@Valid @Body payableList: AccountPayablesFile): AccountPayableFileResponse {
         return knockoffService.uploadBillPayment(payableList)
     }
-
 }
