@@ -717,7 +717,6 @@ class ScheduleServiceImpl(
         )
         return dunningEmailAudit.id!!
     }
-
     private suspend fun recordFailedThirdPartyApiAudits(executionId: Long, request: String, response: String, apiName: String) {
         thirdPartyApiAuditService.createAudit(
             ThirdPartyApiAudit(

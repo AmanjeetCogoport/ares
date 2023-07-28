@@ -5,6 +5,7 @@ import com.cogoport.ares.api.dunning.model.request.ListDunningCycleReq
 import com.cogoport.ares.api.dunning.model.request.ListExceptionReq
 import com.cogoport.ares.api.dunning.model.response.CycleWiseExceptionResp
 import com.cogoport.ares.api.dunning.model.response.MasterExceptionResp
+import com.cogoport.ares.api.dunning.service.interfaces.DunningHelperService
 import com.cogoport.ares.api.dunning.service.interfaces.DunningService
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.ResponseList
@@ -44,7 +45,8 @@ import javax.validation.Valid
 @Validated
 @Controller("/dunning")
 class DunningController(
-    private val dunningService: DunningService
+    private val dunningService: DunningService,
+    private val dunningHelperService: DunningHelperService
 ) {
 
     @Post("/cycle")
@@ -167,13 +169,13 @@ class DunningController(
     @Get("/severity-level-templates")
     suspend fun listSeverityLevelTemplates(): MutableMap<String, String> {
         return Response<MutableMap<String, String>>().ok(
-            dunningService.listSeverityLevelTemplates()
+            dunningHelperService.listSeverityLevelTemplates()
         )
     }
 
     @Post("/check-schedule-time")
     suspend fun calculateNextScheduleTime(@Body scheduleRule: DunningScheduleRule): Date {
-        return dunningService.calculateNextScheduleTime(scheduleRule)
+        return dunningHelperService.calculateNextScheduleTime(scheduleRule)
     }
 
     @Post("/send-mail-of-all-communication-to-trade-party")
@@ -188,11 +190,6 @@ class DunningController(
                 true
             )
         )
-    }
-
-    @Post("payment-link")
-    suspend fun createDunningPaymentLink(@QueryValue("token") token: String): String {
-        return dunningService.createDunningPaymentLink(token)
     }
 
     @Post("/create-dunning-relevant-user")

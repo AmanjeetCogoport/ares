@@ -7,9 +7,7 @@ import com.cogoport.ares.api.common.client.CogoBackLowLevelClient
 import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.common.enums.TokenTypes
 import com.cogoport.ares.api.dunning.DunningConstants
-import com.cogoport.ares.api.dunning.DunningConstants.EXTRA_TIME_TO_PROCESS_DATA_DUNNING
 import com.cogoport.ares.api.dunning.DunningConstants.SEGMENT_MAPPING
-import com.cogoport.ares.api.dunning.DunningConstants.TIME_ZONE_DIFFERENCE_FROM_GMT
 import com.cogoport.ares.api.dunning.entity.CycleExceptions
 import com.cogoport.ares.api.dunning.entity.DunningCycle
 import com.cogoport.ares.api.dunning.entity.DunningCycleExecution
@@ -31,6 +29,7 @@ import com.cogoport.ares.api.dunning.repository.DunningCycleRepo
 import com.cogoport.ares.api.dunning.repository.DunningEmailAuditRepo
 import com.cogoport.ares.api.dunning.repository.MasterExceptionRepo
 import com.cogoport.ares.api.dunning.repository.OrganizationStakeholderRepo
+import com.cogoport.ares.api.dunning.service.interfaces.DunningHelperService
 import com.cogoport.ares.api.dunning.service.interfaces.DunningService
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
@@ -63,7 +62,6 @@ import com.cogoport.ares.model.dunning.request.CreateDunningCycleRequest
 import com.cogoport.ares.model.dunning.request.CreateUserRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilterRequest
 import com.cogoport.ares.model.dunning.request.DunningCycleFilters
-import com.cogoport.ares.model.dunning.request.DunningScheduleRule
 import com.cogoport.ares.model.dunning.request.ListDunningCycleExecutionReq
 import com.cogoport.ares.model.dunning.request.ListOrganizationStakeholderRequest
 import com.cogoport.ares.model.dunning.request.MonthWiseStatisticsOfAccountUtilizationReuest
@@ -87,11 +85,8 @@ import com.cogoport.brahma.rabbitmq.client.interfaces.RabbitmqService
 import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.inject.Singleton
 import java.sql.Timestamp
-import java.text.SimpleDateFormat
-import java.time.DayOfWeek
 import java.time.Instant
 import java.util.Calendar
-import java.util.Date
 import java.util.UUID
 import javax.transaction.Transactional
 
@@ -114,13 +109,14 @@ open class DunningServiceImpl(
     private val dunningMapper: DunningMapper,
     private val thirdPartyApiAuditService: ThirdPartyApiAuditService,
     private val businessPartnersServiceImpl: DefaultedBusinessPartnersServiceImpl,
-    private val unifiedDBRepo: UnifiedDBRepo
+    private val unifiedDBRepo: UnifiedDBRepo,
+    private val dunningHelperService: DunningHelperService
 ) : DunningService {
 
     @Transactional
     override suspend fun syncOrgStakeholders(syncOrgStakeholderRequest: SyncOrgStakeholderRequest): Long {
         val organizationStakeholderType = OrganizationStakeholderType.valueOf(
-            replaceUnderScore(syncOrgStakeholderRequest.organizationStakeholderType)
+            util.replaceUnderScore(syncOrgStakeholderRequest.organizationStakeholderType)
         ).toString()
 
         var organizationStakeholder = organizationStakeholderRepo.getOrganizationStakeholdersUsingOrgId(
@@ -130,7 +126,7 @@ open class DunningServiceImpl(
 
         if (organizationStakeholder == null) {
 
-            val organizationSegment = replaceUnderScore(syncOrgStakeholderRequest.organizationSegment!!)
+            val organizationSegment = util.replaceUnderScore(syncOrgStakeholderRequest.organizationSegment!!)
             val organizationStakeholderEntity = OrganizationStakeholder(
                 id = null,
                 organizationStakeholderName = syncOrgStakeholderRequest.organizationStakeholderName!!,
@@ -148,7 +144,7 @@ open class DunningServiceImpl(
             var organizationSegment = organizationStakeholder.organizationSegment
             if (syncOrgStakeholderRequest.organizationSegment != null) {
                 organizationSegment = OrganizationSegment.valueOf(
-                    replaceUnderScore(syncOrgStakeholderRequest.organizationSegment!!)
+                    util.replaceUnderScore(syncOrgStakeholderRequest.organizationSegment!!)
                 ).toString()
             }
 
@@ -280,7 +276,7 @@ open class DunningServiceImpl(
     @Transactional
     override suspend fun saveAndScheduleExecution(dunningCycle: DunningCycle): Long {
 
-        val dunningCycleScheduledAt = calculateNextScheduleTime(dunningCycle.scheduleRule)
+        val dunningCycleScheduledAt = dunningHelperService.calculateNextScheduleTime(dunningCycle.scheduleRule)
 
         val dunningCycleExecutionResponse = dunningExecutionRepo.save(
             DunningCycleExecution(
@@ -332,7 +328,7 @@ open class DunningServiceImpl(
         var serviceTypes = listOf<ServiceType>()
 
         request.serviceTypes?.forEach { serviceType ->
-            serviceTypes = serviceTypes + getServiceType(serviceType)
+            serviceTypes = serviceTypes + dunningHelperService.getServiceType(serviceType)
         }
 
         var taggedOrganizationIds: List<UUID>? = listOf()
@@ -355,8 +351,8 @@ open class DunningServiceImpl(
                 serviceTypes = serviceTypes,
                 taggedOrganizationIds = taggedOrganizationIds,
                 totalDueOutstanding = request.totalDueOutstanding,
-                ageingStartDay = getAgeingBucketDays(AgeingBucketEnum.valueOf(request.ageingBucket!!))[0],
-                ageingLastDay = getAgeingBucketDays(AgeingBucketEnum.valueOf(request.ageingBucket!!))[1],
+                ageingStartDay = dunningHelperService.getAgeingBucketDays(AgeingBucketEnum.valueOf(request.ageingBucket!!))[0],
+                ageingLastDay = dunningHelperService.getAgeingBucketDays(AgeingBucketEnum.valueOf(request.ageingBucket!!))[1],
                 exceptionTradePartyDetailId = listOf(),
                 pageSizeData = request.pageSize,
                 pageIndexData = request.pageIndex
@@ -415,50 +411,6 @@ open class DunningServiceImpl(
             totalRecords = totalCount,
             pageNo = dunningCycleFilterRequest.pageIndexData ?: dunningCycleFilterRequest.pageIndex,
         )
-    }
-
-    private fun getAgeingBucketDays(ageingBucketName: AgeingBucketEnum): IntArray {
-        return when (ageingBucketName) {
-            AgeingBucketEnum.ALL -> intArrayOf(0, 0)
-            AgeingBucketEnum.AB_1_30 -> intArrayOf(0, 30)
-            AgeingBucketEnum.AB_31_60 -> intArrayOf(31, 60)
-            AgeingBucketEnum.AB_61_90 -> intArrayOf(61, 90)
-            AgeingBucketEnum.AB_91_180 -> intArrayOf(91, 180)
-            AgeingBucketEnum.AB_181_PLUS -> intArrayOf(181, 181)
-            else -> throw AresException(AresError.ERR_1542, "")
-        }
-    }
-
-    private fun getServiceType(serviceType: ServiceType): List<ServiceType> {
-        return when (serviceType) {
-            ServiceType.FCL_FREIGHT -> listOf(
-                ServiceType.FCL_FREIGHT, ServiceType.FCL_CUSTOMS, ServiceType.FCL_FREIGHT_LOCAL,
-                ServiceType.FCL_CUSTOMS, ServiceType.FCL_CFS
-            )
-
-            ServiceType.LCL_FREIGHT -> listOf(
-                ServiceType.LCL_FREIGHT, ServiceType.LCL_CUSTOMS, ServiceType.LCL_CUSTOMS_FREIGHT
-            )
-
-            ServiceType.LTL_FREIGHT -> listOf(
-                ServiceType.LTL_FREIGHT
-            )
-
-            ServiceType.AIR_FREIGHT -> listOf(
-                ServiceType.AIR_FREIGHT, ServiceType.AIR_CUSTOMS_FREIGHT, ServiceType.AIR_CUSTOMS,
-                ServiceType.AIR_FREIGHT_LOCAL, ServiceType.DOMESTIC_AIR_FREIGHT
-            )
-
-            ServiceType.FTL_FREIGHT -> listOf(
-                ServiceType.FTL_FREIGHT
-            )
-
-            ServiceType.HAULAGE_FREIGHT -> listOf(
-                ServiceType.HAULAGE_FREIGHT
-            )
-
-            else -> throw AresException(AresError.ERR_1543, "")
-        }
     }
 
     override suspend fun listMasterException(request: ListExceptionReq): ResponseList<MasterExceptionResp> {
@@ -727,16 +679,6 @@ open class DunningServiceImpl(
         return response
     }
 
-    override suspend fun listSeverityLevelTemplates(): MutableMap<String, String> {
-        val response: MutableMap<String, String> = mutableMapOf()
-
-        SeverityEnum.values().forEach { severityLeve ->
-            response.put(severityLeve.name, severityLeve.severity)
-        }
-
-        return response
-    }
-
     override suspend fun createDunningException(request: CreateDunningException): MutableList<String> {
         if (request.exceptionType == DunningExceptionType.CYCLE_WISE && request.cycleId.isNullOrEmpty()) {
             throw AresException(AresError.ERR_1003, "cycle id")
@@ -857,135 +799,6 @@ open class DunningServiceImpl(
         return returnExclusionList.toSet().toMutableList()
     }
 
-    override suspend fun calculateNextScheduleTime(
-        scheduleRule: DunningScheduleRule
-    ): Date {
-        val extractTime = extractHourAndMinute(scheduleRule.scheduleTime)
-        val scheduleHour = extractTime["hour"]!!
-        val scheduleMinute = extractTime["minute"]!!
-
-        val scheduleTimeStampInGMT: Timestamp = when (DunningExecutionFrequency.valueOf(scheduleRule.dunningExecutionFrequency)) {
-            DunningExecutionFrequency.ONE_TIME -> calculateNextScheduleTimeForOneTime(scheduleRule, scheduleHour, scheduleMinute)
-            DunningExecutionFrequency.DAILY -> calculateNextScheduleTimeForDaily(scheduleRule, scheduleHour, scheduleMinute)
-            DunningExecutionFrequency.WEEKLY -> calculateScheduleTimeForWeekly(scheduleRule.week!!, scheduleHour, scheduleMinute)
-            DunningExecutionFrequency.MONTHLY -> calculateScheduleTimeForMonthly(scheduleRule.dayOfMonth!!, scheduleHour, scheduleMinute)
-            else -> throw AresException(AresError.ERR_1002, "")
-        }
-
-        val actualTimestampInRespectiveTimeZone = scheduleTimeStampInGMT.time.minus(
-            TIME_ZONE_DIFFERENCE_FROM_GMT[DunningConstants.TimeZone.valueOf(scheduleRule.scheduleTimeZone)]
-                ?: throw AresException(AresError.ERR_1002, "")
-        )
-
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-        val formattedDate = dateFormat.format(actualTimestampInRespectiveTimeZone)
-        return dateFormat.parse(formattedDate)
-    }
-
-    open suspend fun extractHourAndMinute(time: String): Map<String, String> {
-        if (time.length != 5 ||
-            (time.slice(0..1).toLong() > 24 || time.slice(0..1).toLong() < 0) ||
-            (time.slice(3..4).toLong() > 60) || time.slice(3..4).toLong() < 0
-        ) {
-            throw AresException(AresError.ERR_1549, "")
-        }
-
-        return mapOf(
-            "hour" to time.slice(0..1),
-            "minute" to time.slice(3..4)
-        )
-    }
-
-    private fun calculateNextScheduleTimeForOneTime(
-        scheduleRule: DunningScheduleRule,
-        scheduleHour: String,
-        scheduleMinute: String
-    ): Timestamp {
-        val scheduleDateCal = Calendar.getInstance()
-
-        scheduleDateCal.timeInMillis = System.currentTimeMillis()
-
-        scheduleDateCal.set(Calendar.DAY_OF_MONTH, scheduleRule.oneTimeDate!!.slice(0..1).toInt())
-        scheduleDateCal.set(Calendar.MONTH, (scheduleRule.oneTimeDate!!.slice(3..4).toInt()).minus(1))
-        scheduleDateCal.set(Calendar.YEAR, scheduleRule.oneTimeDate!!.slice(6..9).toInt())
-        scheduleDateCal.set(Calendar.HOUR_OF_DAY, scheduleHour.toInt())
-        scheduleDateCal.set(Calendar.MINUTE, scheduleMinute.toInt())
-
-        val localTimestampWRTZone: Long = System.currentTimeMillis().plus(EXTRA_TIME_TO_PROCESS_DATA_DUNNING)
-
-        if (scheduleDateCal.timeInMillis < localTimestampWRTZone) {
-            throw AresException(AresError.ERR_1551, "")
-        }
-
-        return Timestamp(scheduleDateCal.timeInMillis)
-    }
-
-    private fun calculateNextScheduleTimeForDaily(
-        scheduleRule: DunningScheduleRule,
-        scheduleHour: String,
-        scheduleMinute: String
-    ): Timestamp {
-        val todayCal = Calendar.getInstance()
-        todayCal.timeInMillis = TIME_ZONE_DIFFERENCE_FROM_GMT[DunningConstants.TimeZone.valueOf(scheduleRule.scheduleTimeZone)]?.plus(System.currentTimeMillis())!!
-
-        if (todayCal.get(Calendar.HOUR_OF_DAY) > scheduleHour.toInt()) {
-            todayCal.add(Calendar.DAY_OF_MONTH, 1)
-        }
-        todayCal.set(Calendar.HOUR_OF_DAY, scheduleHour.toInt())
-        todayCal.set(Calendar.MINUTE, scheduleMinute.toInt())
-
-        return Timestamp(todayCal.timeInMillis)
-    }
-
-    private fun calculateScheduleTimeForWeekly(week: DayOfWeek, scheduleHour: String, scheduleMinute: String): Timestamp {
-        val todayCal = Calendar.getInstance()
-        todayCal.timeInMillis = System.currentTimeMillis()
-
-        if (
-            !(
-                (todayCal.get(Calendar.DAY_OF_WEEK) == (week.ordinal + 1)) &&
-                    (todayCal.get(Calendar.HOUR_OF_DAY) < scheduleHour.toInt())
-                )
-        ) {
-            while (todayCal.get(Calendar.DAY_OF_WEEK) != (week.ordinal + 1)) {
-                todayCal.add(Calendar.DAY_OF_WEEK, 1)
-            }
-        }
-
-        todayCal.set(Calendar.HOUR_OF_DAY, scheduleHour.toInt())
-        todayCal.set(Calendar.MINUTE, scheduleMinute.toInt())
-
-        return Timestamp(todayCal.timeInMillis)
-    }
-
-    private fun calculateScheduleTimeForMonthly(dayOfMonth: Int, scheduleHour: String, scheduleMinute: String): Timestamp {
-        val todayCal = Calendar.getInstance()
-        todayCal.timeInMillis = System.currentTimeMillis()
-
-        if (todayCal.get(Calendar.DAY_OF_MONTH) > dayOfMonth ||
-            (todayCal.get(Calendar.DAY_OF_MONTH) == dayOfMonth && (todayCal.get(Calendar.HOUR_OF_DAY) > scheduleHour.toInt())) &&
-            (todayCal.get(Calendar.DAY_OF_MONTH) == dayOfMonth && (todayCal.get(Calendar.HOUR_OF_DAY) == scheduleHour.toInt() && todayCal.get(Calendar.MINUTE) > scheduleMinute.toInt()))
-        ) {
-            todayCal.add(Calendar.MONTH, 1)
-        }
-
-        todayCal.set(Calendar.DAY_OF_MONTH, dayOfMonth)
-
-        todayCal.set(Calendar.HOUR_OF_DAY, scheduleHour.toInt())
-        todayCal.set(Calendar.MINUTE, scheduleMinute.toInt())
-
-        return Timestamp(todayCal.timeInMillis)
-    }
-
-    override suspend fun createDunningPaymentLink(token: String): String {
-        val tokenDetails = aresTokenRepo.findByTokens(token, TokenTypes.DUNNING_PAYMENT.name) ?: throw AresException(AresError.ERR_1002, "Link is not valid")
-
-        if (tokenDetails.expiryTime!! <= Timestamp.from(Instant.now())) {
-            throw AresException(AresError.ERR_1002, "payment link is expired")
-        }
-        return ""
-    }
-
     override suspend fun createRelevantUser(request: CreateUserRequest): String? {
         val tokenDetails = aresTokenRepo.findByTokens(request.userToken, TokenTypes.RELEVANT_USER.name) ?: throw AresException(AresError.ERR_1002, "Link is not valid")
 
@@ -1036,10 +849,6 @@ open class DunningServiceImpl(
         response.totalOutstandingAmount = response.totalOutstandingAmount?.minus(onAccount ?: 0.toBigDecimal())
         response.activeCycles = dunningCycleRepo.totalCountDunningCycle(status = true)
         return response
-    }
-
-    private fun replaceUnderScore(request: String): String {
-        return request.replace("_", " ").uppercase().replace(" ", "_")
     }
 
     private suspend fun recordFailedThirdPartyApiAudits(objectId: Long, request: String, response: String, apiName: String, objectName: String, apiType: String) {
