@@ -130,4 +130,5 @@ jobs:
       - name: sonarqube
         run: |
           tbot proxy --destination-dir=/opt/machine-id --proxy=teleport.cogoport.com:443 app --port=9000 sonarqube &
+          sleep 10
           ./gradlew build -x test sonar --info
