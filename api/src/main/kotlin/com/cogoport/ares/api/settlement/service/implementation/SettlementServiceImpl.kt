@@ -2630,10 +2630,10 @@ open class SettlementServiceImpl : SettlementService {
             val destinationDocument = accountUtilizationRepository.findByDocumentNo(settlement.destinationId, AccountType.valueOf(settlement.destinationType.toString()))
 
             if (destinationDocument.isProforma == true) {
-                throw AresException(AresError.ERR_1543, "")
+                throw AresException(AresError.ERR_1547, "")
             }
             if (sourceDocument.isProforma == true) {
-                throw AresException(AresError.ERR_1543, "")
+                throw AresException(AresError.ERR_1547, "")
             }
 
             val sageOrganizationResponse = checkIfOrganizationIdIsValid(settlementId, sourceDocument.accMode, sourceDocument)

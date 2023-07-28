@@ -10,6 +10,7 @@ data class CustomerOutstandingRequest(
     var kamId: List<UUID>? = null,
     var creditControllerId: List<UUID>? = null,
     var sageId: String? = null,
+    var tradePartyDetailId: UUID? = null,
     var tradePartySerialId: String? = null,
     var organizationSerialId: String? = null,
     var countryId: List<UUID>? = null,
