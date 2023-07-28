@@ -1006,7 +1006,6 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                                 acc_mode = 'AR'
                                 AND (COALESCE(:taggedOrganizationIds) IS NULL OR tagged_organization_id::UUID IN (:taggedOrganizationIds))
                                 AND (COALESCE(:exceptionTradePartyDetailId) IS NULL OR organization_id::UUID NOT IN (:exceptionTradePartyDetailId))
-                                AND (COALESCE(:serviceTypes) IS NULL OR service_type::VARCHAR IN (:serviceTypes))
                                 AND transaction_date IS NOT NULL
                                 AND document_status = 'FINAL'
                                 AND organization_id IS NOT NULL
@@ -1042,7 +1041,6 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
     )
     suspend fun listOnAccountAndOutstandingBasedOnDunningCycleFilters(
         query: String?,
-        serviceTypes: List<String>? = null,
         totalDueOutstanding: BigDecimal? = null,
         entityCode: Int,
         ageingStartDay: Int,
@@ -1111,7 +1109,6 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                                 acc_mode = 'AR'
                                 AND (COALESCE(:taggedOrganizationIds) IS NULL OR tagged_organization_id::UUID IN (:taggedOrganizationIds))
                                 AND (COALESCE(:exceptionTradePartyDetailId) IS NULL OR organization_id::UUID NOT IN (:exceptionTradePartyDetailId))
-                                AND (COALESCE(:serviceTypes) IS NULL OR service_type::VARCHAR IN (:serviceTypes))
                                 AND transaction_date IS NOT NULL
                                 AND document_status = 'FINAL'
                                 AND organization_id IS NOT NULL
@@ -1136,7 +1133,6 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
     )
     suspend fun countOnAccountAndOutstandingBasedOnDunningCycleFilters(
         query: String?,
-        serviceTypes: List<String?>? = null,
         totalDueOutstanding: BigDecimal? = null,
         entityCode: Int,
         ageingStartDay: Int,
