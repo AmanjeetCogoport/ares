@@ -1710,7 +1710,7 @@ open class SettlementServiceImpl : SettlementService {
         /** Payment ledger amount */
         val paidLedAmount = getExchangeValue(paidAmount, ledgerRate)
         /** Tds Amount in Invoice currency */
-        var invoiceTds = invoice.tds!! - invoice.settledTds
+        var invoiceTds = invoice.tds!!
         /** Tds Amount in Invoice ledger currency */
         val invoiceTdsLed = invoiceTds * (invoice.exchangeRate)
         /** Tds Amount in Payment currency */
@@ -1930,10 +1930,6 @@ open class SettlementServiceImpl : SettlementService {
                     "${document.documentNo}_${document.accountType}"
                 )
         if ((paymentUtilization.amountCurr - paymentUtilization.payCurr) < utilizedAmount.setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.DOWN)) {
-            throw AresException(AresError.ERR_1504, " Document No: ${paymentUtilization.documentValue}")
-        } else if ((paymentUtilization.accType !in listOf(AccountType.SINV, AccountType.SREIMB, AccountType.SCN)) && ((paymentUtilization.amountCurr - paymentUtilization.tdsAmount!!) - paymentUtilization.payCurr) <
-            utilizedAmount.setScale(AresConstants.ROUND_DECIMAL_TO, RoundingMode.DOWN)
-        ) {
             throw AresException(AresError.ERR_1504, " Document No: ${paymentUtilization.documentValue}")
         }
 
@@ -2257,7 +2253,6 @@ open class SettlementServiceImpl : SettlementService {
             it.id = Hashids.decode(it.id)[0].toString()
             it.documentNo = Hashids.decode(it.documentNo)[0].toString()
             it.settledAllocation = BigDecimal.ZERO
-            it.settledTds = BigDecimal.ZERO
             it.settledNostro = BigDecimal.ZERO
             if (it.nostroAmount == null) it.nostroAmount = BigDecimal.ZERO
             if (it.tds == null) it.tds = BigDecimal.ZERO
