@@ -857,7 +857,7 @@ open class ParentJVServiceImpl : ParentJVService {
             ledCurrency = ledCurrency,
             entityCode = accountUtilization?.entityCode,
             exchangeRate = exchangeRate?.setScale(AresConstants.DECIMAL_NUMBER_UPTO, RoundingMode.HALF_DOWN),
-            description = "TDS AGAINST ${accountUtilization?.documentNo}",
+            description = "TDS AGAINST ${accountUtilization?.documentValue}",
             createdBy = createdBy,
             updatedBy = createdBy,
             jvCodeNum = "VTDS",
