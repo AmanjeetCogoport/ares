@@ -66,18 +66,16 @@ jackson:
   date-format: yyyy-MM-dd HH:mm:ss
 
 opensearch:
-  host: ${OPENSEARCH_HOST:localhost}
-  user: ${OPENSEARCH_USER:admin}
-  pass: ${OPENSEARCH_PASS:admin}
-  scheme: http
-  port: 9200
+  host: ${OPENSEARCH_HOST:search.stage.cogoport.io}
+  user: ${OPENSEARCH_USER:awsadmin}
+  pass: ${OPENSEARCH_PASS:Password@123}
 
 sentry:
   enabled: ${SENTRY_ENABLED:false}
   dsn: ${SENTRY_DSN:`https://10e833c953b04f429df6a6c8cae72c13@o435527.ingest.sentry.io/6475007`}
 
 cogoport:
-  api_url: https://api-mustangs1.dev.cogoport.io
+  api_url: ${COGOPORT_API_URL:https://api-mustangs1.dev.cogoport.io}
   bearer_token: '7cff5415-6007-4bab-9f3e-e4a08c11e915'
   bearer_token_new: 90fe8fd9-8760-4e1c-9f74-76c644f52c65
   auth_scope_id: e6efcc61-7e30-4d86-a901-e5d330113205
