@@ -2,7 +2,6 @@ package com.cogoport.ares.api.settlement.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.client.RailsClient
-import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
@@ -199,8 +198,8 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                 type = lineItem["type"].toString(),
                 signFlag = lineItem["signFlag"]?.toString()?.toShort(),
                 status = JVStatus.APPROVED,
-                tradePartyId = if (lineItem["accMode"] != null) accountUtilization?.organizationId else null,
-                tradePartyName = if (lineItem["accMode"] != null) accountUtilization?.organizationName else null,
+                tradePartyId = accountUtilization?.organizationId,
+                tradePartyName = accountUtilization?.organizationName,
                 validityDate = parentJvData.transactionDate,
                 migrated = false,
                 deletedAt = null,
@@ -211,11 +210,13 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         }
 
         val jvLineItems = journalVoucherRepository.saveAll(jvLineItemData)
-        val jvLineItemWithAccMode = jvLineItems.first { it.accMode != null && it.accMode != AccMode.OTHER }
+        val jvLineItemsWithAccModeAp = jvLineItems.first { it.accMode == AccMode.AP }
 
-        createJvAccUtilForTds(jvLineItemWithAccMode, accountUtilization, createdBy = parentJvData.createdBy, createdByUserType, payCurrTds, payLocTds)
+        jvLineItems.map {
+            createJvAccUtilForTds(it, accountUtilization, createdBy = parentJvData.createdBy, createdByUserType, payCurrTds, payLocTds)
+        }
 
-        return jvLineItemWithAccMode.id!!
+        return jvLineItemsWithAccModeAp.id!!
     }
 
     private suspend fun createJvAccUtilForTds(
@@ -240,10 +241,10 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             taggedOrganizationId = accountUtilization.taggedOrganizationId,
             tradePartyMappingId = accountUtilization.tradePartyMappingId,
             organizationName = accountUtilization.organizationName,
-            accCode = AresModelConstants.AP_ACCOUNT_CODE,
+            accCode = journalVoucher.glCode?.toInt()!!,
             accType = AccountType.VTDS,
-            accMode = accountUtilization.accMode,
-            signFlag = SignSuffix.VTDS.sign,
+            accMode = journalVoucher.accMode!!,
+            signFlag = journalVoucher.signFlag!!,
             currency = journalVoucher.currency!!,
             ledCurrency = journalVoucher.ledCurrency,
             amountCurr = journalVoucher.amount!!,
