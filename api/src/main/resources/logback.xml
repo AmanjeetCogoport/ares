@@ -11,6 +11,8 @@
     <logger name="io.micronaut.data.query" level="error"/>
     <logger name="io.micronaut.rabbitmq" level="error"/>
     <logger name="io.micronaut.management" level="error"/>
+    <logger name="io.micronaut.http.client" level="DEBUG" />
+
     <root level="INFO">
         <appender-ref ref="STDOUT"/>
     </root>
