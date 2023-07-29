@@ -831,7 +831,7 @@ open class OnAccountServiceImpl : OnAccountService {
         return orgStatsConverter.convertToModel(response)
     }
 
-    override suspend fun getOrgStwatsForCoeFinance(orgId: UUID?): OrgStatsResponseForCoeFinance {
+    override suspend fun getOrgStatsForCoeFinance(orgId: UUID?): OrgStatsResponseForCoeFinance {
         if (orgId == null) throw AresException(AresError.ERR_1003, AresConstants.ORG_ID)
         val payableStats = accountUtilizationRepository.getOrgStatsForCoeFinance(orgId) ?: throw AresException(AresError.ERR_1005, "")
         val tradePartyOutstandingList = cogoBackLowLevelClient.getTradePartyOutstanding(orgId.toString(), "get_trade_party_outstanding")
