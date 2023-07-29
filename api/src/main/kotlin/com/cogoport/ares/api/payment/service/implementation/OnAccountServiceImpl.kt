@@ -31,6 +31,7 @@ import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.AresDocumentRepository
 import com.cogoport.ares.api.payment.repository.PaymentFileRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
+import com.cogoport.ares.api.payment.repository.UnifiedDBNewRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
@@ -101,8 +102,10 @@ import com.cogoport.brahma.sage.SageException
 import com.cogoport.brahma.sage.model.request.PaymentLineItem
 import com.cogoport.brahma.sage.model.request.PaymentRequest
 import com.cogoport.brahma.sage.model.request.SageResponse
+import com.cogoport.loki.model.job.DocumentDetail
 import com.cogoport.plutus.model.invoice.GetUserRequest
 import com.cogoport.plutus.model.invoice.SageOrganizationRequest
+import com.cogoport.plutus.model.invoice.enums.DocumentName
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import io.micronaut.context.annotation.Value
@@ -201,6 +204,9 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Inject
     lateinit var unifiedDBRepo: UnifiedDBRepo
+
+    @Inject
+    lateinit var unifiedDBNewRepository: UnifiedDBNewRepository
 
     @Value("\${server.base-url}") // application-prod.yml path
     private lateinit var baseUrl: String
@@ -1876,15 +1882,72 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     override suspend fun getARLedgerOrganizationAndEntityWise(req: LedgerSummaryRequest): List<ARLedgerResponse> {
-        val ledgerSelectedDateWise = accountUtilizationRepository.getARLedger(
+        val ledgerSelectedDateWise = unifiedDBNewRepository.getARLedger(
             AccMode.AR,
             req.orgId,
             req.entityCodes!!,
             req.startDate!!,
             req.endDate!!
         )
-        val previousLedger = accountUtilizationRepository.getOpeningAndClosingLedger(AccMode.AR, req.orgId, req.entityCodes!!, req.startDate!!, AresConstants.OPENING_BALANCE)
-        val currentLedger = accountUtilizationRepository.getOpeningAndClosingLedger(AccMode.AR, req.orgId, req.entityCodes!!, req.endDate, AresConstants.CLOSING_BALANCE)
-        return previousLedger + ledgerSelectedDateWise + currentLedger
+        ledgerSelectedDateWise.forEach {
+            it.shipmentDocumentNumber = getShipmentDocumentDetails(it.jobDocuments)
+        }
+        var arLedgerResponse = accountUtilizationMapper.convertARLedgerJobDetailsResponseToARLedgerResponse(ledgerSelectedDateWise)
+        val openingLedger = accountUtilizationRepository.getOpeningAndClosingLedger(AccMode.AR, req.orgId, req.entityCodes!!, req.startDate!!, AresConstants.OPENING_BALANCE)
+        var openingLedgerList: List<ARLedgerResponse> = listOf(
+            ARLedgerResponse(
+                transactionDate = "",
+                documentType = "",
+                documentNumber = AresConstants.OPENING_BALANCE,
+                currency = "",
+                amount = "",
+                debit = openingLedger.debit,
+                credit = openingLedger.credit,
+                debitBalance = if (openingLedger.debit > openingLedger.credit) openingLedger.debit.minus(openingLedger.credit) else BigDecimal.ZERO,
+                creditBalance = if (openingLedger.credit > openingLedger.debit) openingLedger.credit.minus(openingLedger.debit) else BigDecimal.ZERO,
+                transactionRefNumber = "",
+                shipmentDocumentNumber = ""
+            )
+        )
+        val completeLedgerList = openingLedgerList + arLedgerResponse
+
+        for (i in 1..completeLedgerList.lastIndex) {
+            val balance = (completeLedgerList[i].debit - completeLedgerList[i].credit) + (completeLedgerList[i - 1].debitBalance - completeLedgerList[i - 1].creditBalance)
+            if (balance.compareTo(BigDecimal.ZERO) == 1)
+                completeLedgerList[i].debitBalance = balance
+            else
+                completeLedgerList[i].creditBalance = -balance
+        }
+        var closingBalance = completeLedgerList[completeLedgerList.lastIndex].debitBalance - completeLedgerList[completeLedgerList.lastIndex].creditBalance
+        var closingLedgerList: List<ARLedgerResponse> = listOf(
+            ARLedgerResponse(
+                transactionDate = "",
+                documentType = "",
+                documentNumber = AresConstants.CLOSING_BALANCE,
+                currency = "",
+                amount = "",
+                debit = BigDecimal.ZERO,
+                credit = BigDecimal.ZERO,
+                debitBalance = if (closingBalance.compareTo(BigDecimal.ZERO) == 1) closingBalance
+                else BigDecimal.ZERO,
+                creditBalance = if (closingBalance.compareTo(BigDecimal.ZERO) != 1) -closingBalance
+                else BigDecimal.ZERO,
+                transactionRefNumber = "",
+                shipmentDocumentNumber = ""
+            )
+        )
+        return completeLedgerList + closingLedgerList
+    }
+
+    private fun getShipmentDocumentDetails(documentDetail: MutableList<DocumentDetail>?): String? {
+        var shipmentDocumentNumber = ""
+        if (documentDetail != null) {
+            for (document in documentDetail) {
+                if (document.name in listOf<String?>(DocumentName.MBL.value, DocumentName.HBL.value, DocumentName.MAWB.value, DocumentName.HAWB.value)) {
+                    shipmentDocumentNumber += "${document.number},"
+                }
+            }
+        }
+        return shipmentDocumentNumber
     }
 }

@@ -7,6 +7,7 @@ import builders.dsl.spreadsheet.builder.api.SheetDefinition
 import builders.dsl.spreadsheet.builder.api.WorkbookDefinition
 import builders.dsl.spreadsheet.builder.poi.PoiSpreadsheetBuilder
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.AresConstants.LEDGER_CURRENCY
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
@@ -171,14 +172,14 @@ class ReportServiceImpl(
         reportHeader["Start Date"] = startDate.toString()
         reportHeader["End Date"] = endDate.toString()
         reportHeader["Document Date"] = LocalDate.now().toString()
-        reportHeader["Ledger Currency"] = report[0].ledgerCurrency
-        reportHeader["Opening Account Balance"] = report[0].balance.setScale(2, RoundingMode.UP).toString()
-        reportHeader["Closing Account Balance"] = report[report.lastIndex].balance.setScale(2, RoundingMode.UP).toString()
+        reportHeader["Ledger Currency"] = LEDGER_CURRENCY[req.entityCodes?.get(0)]
+        reportHeader["Opening Account Balance"] = (report[0].debitBalance - report[0].creditBalance).setScale(2, RoundingMode.UP).toString()
+        reportHeader["Closing Account Balance"] = (report[report.lastIndex].debitBalance - report[report.lastIndex].creditBalance).setScale(2, RoundingMode.UP).toString()
 
         val excelName = "AR_Ledger_Report_${orgName}_from_${startDate}_to_$endDate"
         var file = writeHeaderIntoExcel(reportHeader, report, excelName)
         val url = s3Client.upload(s3Bucket, "$excelName.xlsx", file).toString()
-        val result = aresDocumentRepository.save(
+        aresDocumentRepository.save(
             AresDocument(
                 id = null,
                 documentUrl = url,
@@ -256,7 +257,7 @@ class ReportServiceImpl(
                         if (row[2] == AresConstants.OPENING_BALANCE || row[2] == AresConstants.CLOSING_BALANCE) {
                             r.cell { c ->
                                 c.value(row[2])
-                                c.colspan(4)
+                                c.colspan(5)
                                 c.style { st ->
                                     st.font { f ->
                                         f.style(ExcelFont.BOLD)
@@ -264,7 +265,7 @@ class ReportServiceImpl(
                                     }
                                 }
                             }
-                            for (i in 4..row.lastIndex) {
+                            for (i in 5..row.lastIndex) {
                                 r.cell { c ->
                                     c.value(row[i])
                                     c.style { st -> st.font { f -> f.style(ExcelFont.BOLD) } }
