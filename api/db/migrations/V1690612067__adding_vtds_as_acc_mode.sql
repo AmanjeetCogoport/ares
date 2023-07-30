@@ -1,0 +1,2 @@
+ALTER TYPE account_mode ADD VALUE 'VTDS';
+INSERT INTO account_master (acc_code, acc_short_desc, acc_long_desc, created_at, updated_at, is_active, is_deleted) values ( 324003, 'VTDS', 'TDS Payable', now(), now(), true, false)
