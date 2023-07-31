@@ -661,11 +661,11 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     AND (:startDate is null or transaction_date >= :startDate)
                     AND (:endDate is null or transaction_date <= :endDate)
                     AND acc_type::varchar in (:accType)
-                    AND (:accMode is null OR acc_mode::varchar = :accMode)
+                    AND (acc_mode::varchar in (:accMode))
                     AND deleted_at is null  and is_void = false
         """
     )
-    suspend fun getAccountBalance(orgId: List<UUID>, entityCode: Int, startDate: Timestamp?, endDate: Timestamp?, accType: List<AccountType>, accMode: AccMode?): BigDecimal
+    suspend fun getAccountBalance(orgId: List<UUID>, entityCode: Int, startDate: Timestamp?, endDate: Timestamp?, accType: List<AccountType>, accMode: List<String>): BigDecimal
 
     @NewSpan
     @Query(

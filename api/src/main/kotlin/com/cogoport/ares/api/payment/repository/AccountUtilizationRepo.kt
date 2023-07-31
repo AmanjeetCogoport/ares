@@ -610,7 +610,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 AND (:startDate is null OR transaction_date >= :startDate::date)
                 AND (:endDate is null OR transaction_date <= :endDate::date)
                 AND document_value ilike :query
-                AND (:accMode is null OR acc_mode::varchar = :accMode)
+                AND (acc_mode::varchar in (:accMode))
                 AND document_status != 'DELETED'::document_status
                 AND deleted_at is null
                 AND settlement_enabled = true
@@ -722,7 +722,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
         startDate: Timestamp?,
         endDate: Timestamp?,
         query: String?,
-        accMode: AccMode?,
+        accMode: List<AccMode>,
         sortBy: String?,
         sortType: String?,
         documentPaymentStatus: String?
