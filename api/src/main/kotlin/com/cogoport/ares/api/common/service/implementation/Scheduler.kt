@@ -207,6 +207,8 @@ class Scheduler(
 
     @Scheduled(cron = "0 17 * * *")
     suspend fun createLedgerSummaryForAp() = runBlocking {
+        val today = now()
+        logger().info("Migrating organizations data for : $today")
         outStandingService.createLedgerSummary()
     }
 }
