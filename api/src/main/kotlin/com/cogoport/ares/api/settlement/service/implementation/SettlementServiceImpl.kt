@@ -37,7 +37,6 @@ import com.cogoport.ares.api.settlement.mapper.DocumentMapper
 import com.cogoport.ares.api.settlement.mapper.HistoryDocumentMapper
 import com.cogoport.ares.api.settlement.mapper.OrgSummaryMapper
 import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
-import com.cogoport.ares.api.settlement.model.AccTypeMode
 import com.cogoport.ares.api.settlement.model.PaymentInfo
 import com.cogoport.ares.api.settlement.model.Sid
 import com.cogoport.ares.api.settlement.repository.IncidentMappingsRepository
@@ -249,7 +248,7 @@ open class SettlementServiceImpl : SettlementService {
      */
     override suspend fun getAccountBalance(summaryRequest: SummaryRequest): SummaryResponse {
         val orgId = listOf(summaryRequest.orgId)
-        val accTypes = getAccountModeAndType(summaryRequest.accModes,  null)
+        val accTypes = getAccountModeAndType(summaryRequest.accModes, null)
         val amount =
             accountUtilizationRepository.getAccountBalance(
                 orgId,
@@ -618,6 +617,7 @@ open class SettlementServiceImpl : SettlementService {
         val offset = (request.pageLimit * request.page) - request.pageLimit
         val orgId: List<UUID> = listOf(request.orgId)
         val accTypes = getAccountModeAndType(request.accMode, request.docType)
+        val query = util.toQueryString(request.query)
         val documentEntity =
             accutilizationRepo.getDocumentList(
                 request.pageLimit,
@@ -627,8 +627,8 @@ open class SettlementServiceImpl : SettlementService {
                 request.entityCode,
                 request.startDate,
                 request.endDate,
-                "%${request.query}%",
-                request.accMode,
+                query,
+                request.accMode.map { it.name },
                 request.sortBy,
                 request.sortType,
                 request.documentPaymentStatus
@@ -644,7 +644,7 @@ open class SettlementServiceImpl : SettlementService {
                 request.entityCode,
                 request.startDate,
                 request.endDate,
-                "%${request.query}%",
+                query,
                 request.documentPaymentStatus
             )
 
