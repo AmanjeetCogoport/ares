@@ -25,7 +25,6 @@ import io.micronaut.scheduling.annotation.Scheduled
 import io.sentry.Sentry
 import jakarta.inject.Singleton
 import kotlinx.coroutines.runBlocking
-import java.sql.Timestamp
 import java.time.LocalDate
 import java.time.LocalDate.now
 import java.time.LocalDateTime
@@ -153,8 +152,7 @@ class Scheduler(
     fun bulkMatchingSettlement() = runBlocking {
         val today = now()
         logger().info("Scheduler started for Bulk Matching Settlement On Sage for date: $today")
-        val date = Timestamp.valueOf("2023-05-16 00:00:00")
-        val settlementsIds = settlementRepository.getSettlementIdForCreatedStatus(date)
+        val settlementsIds = settlementRepository.getSettlementIdForCreatedStatus()
         if (!settlementsIds.isNullOrEmpty()) {
             settlementService.bulkMatchingSettlementOnSage(settlementsIds, AresConstants.ARES_USER_ID)
         }
@@ -209,6 +207,8 @@ class Scheduler(
 
     @Scheduled(cron = "0 17 * * *")
     suspend fun createLedgerSummaryForAp() = runBlocking {
+        val today = now()
+        logger().info("Migrating organizations data for : $today")
         outStandingService.createLedgerSummary()
     }
 }

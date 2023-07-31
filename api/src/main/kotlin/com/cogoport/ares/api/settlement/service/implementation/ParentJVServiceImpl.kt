@@ -731,6 +731,7 @@ open class ParentJVServiceImpl : ParentJVService {
             AccMode.PREF -> JVSageControls.PREF.value
             AccMode.PC -> JVSageControls.PC.value
             AccMode.OTHER -> JVSageControls.OTHER.value
+            AccMode.VTDS -> JVSageControls.VTDS.value
             else -> {
                 throw AresException(AresError.ERR_1529, accMode.name)
             }

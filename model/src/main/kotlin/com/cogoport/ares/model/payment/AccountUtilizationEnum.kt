@@ -1,7 +1,7 @@
 package com.cogoport.ares.model.payment
 
 enum class AccMode {
-    AR, AP, OTHER, CSD, PDA, EMD, SUSS, SUSA, RE, PREF, EMP, RI, PC, VTDS,
+    AR, AP, OTHER, CSD, PDA, EMD, SUSS, SUSA, RE, PREF, EMP, RI, PC, VTDS
 }
 
 enum class ServiceType {
