@@ -1236,7 +1236,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             acc_mode::VARCHAR = :accMode AND deleted_at IS NULL
             AND acc_type::varchar in (:accTypes)
             AND document_status in ('FINAL')
-            AND transaction_date >= '2023-07-28'
+            AND created_at >= '2023-07-28'
             group by organization_id, entity_code,led_currency, acc_mode
         """
     )
