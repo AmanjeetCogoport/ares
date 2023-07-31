@@ -249,13 +249,15 @@ open class SettlementServiceImpl : SettlementService {
     override suspend fun getAccountBalance(summaryRequest: SummaryRequest): SummaryResponse {
         val orgId = listOf(summaryRequest.orgId)
         val accTypes = getAccountModeAndType(summaryRequest.accModes, null)
-        val amount =
+        val validAccTypeForOpenInvoiceCalculation = listOf(AccountType.PINV, AccountType.PCN, AccountType.PREIMB, AccountType.SINV, AccountType.SCN, AccountType.SREIMBCN, AccountType.SREIMB)
+        val validAccTypeForOnAccountCalculation = listOf(AccountType.VTDS, AccountType.REC, AccountType.CTDS, AccountType.PAY, AccountType.BANK, AccountType.CONTR, AccountType.ROFF, AccountType.MTCCV, AccountType.MISC, AccountType.INTER, AccountType.OPDIV, AccountType.MTC)
+        val openInvoiceAmount =
             accountUtilizationRepository.getAccountBalance(
                 orgId,
                 summaryRequest.entityCode!!,
                 summaryRequest.startDate,
                 summaryRequest.endDate,
-                accTypes,
+                accTypes.filter { it in validAccTypeForOpenInvoiceCalculation },
                 summaryRequest.accModes.map { it.name }
             )
         val onAccountPayment =
@@ -264,12 +266,13 @@ open class SettlementServiceImpl : SettlementService {
                 summaryRequest.entityCode!!,
                 null,
                 null,
-                listOf(AccountType.REC, AccountType.PAY),
+                accTypes.filter { it in validAccTypeForOnAccountCalculation },
                 summaryRequest.accModes.map { it.name }
             )
         return SummaryResponse(
-            amount = amount,
-            onAccountAmount = onAccountPayment
+            openInvoiceAmount = openInvoiceAmount,
+            onAccountAmount = onAccountPayment,
+            outstandingAmount = openInvoiceAmount + onAccountPayment
         )
     }
 
@@ -819,19 +822,19 @@ open class SettlementServiceImpl : SettlementService {
         return when {
             docType == AresConstants.PAYMENT && accMode == AccMode.AR -> { listOf(AccountType.REC) }
             docType == AresConstants.PAYMENT && accMode == AccMode.AP -> { listOf(AccountType.PAY) }
-            docType == AresConstants.INVOICE && accMode == AccMode.AR -> { listOf(AccountType.SINV) }
-            docType == AresConstants.INVOICE && accMode == AccMode.AP -> { listOf(AccountType.PINV) }
-            docType == AresConstants.CREDIT_NOTE && accMode == AccMode.AR -> { listOf(AccountType.SCN) }
+            docType == AresConstants.INVOICE && accMode == AccMode.AR -> { listOf(AccountType.SINV, AccountType.SREIMB) }
+            docType == AresConstants.INVOICE && accMode == AccMode.AP -> { listOf(AccountType.PINV, AccountType.PREIMB) }
+            docType == AresConstants.CREDIT_NOTE && accMode == AccMode.AR -> { listOf(AccountType.SCN, AccountType.SREIMBCN) }
             docType == AresConstants.CREDIT_NOTE && accMode == AccMode.AP -> { listOf(AccountType.PCN) }
             docType == AresConstants.TDS && accMode == AccMode.AR -> { listOf(AccountType.CTDS) }
             docType == AresConstants.TDS && accMode == AccMode.AP -> { listOf(AccountType.VTDS) }
             docType == AresConstants.TDS && accMode == AccMode.VTDS -> { listOf(AccountType.VTDS) }
             docType == AresConstants.JV -> { jvList }
             docType == null && accMode == AccMode.AR -> {
-                listOf(AccountType.SINV, AccountType.REC, AccountType.SCN, AccountType.SDN) + jvList
+                listOf(AccountType.SINV, AccountType.REC, AccountType.SCN, AccountType.SDN, AccountType.CTDS, AccountType.SREIMB, AccountType.SREIMBCN) + jvList
             }
             docType == null && accMode == AccMode.AP -> {
-                listOf(AccountType.PINV, AccountType.PCN, AccountType.PDN, AccountType.PAY) + jvList
+                listOf(AccountType.PINV, AccountType.PCN, AccountType.PDN, AccountType.PAY, AccountType.VTDS, AccountType.PREIMB) + jvList
             }
             else -> { emptyList() }
         }
@@ -1446,7 +1449,8 @@ open class SettlementServiceImpl : SettlementService {
                 SettlementType.REC,
                 SettlementType.PCN,
                 SettlementType.PAY,
-                SettlementType.SCN
+                SettlementType.SCN,
+                SettlementType.SREIMBCN
             )
         val debitType =
             listOf(
@@ -2183,7 +2187,7 @@ open class SettlementServiceImpl : SettlementService {
                 listOf(SettlementType.PAY, SettlementType.PCN, SettlementType.SINV) + jvList
             }
             SettlementType.PCN -> {
-                listOf(SettlementType.PINV, SettlementType.PDN) + jvList
+                listOf(SettlementType.PINV, SettlementType.PDN)
             }
             SettlementType.PAY -> {
                 listOf(SettlementType.PINV, SettlementType.PDN) + jvList
@@ -2192,7 +2196,7 @@ open class SettlementServiceImpl : SettlementService {
                 listOf(SettlementType.REC, SettlementType.SCN, SettlementType.PINV) + jvList
             }
             SettlementType.SCN -> {
-                listOf(SettlementType.SINV, SettlementType.SDN) + jvList
+                listOf(SettlementType.SINV, SettlementType.SDN)
             }
             SettlementType.SDN -> {
                 listOf(SettlementType.SCN, SettlementType.REC)
@@ -2211,6 +2215,9 @@ open class SettlementServiceImpl : SettlementService {
             }
             SettlementType.SREIMB -> {
                 listOf(SettlementType.PREIMB)
+            }
+            SettlementType.SREIMBCN -> {
+                listOf(SettlementType.SREIMB)
             }
             else -> {
                 emptyList()
