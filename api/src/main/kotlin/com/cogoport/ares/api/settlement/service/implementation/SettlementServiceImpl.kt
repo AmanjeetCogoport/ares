@@ -2279,7 +2279,6 @@ open class SettlementServiceImpl : SettlementService {
         }
         for (invoice in dest) {
             fetchSettlingDocs(invoice.accountType).forEach { credit ->
-
                 if (source.map { it.accountType }.contains(credit)) creditCount += 1
             }
             if (creditCount == 0) throw AresException(AresError.ERR_1501, "") else creditCount = 0
