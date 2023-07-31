@@ -2205,7 +2205,7 @@ open class SettlementServiceImpl : SettlementService {
                 listOf(SettlementType.PAY, SettlementType.PCN, SettlementType.SINV) + jvList
             }
             SettlementType.PCN -> {
-                listOf(SettlementType.PINV, SettlementType.PDN)
+                listOf(SettlementType.PINV, SettlementType.PDN) + jvList
             }
             SettlementType.PAY -> {
                 listOf(SettlementType.PINV, SettlementType.PDN) + jvList
@@ -2214,7 +2214,7 @@ open class SettlementServiceImpl : SettlementService {
                 listOf(SettlementType.REC, SettlementType.SCN, SettlementType.PINV) + jvList
             }
             SettlementType.SCN -> {
-                listOf(SettlementType.SINV, SettlementType.SDN)
+                listOf(SettlementType.SINV, SettlementType.SDN) + jvList
             }
             SettlementType.SDN -> {
                 listOf(SettlementType.SCN, SettlementType.REC)
@@ -2279,6 +2279,7 @@ open class SettlementServiceImpl : SettlementService {
         }
         for (invoice in dest) {
             fetchSettlingDocs(invoice.accountType).forEach { credit ->
+
                 if (source.map { it.accountType }.contains(credit)) creditCount += 1
             }
             if (creditCount == 0) throw AresException(AresError.ERR_1501, "") else creditCount = 0
