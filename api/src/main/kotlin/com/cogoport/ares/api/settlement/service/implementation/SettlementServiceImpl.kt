@@ -2205,7 +2205,7 @@ open class SettlementServiceImpl : SettlementService {
                 listOf(SettlementType.PAY, SettlementType.PCN, SettlementType.SINV) + jvList
             }
             SettlementType.PCN -> {
-                listOf(SettlementType.PINV, SettlementType.PDN)
+                listOf(SettlementType.PINV, SettlementType.PDN) + jvList
             }
             SettlementType.PAY -> {
                 listOf(SettlementType.PINV, SettlementType.PDN) + jvList
@@ -2214,7 +2214,7 @@ open class SettlementServiceImpl : SettlementService {
                 listOf(SettlementType.REC, SettlementType.SCN, SettlementType.PINV) + jvList
             }
             SettlementType.SCN -> {
-                listOf(SettlementType.SINV, SettlementType.SDN)
+                listOf(SettlementType.SINV, SettlementType.SDN) + jvList
             }
             SettlementType.SDN -> {
                 listOf(SettlementType.SCN, SettlementType.REC)
