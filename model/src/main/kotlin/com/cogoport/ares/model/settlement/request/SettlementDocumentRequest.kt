@@ -18,9 +18,9 @@ data class SettlementDocumentRequest(
     @QueryValue(AresModelConstants.PAGE) val page: Int = 1,
     @QueryValue(AresModelConstants.PAGE_LIMIT) val pageLimit: Int = 10,
     @QueryValue(AresModelConstants.QUERY) val query: String? = "",
-    @QueryValue(AresModelConstants.ACC_MODE) val accMode: List<AccMode>,
+    @QueryValue(AresModelConstants.ACC_MODE) val accModes: List<AccMode>?,
     val docType: String? = null,
     val documentPaymentStatus: String? = null,
-    val sortBy: String = "transactionDate",
-    val sortType: String = "Desc"
+    val sortBy: String? = "transactionDate",
+    val sortType: String? = "Desc"
 )

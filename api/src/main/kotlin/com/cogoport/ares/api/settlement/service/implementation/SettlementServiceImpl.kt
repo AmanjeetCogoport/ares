@@ -257,8 +257,8 @@ open class SettlementServiceImpl : SettlementService {
                 summaryRequest.entityCode!!,
                 summaryRequest.startDate,
                 summaryRequest.endDate,
-                accTypes.filter { it in validAccTypeForOpenInvoiceCalculation },
-                summaryRequest.accModes.map { it.name }
+                accTypes?.filter { it in validAccTypeForOpenInvoiceCalculation },
+                summaryRequest.accModes?.map { it.name }
             )
         val onAccountPayment =
             accountUtilizationRepository.getAccountBalance(
@@ -266,8 +266,8 @@ open class SettlementServiceImpl : SettlementService {
                 summaryRequest.entityCode!!,
                 null,
                 null,
-                accTypes.filter { it in validAccTypeForOnAccountCalculation },
-                summaryRequest.accModes.map { it.name }
+                accTypes?.filter { it in validAccTypeForOnAccountCalculation },
+                summaryRequest.accModes?.map { it.name }
             )
         return SummaryResponse(
             openInvoiceAmount = openInvoiceAmount,
@@ -619,7 +619,8 @@ open class SettlementServiceImpl : SettlementService {
     ): ResponseList<Document> {
         val offset = (request.pageLimit * request.page) - request.pageLimit
         val orgId: List<UUID> = listOf(request.orgId)
-        val accTypes = getAccountModeAndType(request.accMode, request.docType)
+        val accTypes = getAccountModeAndType(request.accModes, request.docType)
+
         val query = util.toQueryString(request.query)
         val documentEntity =
             accutilizationRepo.getDocumentList(
@@ -631,7 +632,7 @@ open class SettlementServiceImpl : SettlementService {
                 request.startDate,
                 request.endDate,
                 query,
-                request.accMode.map { it.name },
+                request.accModes?.map { it.name },
                 request.sortBy,
                 request.sortType,
                 request.documentPaymentStatus
@@ -811,13 +812,13 @@ open class SettlementServiceImpl : SettlementService {
      * @param: serviceProviderId
      * @return: AccTypeMode
      */
-    private fun getAccountModeAndType(accModeList: List<AccMode>, docType: String?): List<AccountType> {
+    private fun getAccountModeAndType(accModeList: List<AccMode>?, docType: String?): List<AccountType>? {
         return accModeList
-            .flatMap { getListOfAccountTypeFromDocType(docType, it) }
-            .distinct()
+            ?.flatMap { getListOfAccountTypeFromDocType(docType, it) }
+            ?.distinct()
     }
 
-    private fun getListOfAccountTypeFromDocType(docType: String?, accMode: AccMode): List<AccountType> {
+    private fun getListOfAccountTypeFromDocType(docType: String?, accMode: AccMode?): List<AccountType> {
         val jvList = settlementServiceHelper.getJvList(classType = AccountType::class.java).filter { it != AccountType.NEWPR }
         return when {
             docType == AresConstants.PAYMENT && accMode == AccMode.AR -> { listOf(AccountType.REC) }
@@ -829,13 +830,16 @@ open class SettlementServiceImpl : SettlementService {
             docType == AresConstants.TDS && accMode == AccMode.AR -> { listOf(AccountType.CTDS) }
             docType == AresConstants.TDS && accMode == AccMode.AP -> { listOf(AccountType.VTDS) }
             docType == AresConstants.TDS && accMode == AccMode.VTDS -> { listOf(AccountType.VTDS) }
-            docType == AresConstants.JV -> { jvList }
+            docType == AresConstants.JV && accMode != null -> { jvList }
+            docType == AresConstants.INVOICE && accMode == null -> { listOf(AccountType.SINV, AccountType.PINV) }
+            docType == AresConstants.TDS && accMode == null -> { listOf(AccountType.VTDS, AccountType.CTDS) }
             docType == null && accMode == AccMode.AR -> {
                 listOf(AccountType.SINV, AccountType.REC, AccountType.SCN, AccountType.SDN, AccountType.CTDS, AccountType.SREIMB, AccountType.SREIMBCN) + jvList
             }
             docType == null && accMode == AccMode.AP -> {
                 listOf(AccountType.PINV, AccountType.PCN, AccountType.PDN, AccountType.PAY, AccountType.VTDS, AccountType.PREIMB) + jvList
             }
+            docType == null && accMode == null -> { listOf(AccountType.SINV, AccountType.PINV) }
             else -> { emptyList() }
         }
     }

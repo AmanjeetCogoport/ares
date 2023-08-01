@@ -15,7 +15,7 @@ data class SummaryRequest(
     @field:NotNull(message = "entityCode cannot be null")
     var entityCode: Int?,
     @QueryValue(AresModelConstants.ORG_ID) val orgId: UUID,
-    @QueryValue(AresModelConstants.ACC_MODE) val accModes: List<AccMode>,
+    @QueryValue(AresModelConstants.ACC_MODE) val accModes: List<AccMode>?,
     val startDate: Timestamp? = null,
     val endDate: Timestamp? = null
 )
