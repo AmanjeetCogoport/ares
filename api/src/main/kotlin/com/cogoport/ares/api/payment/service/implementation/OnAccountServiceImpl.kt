@@ -1911,12 +1911,12 @@ open class OnAccountServiceImpl : OnAccountService {
         )
         val completeLedgerList = openingLedgerList + arLedgerResponse
 
-        for (i in 1..completeLedgerList.lastIndex) {
-            val balance = (completeLedgerList[i].debit - completeLedgerList[i].credit) + (completeLedgerList[i - 1].debitBalance - completeLedgerList[i - 1].creditBalance)
+        for (index in 1..completeLedgerList.lastIndex) {
+            val balance = (completeLedgerList[index].debit - completeLedgerList[index].credit) + (completeLedgerList[index - 1].debitBalance - completeLedgerList[index - 1].creditBalance)
             if (balance.compareTo(BigDecimal.ZERO) == 1) {
-                completeLedgerList[i].debitBalance = balance
+                completeLedgerList[index].debitBalance = balance
             } else {
-                completeLedgerList[i].creditBalance = -balance
+                completeLedgerList[index].creditBalance = -balance
             }
         }
         var closingBalance = completeLedgerList[completeLedgerList.lastIndex].debitBalance - completeLedgerList[completeLedgerList.lastIndex].creditBalance
