@@ -731,6 +731,7 @@ open class ParentJVServiceImpl : ParentJVService {
             AccMode.PREF -> JVSageControls.PREF.value
             AccMode.PC -> JVSageControls.PC.value
             AccMode.OTHER -> JVSageControls.OTHER.value
+            AccMode.VTDS -> JVSageControls.VTDS.value
             else -> {
                 throw AresException(AresError.ERR_1529, accMode.name)
             }
@@ -878,5 +879,21 @@ open class ParentJVServiceImpl : ParentJVService {
         parentJournalVoucher = parentJVRepository.save(parentJournalVoucher)
 
         return journalVoucherService.createTdsJvLineItems(parentJournalVoucher, accountUtilization, lineItemProps, tdsAmount, tdsLedAmount, createdByUserType, payCurrTds, payLocTds, utr)
+    }
+
+    override suspend fun bulkPostingJvToSage() {
+        val parentJvIds = parentJVRepository.getParentJournalVoucherIds()
+        logger().info("size of jv posting : ${parentJvIds?.size}")
+
+        if (!parentJvIds.isNullOrEmpty()) {
+            parentJvIds.map {
+                aresMessagePublisher.emitPostJvToSage(
+                    PostJVToSageRequest(
+                        parentJvId = Hashids.encode(it),
+                        performedBy = AresConstants.ARES_USER_ID
+                    )
+                )
+            }
+        }
     }
 }

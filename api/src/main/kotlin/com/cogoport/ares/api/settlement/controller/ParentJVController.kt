@@ -104,4 +104,9 @@ class ParentJVController {
     suspend fun getAccountMode(@QueryValue("q") q: String?, @QueryValue("glCode") glCode: String?): List<HashMap<String, String>> {
         return parentJVService.getAccountMode(q, glCode)
     }
+
+    @Post("/bulk-post")
+    suspend fun bulkPostingJvToSage() {
+        return parentJVService.bulkPostingJvToSage()
+    }
 }
