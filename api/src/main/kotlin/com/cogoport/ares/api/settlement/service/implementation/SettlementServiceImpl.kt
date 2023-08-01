@@ -272,7 +272,8 @@ open class SettlementServiceImpl : SettlementService {
         return SummaryResponse(
             openInvoiceAmount = openInvoiceAmount,
             onAccountAmount = onAccountPayment,
-            outstandingAmount = openInvoiceAmount + onAccountPayment
+            outstandingAmount = openInvoiceAmount + onAccountPayment,
+            ledgerCurrency = AresConstants.LEDGER_CURRENCY[summaryRequest.entityCode]
         )
     }
 
