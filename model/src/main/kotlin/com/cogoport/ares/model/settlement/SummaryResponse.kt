@@ -10,4 +10,5 @@ data class SummaryResponse(
     val openInvoiceAmount: BigDecimal = 0.toBigDecimal(),
     val onAccountAmount: BigDecimal = 0.toBigDecimal(),
     val outstandingAmount: BigDecimal = 0.toBigDecimal(),
+    val ledgerCurrency: String?,
 )

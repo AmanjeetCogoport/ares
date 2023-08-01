@@ -604,12 +604,12 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 AND case when acc_type in ('SINV', 'SCN', 'PINV', 'PCN', 'PAY', 'REC', 'VTDS', 'CTDS') THEN (amount_curr - pay_curr) > 1 ELSE (amount_curr - pay_curr) > 0 END 
                 AND organization_id in (:orgId)
                 AND document_status = 'FINAL'
-                AND acc_type::varchar in (:accType)
+                AND ((:accType) is null or acc_type::varchar in (:accType))
                 AND (:entityCode is null OR entity_code = :entityCode)
                 AND (:startDate is null OR transaction_date >= :startDate::date)
                 AND (:endDate is null OR transaction_date <= :endDate::date)
                 AND document_value ilike :query
-                AND acc_mode::varchar in (:accMode)
+                AND ((:accMode) is null or acc_mode::varchar in (:accMode))
                 AND document_status != 'DELETED'::document_status
                 AND deleted_at is null
                 AND settlement_enabled = true
@@ -715,13 +715,13 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
     suspend fun getDocumentList(
         limit: Int? = null,
         offset: Int? = null,
-        accType: List<AccountType>,
+        accType: List<AccountType>?,
         orgId: List<UUID>,
         entityCode: Int?,
         startDate: Timestamp?,
         endDate: Timestamp?,
         query: String?,
-        accMode: List<String>,
+        accMode: List<String>?,
         sortBy: String?,
         sortType: String?,
         documentPaymentStatus: String?
@@ -738,7 +738,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     AND case when acc_type in ('SINV', 'SCN', 'PINV', 'PCN', 'PAY', 'REC', 'VTDS', 'CTDS') THEN (amount_curr - pay_curr) > 1 ELSE (amount_curr - pay_curr) > 0 END
                     AND document_status = 'FINAL'
                     AND organization_id in (:orgId)
-                    AND acc_type::varchar in (:accType)
+                    AND ((:accType) is null or acc_type::varchar in (:accType))
                     AND (:entityCode is null OR entity_code = :entityCode)
                     AND (:startDate is null OR transaction_date >= :startDate::date)
                     AND (:endDate is null OR transaction_date <= :endDate::date)
@@ -760,7 +760,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             )
     """
     )
-    suspend fun getDocumentCount(accType: List<AccountType>, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?, documentPaymentStatus: String?): Long?
+    suspend fun getDocumentCount(accType: List<AccountType>?, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?, documentPaymentStatus: String?): Long?
 
     @NewSpan
     @Query(
@@ -1235,7 +1235,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             acc_mode::VARCHAR = :accMode AND deleted_at IS NULL
             AND acc_type::varchar in (:accTypes)
             AND document_status in ('FINAL')
-            AND transaction_date >= '2023-07-28'
+            AND created_at >= '2023-07-28'
             group by organization_id, entity_code,led_currency, acc_mode
         """
     )
