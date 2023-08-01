@@ -1913,10 +1913,12 @@ open class OnAccountServiceImpl : OnAccountService {
 
         for (i in 1..completeLedgerList.lastIndex) {
             val balance = (completeLedgerList[i].debit - completeLedgerList[i].credit) + (completeLedgerList[i - 1].debitBalance - completeLedgerList[i - 1].creditBalance)
-            if (balance.compareTo(BigDecimal.ZERO) == 1)
+            if (balance.compareTo(BigDecimal.ZERO) == 1) {
                 completeLedgerList[i].debitBalance = balance
-            else
+            }
+            else {
                 completeLedgerList[i].creditBalance = -balance
+            }
         }
         var closingBalance = completeLedgerList[completeLedgerList.lastIndex].debitBalance - completeLedgerList[completeLedgerList.lastIndex].creditBalance
         var closingLedgerList: List<ARLedgerResponse> = listOf(
@@ -1928,10 +1930,18 @@ open class OnAccountServiceImpl : OnAccountService {
                 amount = "",
                 debit = BigDecimal.ZERO,
                 credit = BigDecimal.ZERO,
-                debitBalance = if (closingBalance.compareTo(BigDecimal.ZERO) == 1) closingBalance
-                else BigDecimal.ZERO,
-                creditBalance = if (closingBalance.compareTo(BigDecimal.ZERO) != 1) -closingBalance
-                else BigDecimal.ZERO,
+                debitBalance = if (closingBalance.compareTo(BigDecimal.ZERO) == 1) {
+                    closingBalance
+                }
+                else {
+                    BigDecimal.ZERO
+                },
+                creditBalance = if (closingBalance.compareTo(BigDecimal.ZERO) != 1) {
+                    -closingBalance
+                }
+                else {
+                    BigDecimal.ZERO
+                },
                 transactionRefNumber = "",
                 shipmentDocumentNumber = ""
             )
