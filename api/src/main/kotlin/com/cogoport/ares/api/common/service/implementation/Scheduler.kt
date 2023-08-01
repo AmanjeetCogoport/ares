@@ -12,6 +12,7 @@ import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
+import com.cogoport.ares.api.settlement.service.interfaces.ParentJVService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.utils.ExcelUtils
 import com.cogoport.ares.api.utils.logger
@@ -47,7 +48,8 @@ class Scheduler(
     private var aresDocumentRepository: AresDocumentRepository,
     private var s3Client: S3Client,
     private var onAccountService: OnAccountService,
-    private var paymentMigration: PaymentMigrationWrapper
+    private var paymentMigration: PaymentMigrationWrapper,
+    private var parentJVService: ParentJVService
 ) {
     @Value("\${aws.s3.bucket}")
     private lateinit var s3Bucket: String
@@ -210,5 +212,12 @@ class Scheduler(
         val today = now()
         logger().info("Migrating organizations data for : $today")
         outStandingService.createLedgerSummary()
+    }
+
+    @Scheduled(cron = "0 15 * * *")
+    fun postToSageJV() = runBlocking {
+        val today = now()
+        logger().info("Posting JVs to Sage : $today")
+        parentJVService.bulkPostingJvToSage()
     }
 }
