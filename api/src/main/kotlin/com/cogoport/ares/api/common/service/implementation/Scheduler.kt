@@ -11,12 +11,14 @@ import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
+import com.cogoport.ares.api.settlement.repository.ParentJVRepository
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.utils.ExcelUtils
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
+import com.cogoport.ares.model.settlement.PostJVToSageRequest
 import com.cogoport.ares.model.settlement.PostPaymentToSage
 import com.cogoport.brahma.hashids.Hashids
 import com.cogoport.brahma.s3.client.S3Client
@@ -47,7 +49,8 @@ class Scheduler(
     private var aresDocumentRepository: AresDocumentRepository,
     private var s3Client: S3Client,
     private var onAccountService: OnAccountService,
-    private var paymentMigration: PaymentMigrationWrapper
+    private var paymentMigration: PaymentMigrationWrapper,
+    private var parentJVRepository: ParentJVRepository
 ) {
     @Value("\${aws.s3.bucket}")
     private lateinit var s3Bucket: String
@@ -210,5 +213,24 @@ class Scheduler(
         val today = now()
         logger().info("Migrating organizations data for : $today")
         outStandingService.createLedgerSummary()
+    }
+
+    @Scheduled(cron = "0 15 * * *")
+    fun postToSageJV() = runBlocking {
+        val today = now()
+        logger().info("Posting JVs to Sage : $today")
+        val parentJvIds = parentJVRepository.getParentJournalVoucherIds()
+        logger().info("size of jv posting : ${parentJvIds?.size}")
+
+        if (!parentJvIds.isNullOrEmpty()) {
+            parentJvIds.map {
+                aresMessagePublisher.emitPostJvToSage(
+                    PostJVToSageRequest(
+                        parentJvId = Hashids.encode(it),
+                        performedBy = AresConstants.ARES_USER_ID
+                    )
+                )
+            }
+        }
     }
 }
