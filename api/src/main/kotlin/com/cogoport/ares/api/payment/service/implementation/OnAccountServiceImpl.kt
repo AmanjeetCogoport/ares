@@ -1915,8 +1915,7 @@ open class OnAccountServiceImpl : OnAccountService {
             val balance = (completeLedgerList[i].debit - completeLedgerList[i].credit) + (completeLedgerList[i - 1].debitBalance - completeLedgerList[i - 1].creditBalance)
             if (balance.compareTo(BigDecimal.ZERO) == 1) {
                 completeLedgerList[i].debitBalance = balance
-            }
-            else {
+            } else {
                 completeLedgerList[i].creditBalance = -balance
             }
         }
@@ -1932,14 +1931,12 @@ open class OnAccountServiceImpl : OnAccountService {
                 credit = BigDecimal.ZERO,
                 debitBalance = if (closingBalance.compareTo(BigDecimal.ZERO) == 1) {
                     closingBalance
-                }
-                else {
+                } else {
                     BigDecimal.ZERO
                 },
                 creditBalance = if (closingBalance.compareTo(BigDecimal.ZERO) != 1) {
                     -closingBalance
-                }
-                else {
+                } else {
                     BigDecimal.ZERO
                 },
                 transactionRefNumber = "",
