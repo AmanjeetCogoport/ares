@@ -150,7 +150,7 @@ interface ParentJVRepository : CoroutineCrudRepository<ParentJournalVoucher, Lon
     @NewSpan
     @Query(
         """
-            SELECT *
+            SELECT id
               FROM parent_journal_vouchers
                 WHERE status::varchar in ('APPROVED', 'POSTING_FAILED')
                 AND led_currency != 'VND'

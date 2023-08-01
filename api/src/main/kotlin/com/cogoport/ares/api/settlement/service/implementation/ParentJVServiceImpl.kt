@@ -880,4 +880,20 @@ open class ParentJVServiceImpl : ParentJVService {
 
         return journalVoucherService.createTdsJvLineItems(parentJournalVoucher, accountUtilization, lineItemProps, tdsAmount, tdsLedAmount, createdByUserType, payCurrTds, payLocTds, utr)
     }
+
+    override suspend fun bulkPostingJvToSage() {
+        val parentJvIds = parentJVRepository.getParentJournalVoucherIds()
+        logger().info("size of jv posting : ${parentJvIds?.size}")
+
+        if (!parentJvIds.isNullOrEmpty()) {
+            parentJvIds.map {
+                aresMessagePublisher.emitPostJvToSage(
+                    PostJVToSageRequest(
+                        parentJvId = Hashids.encode(it),
+                        performedBy = AresConstants.ARES_USER_ID
+                    )
+                )
+            }
+        }
+    }
 }
