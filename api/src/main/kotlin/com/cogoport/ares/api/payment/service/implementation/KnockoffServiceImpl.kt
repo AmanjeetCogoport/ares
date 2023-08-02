@@ -644,14 +644,14 @@ open class KnockoffServiceImpl : KnockoffService {
             hashMapOf(
                 "accMode" to "AP",
                 "glCode" to "321000",
-                "type" to "CREDIT",
-                "signFlag" to -1
-            ),
-            hashMapOf(
-                "accMode" to null,
-                "glCode" to "324001",
                 "type" to "DEBIT",
                 "signFlag" to 1
+            ),
+            hashMapOf(
+                "accMode" to "VTDS",
+                "glCode" to "324003",
+                "type" to "CREDIT",
+                "signFlag" to -1
             )
         )
         return parentJVService.createTdsAsJvForBills(

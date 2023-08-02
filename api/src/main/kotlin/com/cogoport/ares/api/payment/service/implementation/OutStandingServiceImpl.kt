@@ -1025,6 +1025,7 @@ class OutStandingServiceImpl : OutStandingService {
         val onAccountAccountType = listOf(AccountType.PAY.name, AccountType.VTDS.name, AccountType.OPDIV.name, AccountType.MISC.name, AccountType.BANK.name, AccountType.CONTR.name, AccountType.INTER.name, AccountType.MTC.name, AccountType.MTCCV.name)
         val creditNoteAccType = listOf(AccountType.PCN.name)
         val outstandingData = accountUtilizationRepo.getLedgerSummaryForAp(accTypesForAp, AccMode.AP.name, invoiceAccType, onAccountAccountType, creditNoteAccType)
+        logger().info("Creating Data of size ${outstandingData?.size}")
         if (!outstandingData.isNullOrEmpty()) {
             ledgerSummaryRepo.saveAll(outstandingData)
         }
