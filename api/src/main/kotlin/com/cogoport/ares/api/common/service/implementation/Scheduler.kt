@@ -134,13 +134,13 @@ class Scheduler(
     }
 
     @Scheduled(cron = "0 18 * * *")
-    fun bulkPaymentPostToSage() = runBlocking {
-        val yesterday = now().minus(1, ChronoUnit.DAYS)
-        logger().info("Scheduler started for AP post payment to sage for date: $yesterday")
+    fun bulkPaymentFinalPostOnSage() = runBlocking {
+        val threeDayBefore = now().minus(3, ChronoUnit.DAYS)
+        logger().info("Scheduler started for AP post payment to sage for date: $threeDayBefore")
         val paymentIds = paymentRepository.getPaymentIdsForApprovedPayments()
         if (!paymentIds.isNullOrEmpty()) {
             paymentIds.forEach {
-                aresMessagePublisher.emitPostPaymentToSage(
+                aresMessagePublisher.emitBulkPostPaymentToSage(
                     PostPaymentToSage(
                         it,
                         AresConstants.ARES_USER_ID
