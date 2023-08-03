@@ -663,6 +663,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     AND ((:accType) is null or acc_type::varchar in (:accType))
                     AND ((:accMode) is null or acc_mode::varchar in (:accMode))
                     AND deleted_at is null  and is_void = false
+                    and acc_type != 'NEWPR'
         """
     )
     suspend fun getAccountBalance(orgId: List<UUID>, entityCode: Int, startDate: Timestamp?, endDate: Timestamp?, accType: List<AccountType>?, accMode: List<String>?): BigDecimal
