@@ -133,7 +133,7 @@ class Scheduler(
         ledgerBalanceServiceImpl.createLedgerBalances(calendar.time, 401)
     }
 
-    @Scheduled(cron = "0 18 * * *")
+    @Scheduled(cron = "0 16 * * *")
     fun bulkPaymentFinalPostOnSage() = runBlocking {
         val threeDayBefore = now().minus(3, ChronoUnit.DAYS)
         logger().info("Scheduler started for AP post payment to sage for date: $threeDayBefore")
