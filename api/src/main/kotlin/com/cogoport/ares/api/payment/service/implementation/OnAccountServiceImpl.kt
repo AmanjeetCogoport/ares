@@ -65,6 +65,7 @@ import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
 import com.cogoport.ares.model.payment.ValidateTradePartyRequest
 import com.cogoport.ares.model.payment.enum.CogoBankAccount
 import com.cogoport.ares.model.payment.enum.PaymentSageGLCodes
+import com.cogoport.ares.model.payment.enum.ShipmentDocumentName
 import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
 import com.cogoport.ares.model.payment.request.BulkUploadRequest
@@ -1950,7 +1951,7 @@ open class OnAccountServiceImpl : OnAccountService {
         var shipmentDocumentNumber = ""
         if (documentDetail != null) {
             for (document in documentDetail) {
-                if (document.name in listOf<String?>(DocumentName.MBL.value, DocumentName.HBL.value, DocumentName.MAWB.value, DocumentName.HAWB.value)) {
+                if (document.name in listOf<String?>(ShipmentDocumentName.DMAWB.value, ShipmentDocumentName.DHBL.value, ShipmentDocumentName.DMBL.value)) {
                     shipmentDocumentNumber += "${document.number},"
                 }
             }
