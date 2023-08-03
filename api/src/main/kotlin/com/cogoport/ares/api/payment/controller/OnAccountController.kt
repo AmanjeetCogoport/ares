@@ -1,7 +1,6 @@
 package com.cogoport.ares.api.payment.controller
 
 import com.cogoport.ares.api.common.AresConstants
-import com.cogoport.ares.api.common.service.implementation.Scheduler
 import com.cogoport.ares.api.migration.service.interfaces.SageService
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.api.utils.Util
@@ -51,9 +50,6 @@ class OnAccountController {
 
     @Inject
     lateinit var util: Util
-
-    @Inject
-    lateinit var scheduler: Scheduler
 
     @Auth
     @Get("{?request*}")
@@ -147,10 +143,5 @@ class OnAccountController {
     @Delete("/delete-payments")
     suspend fun deletingApPayments(@Body paymentNumValues: List<String>) {
         return onAccountService.deletingApPayments(paymentNumValues)
-    }
-
-    @Post("/fina-post")
-    suspend fun finalPost() {
-        scheduler.bulkPaymentFinalPostOnSage()
     }
 }
