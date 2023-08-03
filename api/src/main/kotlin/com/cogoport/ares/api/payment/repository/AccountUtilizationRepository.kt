@@ -33,6 +33,7 @@ import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
 import java.math.BigDecimal
 import java.sql.Timestamp
+import java.time.LocalDate
 import java.util.Date
 import java.util.UUID
 
@@ -1223,9 +1224,9 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             COALESCE(SUM(CASE WHEN au.sign_flag > 0 THEN (au.amount_loc - au.pay_loc)  ELSE 0 END), 0) AS debit
             FROM account_utilizations au 
             WHERE au.acc_mode = :accMode::ACCOUNT_MODE AND au.organization_id = :organizationId::UUID AND document_status = 'FINAL'
-            AND au.entity_code IN (:entityCodes) AND au.deleted_at IS NULL AND au.acc_type != 'NEWPR'
-            AND CASE WHEN :commonRow = 'OPENING BALANCE' THEN au.transaction_date < :date::DATE ELSE au.transaction_date <= :date::DATE END
+            AND au.entity_code IN (:entityCodes) AND au.deleted_at IS NULL AND au.acc_type != 'NEWPR' AND
+            au.transaction_date < :date
         """
     )
-    suspend fun getOpeningAndClosingLedger(accMode: AccMode, organizationId: String, entityCodes: List<Int>, date: Timestamp?, commonRow: String): CreditDebitBalance
+    suspend fun getOpeningAndClosingLedger(accMode: AccMode, organizationId: String, entityCodes: List<Int>, date: LocalDate?, commonRow: String): CreditDebitBalance
 }

@@ -30,6 +30,8 @@ data class ARLedgerResponse(
     var creditBalance: BigDecimal,
     @ExcelColumn("Transaction Ref Number")
     val transactionRefNumber: String?,
-    @ExcelColumn("MAWB/HAWB/MBL/HBL")
-    val shipmentDocumentNumber: String?
+    @ExcelColumn("MAWB/MBL")
+    val shipmentDocumentNumber: String?,
+    @ExcelColumn("HAWB/HBL")
+    val houseDocumentNumber: String?,
 )
