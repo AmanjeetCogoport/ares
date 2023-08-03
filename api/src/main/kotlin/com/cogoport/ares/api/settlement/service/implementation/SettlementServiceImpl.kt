@@ -1697,7 +1697,7 @@ open class SettlementServiceImpl : SettlementService {
         /** Payment ledger amount */
         val paidLedAmount = getExchangeValue(paidAmount, ledgerRate)
         /** Tds Amount in Invoice currency */
-        var invoiceTds = invoice.tds!! - invoice.settledTds
+        var invoiceTds = invoice.tds!!
         /** Tds Amount in Invoice ledger currency */
         val invoiceTdsLed = invoiceTds * (invoice.exchangeRate)
         /** Tds Amount in Payment currency */
@@ -2243,7 +2243,6 @@ open class SettlementServiceImpl : SettlementService {
             it.id = Hashids.decode(it.id)[0].toString()
             it.documentNo = Hashids.decode(it.documentNo)[0].toString()
             it.settledAllocation = BigDecimal.ZERO
-            it.settledTds = BigDecimal.ZERO
             it.settledNostro = BigDecimal.ZERO
             if (it.nostroAmount == null) it.nostroAmount = BigDecimal.ZERO
             if (it.tds == null) it.tds = BigDecimal.ZERO
@@ -2618,10 +2617,10 @@ open class SettlementServiceImpl : SettlementService {
             val destinationDocument = accountUtilizationRepository.findByDocumentNo(settlement.destinationId, AccountType.valueOf(settlement.destinationType.toString()))
 
             if (destinationDocument.isProforma == true) {
-                throw AresException(AresError.ERR_1543, "")
+                throw AresException(AresError.ERR_1547, "")
             }
             if (sourceDocument.isProforma == true) {
-                throw AresException(AresError.ERR_1543, "")
+                throw AresException(AresError.ERR_1547, "")
             }
 
             val sageOrganizationResponse = checkIfOrganizationIdIsValid(settlementId, sourceDocument.accMode, sourceDocument)

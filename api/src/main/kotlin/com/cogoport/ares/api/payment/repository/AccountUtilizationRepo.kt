@@ -1,5 +1,7 @@
 package com.cogoport.ares.api.payment.repository
 
+import com.cogoport.ares.api.dunning.model.response.DunningInvoices
+import com.cogoport.ares.api.dunning.model.response.DunningPayments
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.CustomerOutstandingAgeing
 import com.cogoport.ares.api.payment.entity.LedgerSummary
@@ -7,6 +9,10 @@ import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.api.payment.model.response.DocumentResponse
 import com.cogoport.ares.api.settlement.entity.Document
 import com.cogoport.ares.model.common.TradePartyOutstandingRes
+import com.cogoport.ares.model.dunning.response.CustomerOutstandingAndOnAccountResponse
+import com.cogoport.ares.model.dunning.response.DunningCardData
+import com.cogoport.ares.model.dunning.response.MonthWiseStatisticsOfAccountUtilizationResponse
+import com.cogoport.ares.model.dunning.response.OverallOutstandingAndOnAccountResponse
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocStatus
 import com.cogoport.ares.model.payment.response.CustomerMonthlyPayment
@@ -158,7 +164,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 max(organization_name) as organization_name,
                 sum(
                     CASE WHEN acc_type::varchar IN (:accType)
-                        and(due_date >= now()::date) THEN
+                        and(due_date > now()::date) THEN
                         sign_flag * (amount_loc - pay_loc)
                     ELSE
                         0
@@ -206,6 +212,20 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                         0
                     END) AS one_eighty_plus_led_amount,
                 sum(
+                    CASE WHEN acc_type::varchar IN (:accType)
+                        and(now()::date - due_date) BETWEEN 181 AND 365 THEN
+                        sign_flag * (amount_loc - pay_loc)
+                    ELSE
+                        0
+                    END) AS three_sixty_five_led_amount,
+                sum(
+                    CASE WHEN acc_type::varchar IN (:accType)
+                        and(now()::date - due_date) > 365 THEN
+                        sign_flag * (amount_loc - pay_loc)
+                    ELSE
+                        0
+                    END) AS three_sixty_five_plus_led_amount,
+                sum(
                     CASE WHEN acc_type::varchar IN (:accType) THEN
                         sign_flag * (amount_loc - pay_loc)
                     ELSE
@@ -213,7 +233,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     END) AS total_led_outstanding,
                 sum(
                     CASE WHEN acc_type::varchar IN (:accType)
-                        and(due_date >= now()::date) THEN
+                        and(due_date > now()::date) THEN
                         sign_flag * (amount_curr - pay_curr)
                     ELSE
                         0
@@ -261,13 +281,27 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                         0
                     END) AS one_eighty_plus_curr_amount,
                 sum(
+                    CASE WHEN acc_type::varchar IN (:accType)
+                        and(now()::date - due_date) BETWEEN 181 AND 365 THEN
+                        sign_flag * (amount_curr - pay_curr)
+                    ELSE
+                        0
+                    END) AS three_sixty_five_curr_amount,
+                sum(
+                    CASE WHEN acc_type::varchar IN (:accType)
+                        and(now()::date - due_date) > 365 THEN
+                        sign_flag * (amount_curr - pay_curr)
+                    ELSE
+                        0
+                    END) AS three_sixty_five_plus_curr_amount,
+                sum(
                     CASE WHEN acc_type::varchar IN (:accType) THEN
                         sign_flag * (amount_curr - pay_curr)
                     ELSE
                         0
                     END) AS total_curr_outstanding,
                 sum(
-                    CASE WHEN due_date >= now()::date AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
+                    CASE WHEN due_date > now()::date AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
@@ -307,7 +341,19 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                         1
                     ELSE
                         0
-                    END) AS one_eighty_plus_count
+                    END) AS one_eighty_plus_count,
+                sum(
+                    CASE WHEN (now()::date - due_date) BETWEEN 180 AND 365 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
+                        1
+                    ELSE
+                        0
+                    END) AS three_sixty_five_count,
+                sum(
+                    CASE WHEN (now()::date - due_date) > 365 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
+                        1
+                    ELSE
+                        0
+                    END) AS three_sixty_five_plus_count
             FROM
                 account_utilizations
             WHERE
@@ -335,7 +381,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 max(organization_name) as organization_name,
                 sum(
                     CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')
-                        and(transaction_date >= now()::date) THEN
+                        and(transaction_date > now()::date) THEN
                         sign_flag * (amount_loc - pay_loc)
                     ELSE
                         0
@@ -383,6 +429,20 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                         0
                     END) AS one_eighty_plus_led_amount,
                 sum(
+                    CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')
+                        and(now()::date - transaction_date) BETWEEN 181 AND 365 THEN
+                        sign_flag * (amount_loc - pay_loc)
+                    ELSE
+                        0
+                    END) AS three_sixty_five_led_amount,
+                sum(
+                    CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')
+                        and(now()::date - transaction_date) > 365 THEN
+                        sign_flag * (amount_loc - pay_loc)
+                    ELSE
+                        0
+                    END) AS three_sixty_five_plus_led_amount,
+                sum(
                     CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') THEN
                         sign_flag * (amount_loc - pay_loc)
                     ELSE
@@ -390,7 +450,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     END) AS total_led_outstanding,
                 sum(
                     CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')
-                        and(transaction_date >= now()::date) THEN
+                        and(transaction_date > now()::date) THEN
                         sign_flag * (amount_curr - pay_curr)
                     ELSE
                         0
@@ -438,6 +498,20 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                         0
                     END) AS one_eighty_plus_curr_amount,
                 sum(
+                    CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')
+                        and(now()::date - transaction_date) BETWEEN 181 AND 365 THEN
+                        sign_flag * (amount_curr - pay_curr)
+                    ELSE
+                        0
+                    END) AS three_sixty_five_curr_amount,
+                sum(
+                    CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')
+                        and(now()::date - transaction_date) > 365 THEN
+                        sign_flag * (amount_curr - pay_curr)
+                    ELSE
+                        0
+                    END) AS three_sixty_five_plus_curr_amount,
+                sum(
                     CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') THEN
                         sign_flag * (amount_curr - pay_curr)
                     ELSE
@@ -445,10 +519,10 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     END) AS total_curr_outstanding,
                 SUM(
                     CASE 
-                        WHEN transaction_date >= now()::date 
+                        WHEN transaction_date > now()::date 
                             AND acc_type IN ('REC', 'CTDS') 
                             AND ABS(amount_curr - pay_curr) > 0.001 THEN 1 
-                        WHEN transaction_date >= now()::date 
+                        WHEN transaction_date > now()::date 
                             AND acc_type IN ('BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') 
                             AND amount_curr - pay_curr <> 0 THEN 1 
                         ELSE 0 
@@ -456,10 +530,10 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 )  AS not_due_count,
                 SUM(
                     CASE 
-                        WHEN (now()::date - transaction_date) BETWEEN 1 AND 30 
+                        WHEN (now()::date - transaction_date) BETWEEN 0 AND 30 
                             AND acc_type IN ('REC', 'CTDS') 
                             AND ABS(amount_curr - pay_curr) > 0.001 THEN 1 
-                        WHEN (now()::date - transaction_date) BETWEEN 1 AND 30 
+                        WHEN (now()::date - transaction_date) BETWEEN 0 AND 30 
                             AND acc_type IN ('BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') 
                             AND amount_curr - pay_curr <> 0 THEN 1 
                         ELSE 0 
@@ -519,7 +593,29 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                             AND amount_curr - pay_curr <> 0 THEN 1 
                         ELSE 0 
                     END
-                ) AS one_eighty_plus_count
+                ) AS one_eighty_plus_count,
+                SUM(
+                    CASE 
+                        WHEN (now()::date - transaction_date) BETWEEN 181 AND 365
+                            AND acc_type IN ('REC', 'CTDS') 
+                            AND ABS(amount_curr - pay_curr) > 0.001 THEN 1 
+                        WHEN (now()::date - transaction_date) BETWEEN 181 AND 365 
+                            AND acc_type IN ('BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') 
+                            AND amount_curr - pay_curr <> 0 THEN 1 
+                        ELSE 0 
+                    END
+                ) AS three_sixty_five_count,
+                SUM(
+                    CASE 
+                        WHEN (now()::date - transaction_date) > 365
+                            AND acc_type IN ('REC', 'CTDS') 
+                            AND ABS(amount_curr - pay_curr) > 0.001 THEN 1 
+                        WHEN (now()::date - transaction_date) > 365
+                            AND acc_type IN ('BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') 
+                            AND amount_curr - pay_curr <> 0 THEN 1 
+                        ELSE 0 
+                    END
+                ) AS three_sixty_five_plus_count
             FROM
                 account_utilizations
             WHERE
@@ -790,6 +886,264 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
         newDocNo: Long
     ): Int
 
+    @Query(
+        """
+             SELECT
+                document_no,
+                document_value,
+                led_currency,
+                amount_loc,
+                pay_loc,
+                due_date,
+                CASE
+                    WHEN acc_type = 'SINV' THEN 'INVOICE'
+                    WHEN acc_type = 'SCN' THEN 'CREDIT_NOTE'
+                    ELSE NULL
+                END AS invoice_type,
+                CASE
+                    WHEN (CURRENT_DATE - due_date) BETWEEN 0 AND 30 THEN '0-30 days'
+                    WHEN (CURRENT_DATE - due_date) BETWEEN 31 AND 60 THEN '31-60 days'
+                    WHEN (CURRENT_DATE - due_date) BETWEEN 61 AND 90 THEN '61-90 days'
+                    WHEN (CURRENT_DATE - due_date) BETWEEN 91 AND 180 THEN '91-180 days'
+                    WHEN (CURRENT_DATE - due_date) BETWEEN 181 AND 365 THEN '181-365 days'
+                    WHEN (CURRENT_DATE - due_date) > 365 THEN '365+ days'
+                END AS relative_duration
+            FROM
+                account_utilizations
+            WHERE
+                organization_id::uuid = :tradePartyDetailId
+                AND acc_mode = 'AR'
+                AND acc_type IN ('SINV', 'SCN')
+                AND document_status = 'FINAL'
+                AND deleted_at IS NULL
+                AND amount_loc - pay_loc NOT BETWEEN -1 AND 1
+                AND entity_code = :entityCode
+                AND (
+                    :transactionDateStart IS NULL
+                    OR :transactionDateEnd IS NULL
+                    OR (transaction_date::DATE BETWEEN CAST(:transactionDateStart AS DATE) AND CAST(:transactionDateEnd AS DATE))
+                )
+            ORDER BY
+                CASE
+                    WHEN :sortType = 'ASC' THEN transaction_date
+                    ELSE transaction_date END DESC
+            LIMIT :limit
+        """
+    )
+    suspend fun getInvoicesForDunning(
+        entityCode: Int,
+        tradePartyDetailId: UUID,
+        limit: Int? = 1000,
+        transactionDateStart: Date? = null,
+        transactionDateEnd: Date? = null,
+        sortType: String? = "ASC"
+    ): List<DunningInvoices>
+
+    @Query(
+        """
+            SELECT  document_value, led_currency, amount_loc, pay_loc,transaction_date::TIMESTAMP,sign_flag
+            FROM account_utilizations WHERE 
+            organization_id::uuid = :tradePartyDetailId
+            AND entity_code = :entityCode
+            AND acc_mode = 'AR' AND acc_type in ('PAY','REC','MISC','OPDIV','BANK','MTCCV') AND document_status = 'FINAL'
+            AND deleted_at IS NULL
+            AND amount_loc - pay_loc > 0
+            ORDER BY transaction_date DESC
+            LIMIT 100
+        """
+    )
+    suspend fun getPaymentsForDunning(entityCode: Int, tradePartyDetailId: UUID): List<DunningPayments>
+
+    @NewSpan
+    @Query(
+        """
+                WITH outstanding_data AS (
+                            SELECT
+                                organization_id as trade_party_detail_id,
+                                entity_code,
+                                led_currency,
+                                max(organization_name) as trade_party_detail_name,
+                                max(id) as id,
+                                max(tagged_organization_id :: VARCHAR) as tagged_organization_id,
+                                (
+                                    CASE
+                                        WHEN :ageingStartDay != :ageingLastDay THEN SUM(
+                                            CASE
+                                                WHEN acc_type :: varchar IN ('SINV', 'SCN', 'SREIMB', 'SREIMBCN')
+                                                and(now() :: date - due_date) BETWEEN :ageingStartDay
+                                                AND :ageingLastDay THEN sign_flag * (amount_loc - pay_loc)
+                                                ELSE 0
+                                            END
+                                        )
+                                        ELSE SUM(
+                                            CASE
+                                                WHEN acc_type :: varchar IN ('SINV', 'SCN', 'SREIMB', 'SREIMBCN')
+                                                and(now() :: date - due_date) >= :ageingStartDay THEN sign_flag * (amount_loc - pay_loc)
+                                                ELSE 0
+                                            END
+                                        )
+                                    END
+                                ) as outstanding_amount,
+                                (
+                                    CASE
+                                        WHEN :ageingStartDay != :ageingLastDay THEN sum(
+                                            CASE
+                                                WHEN acc_type :: varchar IN ('REC', 'CTDS', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC', 'PAY')
+                                                and(now() :: date - transaction_date) BETWEEN :ageingStartDay
+                                                AND :ageingLastDay THEN sign_flag * (amount_loc - pay_loc)
+                                                ELSE 0
+                                            END
+                                        )
+                                        ELSE sum(
+                                            CASE
+                                                WHEN acc_type in ('REC', 'CTDS', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC', 'PAY')
+                                                    and(now() :: date - transaction_date) >= :ageingStartDay
+                                                THEN sign_flag * (amount_loc - pay_loc)
+                                                ELSE 0
+                                            END
+                                        )
+                                    END
+                                ) as on_account_amount
+                            from
+                                account_utilizations
+                            WHERE
+                                acc_mode = 'AR'
+                                AND (COALESCE(:taggedOrganizationIds) IS NULL OR tagged_organization_id::UUID IN (:taggedOrganizationIds))
+                                AND (COALESCE(:exceptionTradePartyDetailId) IS NULL OR organization_id::UUID NOT IN (:exceptionTradePartyDetailId))
+                                AND transaction_date IS NOT NULL
+                                AND document_status = 'FINAL'
+                                AND organization_id IS NOT NULL
+                                AND amount_loc - pay_loc > 0
+                                AND entity_code = :entityCode
+                                AND (:query IS NULL OR LOWER(organization_name) ILIKE :query)
+                                AND acc_type in ('SINV','SCN','SREIMB','SREIMBCN','REC', 'CTDS', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC', 'PAY')
+                                AND deleted_at IS NULL 
+                            GROUP BY
+                                organization_id,
+                                entity_code,
+                                led_currency
+                )
+                
+                select
+                        trade_party_detail_id,
+                        entity_code,
+                        led_currency,
+                        trade_party_detail_name,
+                        id,
+                        tagged_organization_id,
+                        ( outstanding_amount + on_account_amount ) AS outstanding_amount,
+                        on_account_amount
+                FROM
+                        outstanding_data
+                WHERE
+                    (COALESCE(:totalDueOutstanding) IS NULL OR (outstanding_amount + on_account_amount) > :totalDueOutstanding)
+                OFFSET 
+                    GREATEST(0, ((:pageIndex - 1) * :pageSize))
+                LIMIT 
+                    :pageSize
+            """
+    )
+    suspend fun listOnAccountAndOutstandingBasedOnDunningCycleFilters(
+        query: String?,
+        totalDueOutstanding: BigDecimal? = null,
+        entityCode: Int,
+        ageingStartDay: Int,
+        ageingLastDay: Int,
+        taggedOrganizationIds: List<UUID>?,
+        exceptionTradePartyDetailId: List<UUID>?,
+        sortBy: String? = "created_at",
+        sortType: String? = "ASC",
+        pageIndex: Int,
+        pageSize: Int
+    ): List<CustomerOutstandingAndOnAccountResponse>
+
+    @NewSpan
+    @Query(
+        """
+                WITH a AS (
+                            SELECT
+                                organization_id as trade_party_detail_id,
+                                entity_code,
+                                led_currency,
+                                max(organization_name) as trade_party_detail_name,
+                                max(id) as id,
+                                max(tagged_organization_id :: VARCHAR) as tagged_organization_id,
+                                (
+                                    CASE
+                                        WHEN :ageingStartDay != :ageingLastDay THEN SUM(
+                                            CASE
+                                                WHEN acc_type :: varchar IN ('SINV', 'SCN', 'SREIMB', 'SREIMBCN')
+                                                and(now() :: date - due_date) BETWEEN :ageingStartDay
+                                                AND :ageingLastDay THEN sign_flag * (amount_loc - pay_loc)
+                                                ELSE 0
+                                            END
+                                        )
+                                        ELSE SUM(
+                                            CASE
+                                                WHEN acc_type :: varchar IN ('SINV', 'SCN', 'SREIMB', 'SREIMBCN')
+                                                and(now() :: date - due_date) > :ageingStartDay THEN sign_flag * (amount_loc - pay_loc)
+                                                ELSE 0
+                                            END
+                                        )
+                                    END
+                                ) as outstanding_amount,
+                                (
+                                    CASE
+                                        WHEN :ageingStartDay != :ageingLastDay THEN sum(
+                                            CASE
+                                                WHEN acc_type :: varchar IN ('REC', 'CTDS', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC', 'PAY')
+                                                and(now() :: date - transaction_date) BETWEEN :ageingStartDay
+                                                AND :ageingLastDay THEN sign_flag * (amount_loc - pay_loc)
+                                                ELSE 0
+                                            END
+                                        )
+                                        ELSE sum(
+                                            CASE
+                                                WHEN acc_type in ('REC', 'CTDS', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC', 'PAY')
+                                                    and(now() :: date - transaction_date) >= :ageingStartDay
+                                                THEN sign_flag * (amount_loc - pay_loc)
+                                                ELSE 0
+                                            END
+                                        )
+                                    END
+                                ) as on_account_amount
+                            from
+                                account_utilizations
+                            WHERE
+                                acc_mode = 'AR'
+                                AND (COALESCE(:taggedOrganizationIds) IS NULL OR tagged_organization_id::UUID IN (:taggedOrganizationIds))
+                                AND (COALESCE(:exceptionTradePartyDetailId) IS NULL OR organization_id::UUID NOT IN (:exceptionTradePartyDetailId))
+                                AND transaction_date IS NOT NULL
+                                AND document_status = 'FINAL'
+                                AND organization_id IS NOT NULL
+                                AND amount_loc - pay_loc > 0
+                                AND entity_code = :entityCode
+                                AND (:query IS NULL OR LOWER(organization_name) ILIKE :query)
+                                AND acc_type in ('SINV','SCN','SREIMB','SREIMBCN','REC', 'CTDS', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC', 'PAY')
+                                AND deleted_at IS NULL 
+                            GROUP BY
+                                organization_id,
+                                entity_code,
+                                led_currency
+                )
+                
+                SELECT
+                        count(*)
+                FROM
+                        a
+                WHERE
+                    (COALESCE(:totalDueOutstanding) IS NULL OR (outstanding_amount + on_account_amount) > :totalDueOutstanding)
+            """
+    )
+    suspend fun countOnAccountAndOutstandingBasedOnDunningCycleFilters(
+        query: String?,
+        totalDueOutstanding: BigDecimal? = null,
+        entityCode: Int,
+        ageingStartDay: Int,
+        ageingLastDay: Int,
+        taggedOrganizationIds: List<UUID?>?,
+        exceptionTradePartyDetailId: List<UUID?>?
+    ): Long
     @NewSpan
     @Query(
         """
@@ -938,6 +1292,231 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
     """
     )
     suspend fun getLedgerForLSPCount(orgId: String, entityCode: Int?, year: Int, month: Int, accTypes: List<String>): Long
+
+    @NewSpan
+    @Query(
+        """
+                WITH temp_table AS (
+                  SELECT 
+                    organization_id as trade_party_detail_id, 
+                    entity_code, 
+                    led_currency, 
+                    max(organization_name) as trade_party_detail_name, 
+                    max(id) as id, 
+                    max(
+                      tagged_organization_id :: VARCHAR
+                    ) as tagged_organization_id, 
+                    (
+                      SUM(
+                        CASE WHEN acc_type :: varchar IN (
+                          'SINV', 'SCN', 'SREIMB', 'SREIMBCN'
+                        ) THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END
+                      )
+                    ) as open_invoice_amount,
+                    (
+                      SUM(
+                        CASE WHEN acc_type :: varchar IN (
+                          'SINV', 'SCN', 'SREIMB', 'SREIMBCN', 'REC', 'CTDS'
+                        ) THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END
+                      )
+                    ) as outstanding_amount, 
+                    (
+                      sum(
+                        CASE WHEN acc_type :: varchar IN ('REC', 'CTDS') THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END
+                      )
+                    ) as on_account_amount 
+                  from 
+                    account_utilizations 
+                  WHERE 
+                    acc_mode = 'AR' 
+                    AND (
+                      COALESCE(:serviceTypes) IS NULL 
+                      OR service_type :: VARCHAR IN (:serviceTypes)
+                    ) 
+                    AND transaction_date IS NOT NULL 
+                    AND document_status = 'FINAL' 
+                    AND organization_id IS NOT NULL 
+                    AND amount_loc - pay_loc > 0 
+                    AND (
+                      COALESCE(:entityCode) IS NULL 
+                      OR entity_code IN (:entityCode)
+                    )
+                    AND (
+                      :query IS NULL 
+                      OR LOWER(organization_name) ILIKE :query
+                    ) 
+                    AND acc_type in (
+                      'REC', 'CTDS', 'SINV', 'SCN', 'SREIMB', 
+                      'SREIMBCN'
+                    ) 
+                    AND deleted_at IS NULL 
+                  GROUP BY 
+                    organization_id, 
+                    entity_code, 
+                    led_currency
+                ) 
+                select 
+                      tt.trade_party_detail_id, 
+                      tt.entity_code, 
+                      tt.led_currency, 
+                      tt.trade_party_detail_name, 
+                      tt.id, 
+                      tt.tagged_organization_id, 
+                      tt.open_invoice_amount, 
+                      tt.on_account_amount, 
+                      tt.outstanding_amount, 
+                      os.organization_stakeholder_name 
+                FROM 
+                      temp_table tt 
+                      left join organization_stakeholders os on os.organization_id :: varchar = tt.tagged_organization_id 
+                      and os.organization_stakeholder_type = 'CREDIT_CONTROLLER'
+                ORDER BY
+                    CASE WHEN :sortBy = 'onAccountAmount'
+                        THEN CASE WHEN :sortType = 'Asc' THEN on_account_amount END
+                    END ASC,
+                    CASE WHEN :sortBy = 'onAccountAmount'
+                        THEN CASE WHEN :sortType = 'Desc' THEN on_account_amount END
+                    END DESC,
+                    CASE WHEN :sortBy = 'outstandingAmount'
+                        THEN CASE WHEN :sortType = 'Asc' THEN outstanding_amount END
+                    END ASC,
+                    CASE WHEN :sortBy = 'outstandingAmount'
+                        THEN CASE WHEN :sortType = 'Desc' THEN outstanding_amount END
+                    END DESC
+                OFFSET 
+                    GREATEST(0, ((:pageIndex - 1) * :pageSize))
+                LIMIT 
+                    :pageSize
+            """
+    )
+    suspend fun overallOutstandingAndOnAccountPerTradeParty(
+        pageSize: Int? = 10,
+        pageIndex: Int? = 1,
+        entityCode: List<Int>?,
+        query: String?,
+        serviceTypes: List<String>?,
+        sortBy: String? = "outstandingAmount",
+        sortType: String? = "Desc"
+    ): List<OverallOutstandingAndOnAccountResponse>
+
+    @NewSpan
+    @Query(
+        """
+                WITH temp_table AS (
+                  SELECT 
+                    organization_id as trade_party_detail_id, 
+                    entity_code, 
+                    led_currency, 
+                    max(organization_name) as trade_party_detail_name, 
+                    max(id) as id, 
+                    max(
+                      tagged_organization_id :: VARCHAR
+                    ) as tagged_organization_id, 
+                    (
+                      SUM(
+                        CASE WHEN acc_type :: varchar IN (
+                          'SINV', 'SCN', 'SREIMB', 'SREIMBCN'
+                        ) THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END
+                      )
+                    ) as open_invoice_amount, 
+                    (
+                      sum(
+                        CASE WHEN acc_type :: varchar IN ('REC', 'CTDS') THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END
+                      )
+                    ) as on_account_amount 
+                  from 
+                    account_utilizations 
+                  WHERE 
+                    acc_mode = 'AR' 
+                    AND (
+                      COALESCE(:serviceTypes) IS NULL 
+                      OR service_type :: VARCHAR IN (:serviceTypes)
+                    ) 
+                    AND transaction_date IS NOT NULL 
+                    AND document_status = 'FINAL' 
+                    AND organization_id IS NOT NULL 
+                    AND amount_loc - pay_loc > 0 
+                    AND (
+                      COALESCE(:entityCode) IS NULL 
+                      OR entity_code IN (:entityCode)
+                    )
+                    AND (
+                      :query IS NULL 
+                      OR LOWER(organization_name) ILIKE :query
+                    ) 
+                    AND acc_type in (
+                      'REC', 'CTDS', 'SINV', 'SCN', 'SREIMB', 
+                      'SREIMBCN'
+                    ) 
+                    AND deleted_at IS NULL 
+                  GROUP BY 
+                    organization_id, 
+                    entity_code, 
+                    led_currency
+                ) 
+                select 
+                  count(tt.id)
+                FROM 
+                  temp_table tt 
+                  left join organization_stakeholders os on os.organization_id :: varchar = tt.tagged_organization_id 
+                  and os.organization_stakeholder_type = 'CREDIT_CONTROLLER'
+            """
+    )
+    suspend fun countOverallOutstandingAndOnAccountPerTradeParty(
+        entityCode: List<Int>?,
+        query: String?,
+        serviceTypes: List<String>?
+    ): Long
+
+    @Query(
+        """
+        SELECT
+            TO_CHAR(transaction_date, 'Mon') AS month,
+            TO_CHAR(transaction_date, 'YYYY') AS year,
+            SUM(CASE WHEN acc_type :: varchar IN ('SINV', 'SCN', 'SREIMB', 'SREIMBCN') THEN sign_flag * (pay_loc) ELSE 0 END) as collected_amount,
+            SUM(CASE WHEN acc_type :: varchar IN ('SINV', 'SCN', 'SREIMB', 'SREIMBCN') THEN sign_flag * (amount_loc) ELSE 0 END) as open_invoice_amount,
+            SUM(CASE WHEN acc_type :: varchar IN ('SINV', 'SCN', 'SREIMB', 'SREIMBCN') THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END) as outstanding_amount
+        FROM
+            account_utilizations
+        WHERE
+            transaction_date >= DATE_TRUNC('MONTH', :timestamp::TIMESTAMP) - INTERVAL '11 months'
+            AND transaction_date <= :timestamp::TIMESTAMP
+            AND acc_mode = 'AR'
+            AND transaction_date IS NOT NULL
+            AND document_status = 'FINAL'
+            AND organization_id IS NOT NULL
+            AND amount_loc - pay_loc > 0
+            AND acc_type IN ('REC', 'CTDS', 'SINV', 'SCN', 'SREIMB', 'SREIMBCN')
+            AND deleted_at IS NULL
+            AND (COALESCE(:serviceTypes) IS NULL OR service_type::VARCHAR IN (:serviceTypes))
+            AND (COALESCE(:entityCodes) IS NULL OR entity_code IN (:entityCodes))
+        GROUP BY
+            TO_CHAR(transaction_date, 'Mon'),
+            TO_CHAR(transaction_date, 'YYYY')
+        ORDER BY
+            MIN(transaction_date)
+    """
+    )
+    suspend fun monthWiseStatisticsOfAccountUtilization(
+        timestamp: Timestamp,
+        serviceTypes: List<String>?,
+        entityCodes: List<Int>?
+    ): List<MonthWiseStatisticsOfAccountUtilizationResponse>
+
+    @NewSpan
+    @Query(
+        """
+     SELECT COUNT(DISTINCT organization_id) AS total_customers , 
+        COALESCE(SUM(sign_flag * (amount_loc - pay_loc)),0) as  total_outstanding_amount
+        FROM account_utilizations WHERE acc_mode = 'AR' AND document_status = 'FINAL' AND deleted_at IS NULL
+        AND acc_type IN ('SINV', 'SCN','SREIMB', 'SREIMBCN')
+        AND due_date < now()::date 
+        AND due_date IS NOT NULL
+        AND (COALESCE(:defaultedOrgIds) IS NULL OR organization_id::UUID NOT IN (:defaultedOrgIds))
+        AND (COALESCE(:entityCode) IS NULL OR entity_code  IN (:entityCode))
+    """
+    )
+    suspend fun getCustomerWithOutStanding(entityCode: List<Int>?, defaultedOrgIds: List<UUID>?): DunningCardData
 
     @NewSpan
     @Query(
