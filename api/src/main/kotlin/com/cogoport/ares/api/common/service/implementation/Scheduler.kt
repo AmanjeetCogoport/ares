@@ -12,6 +12,7 @@ import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
+import com.cogoport.ares.api.settlement.service.interfaces.ParentJVService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.utils.ExcelUtils
 import com.cogoport.ares.api.utils.logger
@@ -25,7 +26,6 @@ import io.micronaut.scheduling.annotation.Scheduled
 import io.sentry.Sentry
 import jakarta.inject.Singleton
 import kotlinx.coroutines.runBlocking
-import java.sql.Timestamp
 import java.time.LocalDate
 import java.time.LocalDate.now
 import java.time.LocalDateTime
@@ -48,7 +48,8 @@ class Scheduler(
     private var aresDocumentRepository: AresDocumentRepository,
     private var s3Client: S3Client,
     private var onAccountService: OnAccountService,
-    private var paymentMigration: PaymentMigrationWrapper
+    private var paymentMigration: PaymentMigrationWrapper,
+    private var parentJVService: ParentJVService
 ) {
     @Value("\${aws.s3.bucket}")
     private lateinit var s3Bucket: String
@@ -153,8 +154,7 @@ class Scheduler(
     fun bulkMatchingSettlement() = runBlocking {
         val today = now()
         logger().info("Scheduler started for Bulk Matching Settlement On Sage for date: $today")
-        val date = Timestamp.valueOf("2023-05-16 00:00:00")
-        val settlementsIds = settlementRepository.getSettlementIdForCreatedStatus(date)
+        val settlementsIds = settlementRepository.getSettlementIdForCreatedStatus()
         if (!settlementsIds.isNullOrEmpty()) {
             settlementService.bulkMatchingSettlementOnSage(settlementsIds, AresConstants.ARES_USER_ID)
         }
@@ -207,8 +207,17 @@ class Scheduler(
         logger().info("Request for mtccv jv migration received, total number of parent jv to migrate is $size")
     }
 
-    @Scheduled(cron = "0 17 * * *")
-    suspend fun createLedgerSummaryForAp() = runBlocking {
+    @Scheduled(cron = "0 18 * * *")
+    fun createLedgerSummaryForAp() = runBlocking {
+        val today = now()
+        logger().info("Migrating organizations data for : $today")
         outStandingService.createLedgerSummary()
+    }
+
+    @Scheduled(cron = "0 15 * * *")
+    fun postToSageJV() = runBlocking {
+        val today = now()
+        logger().info("Posting JVs to Sage : $today")
+        parentJVService.bulkPostingJvToSage()
     }
 }

@@ -2205,7 +2205,7 @@ open class SettlementServiceImpl : SettlementService {
                 listOf(SettlementType.PAY, SettlementType.PCN, SettlementType.SINV) + jvList
             }
             SettlementType.PCN -> {
-                listOf(SettlementType.PINV, SettlementType.PDN)
+                listOf(SettlementType.PINV, SettlementType.PDN) + jvList
             }
             SettlementType.PAY -> {
                 listOf(SettlementType.PINV, SettlementType.PDN) + jvList
@@ -2214,7 +2214,7 @@ open class SettlementServiceImpl : SettlementService {
                 listOf(SettlementType.REC, SettlementType.SCN, SettlementType.PINV) + jvList
             }
             SettlementType.SCN -> {
-                listOf(SettlementType.SINV, SettlementType.SDN)
+                listOf(SettlementType.SINV, SettlementType.SDN) + jvList
             }
             SettlementType.SDN -> {
                 listOf(SettlementType.SCN, SettlementType.REC)
@@ -2464,7 +2464,7 @@ open class SettlementServiceImpl : SettlementService {
             val tdsProfile = tdsProfiles.find { it.id == doc.mappingId }
             val rate = getTdsRate(tdsProfile)
             if (doc.accMode != AccMode.AP) {
-                doc.tds = when (doc.accountType in listOf(AccountType.SINV.name, AccountType.PINV.name) && entityCode != AresConstants.ENTITY_501 && doc.migrated == false) {
+                doc.tds = when (doc.accountType in listOf(AccountType.SINV.name) && entityCode != AresConstants.ENTITY_501 && doc.migrated == false) {
                     true -> calculateTds(
                         rate = rate,
                         settledTds = doc.settledTds!!,
@@ -3012,13 +3012,13 @@ open class SettlementServiceImpl : SettlementService {
                 "accMode" to "AP",
                 "glCode" to "321000",
                 "type" to "DEBIT",
-                "signFlag" to -1
+                "signFlag" to 1
             ),
             hashMapOf(
-                "accMode" to null,
-                "glCode" to "324001",
+                "accMode" to "VTDS",
+                "glCode" to "324003",
                 "type" to "CREDIT",
-                "signFlag" to 1
+                "signFlag" to -1
             )
         )
         return parentJvService.createTdsAsJvForBills(

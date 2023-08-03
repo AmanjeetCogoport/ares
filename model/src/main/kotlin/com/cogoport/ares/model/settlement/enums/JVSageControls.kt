@@ -13,5 +13,6 @@ enum class JVSageControls(val value: String) {
     PREF("PREF"),
     EMP("EMP"),
     RI("RI"),
-    PC("PC")
+    PC("PC"),
+    VTDS("VTDS")
 }

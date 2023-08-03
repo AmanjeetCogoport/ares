@@ -2,7 +2,6 @@ package com.cogoport.ares.api.settlement.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.client.RailsClient
-import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
@@ -10,6 +9,7 @@ import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
+import com.cogoport.ares.api.settlement.entity.JVAdditionalDetails
 import com.cogoport.ares.api.settlement.entity.JournalVoucher
 import com.cogoport.ares.api.settlement.entity.ParentJournalVoucher
 import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
@@ -172,7 +172,8 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         tdsLedAmount: BigDecimal?,
         createdByUserType: String?,
         payCurrTds: BigDecimal?,
-        payLocTds: BigDecimal?
+        payLocTds: BigDecimal?,
+        utr: String?
     ): Long? {
         val jvLineItemData = jvLineItems.map { lineItem ->
             JournalVoucher(
@@ -201,16 +202,21 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                 tradePartyName = accountUtilization?.organizationName,
                 validityDate = parentJvData.transactionDate,
                 migrated = false,
-                deletedAt = null
+                deletedAt = null,
+                additionalDetails = JVAdditionalDetails(
+                    utr = utr
+                )
             )
         }
 
         val jvLineItems = journalVoucherRepository.saveAll(jvLineItemData)
-        val jvLineItemWithAccMode = jvLineItems.first { it.accMode != null && it.accMode != AccMode.OTHER }
+        val jvLineItemsWithAccModeAp = jvLineItems.first { it.accMode == AccMode.AP }
 
-        createJvAccUtilForTds(jvLineItemWithAccMode, accountUtilization, createdBy = parentJvData.createdBy, createdByUserType, payCurrTds, payLocTds)
+        jvLineItems.map {
+            createJvAccUtilForTds(it, accountUtilization, createdBy = parentJvData.createdBy, createdByUserType, payCurrTds, payLocTds)
+        }
 
-        return jvLineItemWithAccMode.id!!
+        return jvLineItemsWithAccModeAp.id!!
     }
 
     private suspend fun createJvAccUtilForTds(
@@ -235,16 +241,16 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             taggedOrganizationId = accountUtilization.taggedOrganizationId,
             tradePartyMappingId = accountUtilization.tradePartyMappingId,
             organizationName = accountUtilization.organizationName,
-            accCode = AresModelConstants.AP_ACCOUNT_CODE,
+            accCode = journalVoucher.glCode?.toInt()!!,
             accType = AccountType.VTDS,
-            accMode = accountUtilization.accMode,
-            signFlag = SignSuffix.VTDS.sign,
+            accMode = journalVoucher.accMode!!,
+            signFlag = journalVoucher.signFlag!!,
             currency = journalVoucher.currency!!,
             ledCurrency = journalVoucher.ledCurrency,
             amountCurr = journalVoucher.amount!!,
             amountLoc = journalVoucher.ledAmount!!,
-            payCurr = payCurrTds!!,
-            payLoc = payLocTds!!,
+            payCurr = if (journalVoucher.accMode === AccMode.VTDS) BigDecimal.ZERO else payCurrTds!!,
+            payLoc = if (journalVoucher.accMode === AccMode.VTDS) BigDecimal.ZERO else payLocTds!!,
             taxableAmount = BigDecimal.ZERO,
             tdsAmountLoc = BigDecimal.ZERO,
             tdsAmount = BigDecimal.ZERO,
