@@ -556,6 +556,14 @@ class OpenSearchClient {
                             }
                             b
                         }
+                        if (request.tradePartyDetailId != null) {
+                            b.must { s ->
+                                s.match { v ->
+                                    v.field("organizationId.keyword").query(FieldValue.of(request.tradePartyDetailId.toString()))
+                                }
+                            }
+                            b
+                        }
                         if (request.organizationSerialId != null) {
                             b.must { s ->
                                 s.queryString { qs ->

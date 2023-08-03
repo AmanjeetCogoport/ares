@@ -12,18 +12,24 @@ import java.math.BigDecimal
 data class ARLedgerResponse(
     @ExcelColumn("Transaction Date")
     val transactionDate: String?,
+    @ExcelColumn("Document Type")
+    val documentType: String?,
     @ExcelColumn("Document Number")
-    val documentNumber: String?,
-    @ExcelColumn("Document Value")
-    val documentValue: String,
+    val documentNumber: String,
+    @ExcelColumn("Original Transaction Currency")
+    val currency: String?,
+    @ExcelColumn("Original Transaction Amount")
+    val amount: String?,
+    @ExcelColumn("Ledger Debit")
+    val debit: BigDecimal,
+    @ExcelColumn("Ledger Credit")
+    val credit: BigDecimal,
+    @ExcelColumn("Debit Balance")
+    var debitBalance: BigDecimal,
+    @ExcelColumn("Credit Balance")
+    var creditBalance: BigDecimal,
     @ExcelColumn("Transaction Ref Number")
     val transactionRefNumber: String?,
-    @ExcelColumn("Ledger Currency")
-    val ledgerCurrency: String?,
-    @ExcelColumn("Debit")
-    val debit: BigDecimal,
-    @ExcelColumn("Credit")
-    val credit: BigDecimal,
-    @ExcelColumn("Balance")
-    val balance: BigDecimal
+    @ExcelColumn("MAWB/HAWB/MBL/HBL")
+    val shipmentDocumentNumber: String?
 )
