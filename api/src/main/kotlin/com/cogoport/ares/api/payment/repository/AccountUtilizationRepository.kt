@@ -641,7 +641,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     AND document_status = 'FINAL'
                     AND organization_id in (:orgId)
                     AND (:accType is null OR acc_type::varchar = :accType)
-                    AND (:accMode is null OR acc_mode::varchar = :accMode)
+                    AND ((:accMode) is null OR acc_mode::varchar = :accMode)
                     AND (:startDate is null OR transaction_date >= :startDate::date)
                     AND (:endDate is null OR transaction_date <= :endDate::date)
                     AND document_value ilike :query
@@ -660,12 +660,13 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     AND organization_id in (:orgId)
                     AND (:startDate is null or transaction_date >= :startDate)
                     AND (:endDate is null or transaction_date <= :endDate)
-                    AND acc_type::varchar in (:accType)
-                    AND (:accMode is null OR acc_mode::varchar = :accMode)
+                    AND ((:accType) is null or acc_type::varchar in (:accType))
+                    AND ((:accMode) is null or acc_mode::varchar in (:accMode))
                     AND deleted_at is null  and is_void = false
+                    and acc_type != 'NEWPR'
         """
     )
-    suspend fun getAccountBalance(orgId: List<UUID>, entityCode: Int, startDate: Timestamp?, endDate: Timestamp?, accType: List<AccountType>, accMode: AccMode?): BigDecimal
+    suspend fun getAccountBalance(orgId: List<UUID>, entityCode: Int, startDate: Timestamp?, endDate: Timestamp?, accType: List<AccountType>?, accMode: List<String>?): BigDecimal
 
     @NewSpan
     @Query(
