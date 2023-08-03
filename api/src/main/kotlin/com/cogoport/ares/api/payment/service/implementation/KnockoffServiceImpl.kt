@@ -434,14 +434,14 @@ open class KnockoffServiceImpl : KnockoffService {
         var ledTdsPaid = 0.toBigDecimal()
 
         if (payments.isNullOrEmpty()) {
-            throw AresException(AresError.ERR_1542, "")
+            throw AresException(AresError.ERR_1546, "")
         }
 
         val sourceIdsForSettlement = listOfNotNull(payments[0].paymentNum, tdsJvRecord?.id)
         val settlementData = settlementRepository.getSettlementByDestinationId(reverseUtrRequest.documentNo, sourceIdsForSettlement)
 
         if (settlementData.any { it.settlementStatus == SettlementStatus.POSTED }) {
-            throw AresException(AresError.ERR_1541, "")
+            throw AresException(AresError.ERR_1544, "")
         }
 
         val settlementIds = settlementData.map { it.id }

@@ -1,0 +1,9 @@
+auth_server: "teleport.cogoport.com:443"
+onboarding:
+  join_method: "github"
+  token: "teleport-in-action"
+storage:
+  directory: /opt/machine-id-data
+destinations:
+  - directory: /opt/machine-id
+    app: sonarqube

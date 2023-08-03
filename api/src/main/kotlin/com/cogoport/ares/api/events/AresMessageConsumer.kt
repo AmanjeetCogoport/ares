@@ -1,6 +1,10 @@
 package com.cogoport.ares.api.events
 
 import com.cogoport.ares.api.common.client.AuthClient
+import com.cogoport.ares.api.dunning.model.request.CycleExecutionProcessReq
+import com.cogoport.ares.api.dunning.model.request.PaymentReminderReq
+import com.cogoport.ares.api.dunning.service.interfaces.DunningHelperService
+import com.cogoport.ares.api.dunning.service.interfaces.ScheduleService
 import com.cogoport.ares.api.migration.model.JVParentDetails
 import com.cogoport.ares.api.migration.model.JVRecordsScheduler
 import com.cogoport.ares.api.migration.model.NewPeriodRecord
@@ -19,6 +23,7 @@ import com.cogoport.ares.api.settlement.service.interfaces.ParentJVService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.TaggedSettlementService
 import com.cogoport.ares.model.common.CreateCommunicationRequest
+import com.cogoport.ares.model.dunning.request.SendMailOfAllCommunicationToTradePartyReq
 import com.cogoport.ares.model.payment.AccountUtilizationEvent
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.ReverseUtrRequest
@@ -81,6 +86,12 @@ class AresMessageConsumer {
 
     @Inject
     lateinit var authClient: AuthClient
+
+    @Inject
+    lateinit var scheduleService: ScheduleService
+
+    @Inject
+    lateinit var dunningHelperService: DunningHelperService
 
     @Queue("ares-update-supplier-details", prefetch = 1)
     fun updateSupplierOutstanding(request: UpdateSupplierOutstandingRequest) = runBlocking {
@@ -255,5 +266,25 @@ class AresMessageConsumer {
     @Queue("ares-sage-tds-jv-migration", prefetch = 1)
     fun migrateTDSJournalVoucher(journalVoucherRecord: JVParentDetails) = runBlocking {
         paymentMigration.migrateTDSJV(journalVoucherRecord)
+    }
+
+    @Queue("ares-dunning-scheduler", prefetch = 1)
+    fun scheduleDunning(req: CycleExecutionProcessReq) = runBlocking {
+        scheduleService.processCycleExecution(req)
+    }
+
+    @Queue("ares-send-dunning-payment-reminder", prefetch = 1)
+    fun sendPaymentReminder(request: PaymentReminderReq) = runBlocking {
+        scheduleService.sendPaymentReminderToTradeParty(request)
+    }
+
+    @Queue("ares-send-mail-of-all-communication-of-tradeparty", prefetch = 1)
+    fun sendMailOfAllCommunicationToTradeParty(
+        sendMailOfAllCommunicationToTradePartyReq: SendMailOfAllCommunicationToTradePartyReq
+    ) = runBlocking {
+        dunningHelperService.sendMailOfAllCommunicationToTradeParty(
+            sendMailOfAllCommunicationToTradePartyReq,
+            false
+        )
     }
 }
