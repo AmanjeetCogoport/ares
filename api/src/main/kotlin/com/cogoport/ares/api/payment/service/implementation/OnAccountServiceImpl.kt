@@ -106,7 +106,6 @@ import com.cogoport.brahma.sage.model.request.SageResponse
 import com.cogoport.loki.model.job.DocumentDetail
 import com.cogoport.plutus.model.invoice.GetUserRequest
 import com.cogoport.plutus.model.invoice.SageOrganizationRequest
-import com.cogoport.plutus.model.invoice.enums.DocumentName
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import io.micronaut.context.annotation.Value
