@@ -286,7 +286,9 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
                 AND
                     entity_code != 501
                 AND 
-                    transaction_date = current_date - INTERVAL '3 days'
+                    transaction_date <= current_date - INTERVAL '3 days'
+                AND
+                    transaction_date >= '2023-07-25'
             """
     )
     suspend fun getPaymentIdsForApprovedPayments(): List<Long>?
