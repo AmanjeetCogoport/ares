@@ -1562,7 +1562,8 @@ WHERE
         sum(
             CASE WHEN j.job_details->>'tradeType' IN ('LOCAL')
             AND au.due_date < now()::date THEN
-            au.sign_flag * (au.amount_loc - au.pay_loc) ELSE 0 END) AS total_local_due
+            au.sign_flag * (au.amount_loc - au.pay_loc) ELSE 0 END) AS total_local_due,
+        'INR' AS currency
 	FROM
 		ares.account_utilizations au JOIN 
         plutus.invoices iv ON au.document_no = iv.id JOIN
@@ -1613,7 +1614,8 @@ WHERE
         sum(
             CASE WHEN j.job_details->>'tradeType' IN ('LOCAL')
             AND au.due_date < now()::date THEN
-            au.sign_flag * (au.amount_loc - au.pay_loc) ELSE 0 END) AS total_local_due
+            au.sign_flag * (au.amount_loc - au.pay_loc) ELSE 0 END) AS total_local_due,
+        'INR' AS currency
 	FROM
 		ares.account_utilizations au JOIN 
         kuber.bills bill ON au.document_no = bill.id JOIN
