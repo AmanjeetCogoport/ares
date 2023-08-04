@@ -54,4 +54,6 @@ interface ParentJVService {
         payCurrTds: BigDecimal?,
         payLocTds: BigDecimal?
     ): Long?
+
+    suspend fun bulkPostingJvToSage()
 }

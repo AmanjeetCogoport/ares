@@ -19,9 +19,9 @@ import com.cogoport.ares.model.common.PaymentHistoryDetails
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
-import com.cogoport.ares.model.payment.response.ARLedgerResponse
 import com.cogoport.ares.model.payment.response.AccPayablesOfOrgRes
 import com.cogoport.ares.model.payment.response.AccountPayablesStats
+import com.cogoport.ares.model.payment.response.CreditDebitBalance
 import com.cogoport.ares.model.payment.response.InvoiceListResponse
 import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
 import com.cogoport.ares.model.payment.response.OverallStatsForTradeParty
@@ -643,7 +643,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     AND document_status = 'FINAL'
                     AND organization_id in (:orgId)
                     AND (:accType is null OR acc_type::varchar = :accType)
-                    AND (:accMode is null OR acc_mode::varchar = :accMode)
+                    AND ((:accMode) is null OR acc_mode::varchar = :accMode)
                     AND (:startDate is null OR transaction_date >= :startDate::date)
                     AND (:endDate is null OR transaction_date <= :endDate::date)
                     AND document_value ilike :query
@@ -662,12 +662,13 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     AND organization_id in (:orgId)
                     AND (:startDate is null or transaction_date >= :startDate)
                     AND (:endDate is null or transaction_date <= :endDate)
-                    AND acc_type::varchar in (:accType)
-                    AND (:accMode is null OR acc_mode::varchar = :accMode)
+                    AND ((:accType) is null or acc_type::varchar in (:accType))
+                    AND ((:accMode) is null or acc_mode::varchar in (:accMode))
                     AND deleted_at is null  and is_void = false
+                    and acc_type != 'NEWPR'
         """
     )
-    suspend fun getAccountBalance(orgId: List<UUID>, entityCode: Int, startDate: Timestamp?, endDate: Timestamp?, accType: List<AccountType>, accMode: AccMode?): BigDecimal
+    suspend fun getAccountBalance(orgId: List<UUID>, entityCode: Int, startDate: Timestamp?, endDate: Timestamp?, accType: List<AccountType>?, accMode: List<String>?): BigDecimal
 
     @NewSpan
     @Query(
@@ -1216,46 +1217,20 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun getInvoiceBalanceAmount(invoiceNumbers: List<String>, accMode: AccMode): List<InvoiceBalanceResponse>?
-
     @NewSpan
     @Query(
         """
-            SELECT au.transaction_date::varchar AS transaction_date,
-            au.document_no::varchar AS document_number,
-            au.document_value,
-            p.trans_ref_number AS transaction_ref_number,
-            au.led_currency AS ledger_currency,
-            CASE WHEN au.sign_flag < 0 THEN au.amount_loc ELSE 0 END AS credit,
-            CASE WHEN au.sign_flag > 0 THEN au.amount_loc ELSE 0 END AS debit,
-            au.sign_flag * au.amount_loc AS balance 
-            FROM account_utilizations au 
-            LEFT JOIN payments p ON p.payment_num = au.document_no
-            WHERE au.acc_mode = :accMode::ACCOUNT_MODE AND au.organization_id = :organizationId::UUID AND document_status = 'FINAL'
-            AND au.transaction_date >= :startDate::DATE AND au.transaction_date <= :endDate::DATE AND au.entity_code IN (:entityCodes)
-            AND au.deleted_at IS NULL AND au.acc_type != 'NEWPR'
-            ORDER BY transaction_date
-        """
-    )
-    suspend fun getARLedger(accMode: AccMode, organizationId: String, entityCodes: List<Int>, startDate: Timestamp, endDate: Timestamp): List<ARLedgerResponse>
-
-    @NewSpan
-    @Query(
-        """
-            SELECT NULL AS transaction_date,
-            NULL AS document_number,
-            :commonRow AS document_value,
-            NULL AS transaction_ref_number,
+            SELECT
             (array_agg(led_currency))[1] AS ledger_currency,
             COALESCE(SUM(CASE WHEN au.sign_flag < 0 THEN (au.amount_loc - au.pay_loc)  ELSE 0 END), 0) AS credit,
-            COALESCE(SUM(CASE WHEN au.sign_flag > 0 THEN (au.amount_loc - au.pay_loc)  ELSE 0 END), 0) AS debit,
-            COALESCE(SUM(au.sign_flag * (au.amount_loc - au.pay_loc)), 0) AS balance
+            COALESCE(SUM(CASE WHEN au.sign_flag > 0 THEN (au.amount_loc - au.pay_loc)  ELSE 0 END), 0) AS debit
             FROM account_utilizations au 
             WHERE au.acc_mode = :accMode::ACCOUNT_MODE AND au.organization_id = :organizationId::UUID AND document_status = 'FINAL'
             AND au.entity_code IN (:entityCodes) AND au.deleted_at IS NULL AND au.acc_type != 'NEWPR'
             AND CASE WHEN :commonRow = 'OPENING BALANCE' THEN au.transaction_date < :date::DATE ELSE au.transaction_date <= :date::DATE END
         """
     )
-    suspend fun getOpeningAndClosingLedger(accMode: AccMode, organizationId: String, entityCodes: List<Int>, date: Timestamp?, commonRow: String): List<ARLedgerResponse>
+    suspend fun getOpeningAndClosingLedger(accMode: AccMode, organizationId: String, entityCodes: List<Int>, date: Timestamp?, commonRow: String): CreditDebitBalance
 
     @NewSpan
     @Query(

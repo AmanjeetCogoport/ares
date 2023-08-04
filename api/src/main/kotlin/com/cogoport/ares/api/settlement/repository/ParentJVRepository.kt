@@ -146,4 +146,21 @@ interface ParentJVRepository : CoroutineCrudRepository<ParentJournalVoucher, Lon
         """
     )
     suspend fun updateIsUtilizedColumn(id: Long, isUtilized: Boolean, performedBy: UUID, documentValue: String?)
+
+    @NewSpan
+    @Query(
+        """
+            SELECT id
+              FROM parent_journal_vouchers
+                WHERE status::varchar in ('APPROVED', 'POSTING_FAILED')
+                AND led_currency != 'VND'
+                  AND deleted_at IS NULL
+                  AND CASE 
+                        WHEN category = 'VTDS' then created_at <=  current_date - INTERVAL '3 days' and created_at >= '2023-07-28'
+                        ELSE  created_at <= CURRENT_DATE
+                        END
+                ORDER BY created_at DESC
+        """
+    )
+    suspend fun getParentJournalVoucherIds(): List<Long>?
 }

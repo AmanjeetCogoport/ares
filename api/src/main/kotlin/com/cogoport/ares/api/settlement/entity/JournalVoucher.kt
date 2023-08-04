@@ -7,6 +7,8 @@ import io.micronaut.data.annotation.DateCreated
 import io.micronaut.data.annotation.GeneratedValue
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
+import io.micronaut.data.annotation.MappedProperty
+import io.micronaut.data.model.DataType
 import java.math.BigDecimal
 import java.sql.Timestamp
 import java.util.Date
@@ -42,5 +44,7 @@ data class JournalVoucher(
     var signFlag: Short?,
     var sageUniqueId: String? = null,
     var migrated: Boolean? = false,
-    var deletedAt: Timestamp? = null
+    var deletedAt: Timestamp? = null,
+    @MappedProperty(type = DataType.JSON)
+    var additionalDetails: JVAdditionalDetails? = null
 )
