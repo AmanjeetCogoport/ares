@@ -248,7 +248,6 @@ open class SettlementServiceImpl : SettlementService {
      */
     override suspend fun getAccountBalance(summaryRequest: SummaryRequest): SummaryResponse {
         val orgId = listOf(summaryRequest.orgId)
-        val accTypes = getAccountModeAndType(summaryRequest.accModes, null)
         val validAccTypeForOpenInvoiceCalculation = listOf(AccountType.PINV, AccountType.PCN, AccountType.PREIMB, AccountType.SINV, AccountType.SCN, AccountType.SREIMBCN, AccountType.SREIMB)
         val validAccTypeForOnAccountCalculation = listOf(AccountType.VTDS, AccountType.REC, AccountType.CTDS, AccountType.PAY, AccountType.BANK, AccountType.CONTR, AccountType.ROFF, AccountType.MTCCV, AccountType.MISC, AccountType.INTER, AccountType.OPDIV, AccountType.MTC)
         val openInvoiceAmount =
@@ -257,7 +256,7 @@ open class SettlementServiceImpl : SettlementService {
                 summaryRequest.entityCode!!,
                 summaryRequest.startDate,
                 summaryRequest.endDate,
-                accTypes?.filter { it in validAccTypeForOpenInvoiceCalculation },
+                validAccTypeForOpenInvoiceCalculation,
                 summaryRequest.accModes?.map { it.name }
             )
         val onAccountPayment =
@@ -266,7 +265,7 @@ open class SettlementServiceImpl : SettlementService {
                 summaryRequest.entityCode!!,
                 null,
                 null,
-                accTypes?.filter { it in validAccTypeForOnAccountCalculation },
+                validAccTypeForOnAccountCalculation,
                 summaryRequest.accModes?.map { it.name }
             )
         return SummaryResponse(
