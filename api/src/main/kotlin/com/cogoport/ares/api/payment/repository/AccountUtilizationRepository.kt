@@ -14,6 +14,8 @@ import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import com.cogoport.ares.api.settlement.entity.InvoiceDocument
 import com.cogoport.ares.model.balances.GetOpeningBalances
 import com.cogoport.ares.model.common.InvoiceBalanceResponse
+import com.cogoport.ares.model.common.MonthlyUtilizationCount
+import com.cogoport.ares.model.common.PaymentHistoryDetails
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
@@ -1254,4 +1256,69 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun getOpeningAndClosingLedger(accMode: AccMode, organizationId: String, entityCodes: List<Int>, date: Timestamp?, commonRow: String): List<ARLedgerResponse>
+
+    @NewSpan
+    @Query(
+        """
+            SELECT
+                SUM(CASE WHEN transaction_date >= date_trunc('month', current_date - interval '1' month)
+                    and transaction_date < date_trunc('month', current_date) THEN 1 ELSE 0 END) as last_month,
+                SUM(CASE WHEN transaction_date >= date_trunc('month', current_date - interval '2' month)
+                    and transaction_date < date_trunc('month', current_date - interval '1' month) THEN 1 ELSE 0 END) as second_last_month,
+                SUM(CASE WHEN transaction_date >= date_trunc('month', current_date - interval '3' month)
+                    and transaction_date < date_trunc('month', current_date - interval '2' month) THEN 1 ELSE 0 END) as third_last_month,
+                SUM(CASE WHEN transaction_date >= date_trunc('month', current_date - interval '4' month)
+                    and transaction_date < date_trunc('month', current_date - interval '3' month) THEN 1 ELSE 0 END) as fourth_last_month,
+                SUM(CASE WHEN transaction_date >= date_trunc('month', current_date - interval '5' month)
+                    and transaction_date < date_trunc('month', current_date - interval '4' month) THEN 1 ELSE 0 END) as fifth_last_month,
+                SUM(CASE WHEN transaction_date >= date_trunc('month', current_date - interval '6' month)
+                    and transaction_date < date_trunc('month', current_date - interval '5' month) THEN 1 ELSE 0 END) as sixth_last_month
+            FROM account_utilizations
+            WHERE  (:accMode IS NULL OR acc_mode::VARCHAR = :accMode)
+            AND (COALESCE(:accTypes) IS NULL OR acc_type::VARCHAR IN (:accTypes))
+            AND (:docStatus IS NULL OR document_status::VARCHAR = :docStatus)
+            AND (:organizationId IS NULL OR organization_id = :organizationId)
+            AND (:entityCodes IS NULL OR entity_code IN (:entityCodes))
+        """
+    )
+    suspend fun getMonthlyUtilizationCounts(accMode: AccMode?, accTypes: List<AccountType>?, docStatus: DocumentStatus?, organizationId: UUID?, entityCodes: List<Int>?): MonthlyUtilizationCount
+
+    @NewSpan
+    @Query(
+        """
+            WITH payment_history AS (
+                SELECT
+                    document_value, 
+                    (array_agg(ac.due_date::date - s.settlement_date::date order by s.created_at asc))[1] as days
+                FROM
+                account_utilizations AS ac
+                INNER JOIN settlements AS s ON s.destination_id = ac.document_no
+                WHERE  (:accMode IS NULL OR ac.acc_mode::VARCHAR = :accMode)
+                AND (COALESCE(:accTypes) IS NULL OR ac.acc_type::VARCHAR IN (:accTypes))
+                AND (:organizationId IS NULL OR ac.organization_id = :organizationId)
+                AND (:entityCodes IS NULL OR ac.entity_code IN (:entityCodes))
+                AND (COALESCE(:destinationTypes) IS NULL OR s.destination_type::VARCHAR in (:destinationTypes))
+                AND s.deleted_at is null
+                AND ac.deleted_at is null
+                GROUP BY
+                ac.document_value
+            )
+            SELECT
+            SUM(
+                CASE WHEN days < 0 THEN 1 ELSE 0 END
+            ) AS delayed_payments_credit,
+            SUM(
+                CASE WHEN (days + 3) < 0 THEN 1 ELSE 0 END
+            ) AS delayed_payments_cash,
+            COALESCE(COUNT(*), 0) AS total_payments
+            FROM payment_history
+        """
+    )
+    suspend fun getPaymentHistoryDetails(
+        accMode: AccMode?,
+        accTypes: List<AccountType>?,
+        organizationId: UUID?,
+        entityCodes: List<Int>?,
+        destinationTypes: List<SettlementType>?
+    ): PaymentHistoryDetails
 }

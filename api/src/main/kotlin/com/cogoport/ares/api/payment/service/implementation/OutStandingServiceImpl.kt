@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.client.CogoBackLowLevelClient
 import com.cogoport.ares.api.common.config.OpenSearchConfig
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
@@ -16,8 +17,11 @@ import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.LedgerSummaryRepo
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
+import com.cogoport.ares.api.utils.Util.Companion.divideNumbers
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
+import com.cogoport.ares.model.common.CallPriorityScores
+import com.cogoport.ares.model.common.ListOrganizationPaymentModeReq
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.common.TradePartyOutstandingReq
 import com.cogoport.ares.model.common.TradePartyOutstandingRes
@@ -26,6 +30,7 @@ import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.AgeingBucket
 import com.cogoport.ares.model.payment.AgeingBucketOutstanding
 import com.cogoport.ares.model.payment.CustomerOutstanding
+import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.DueAmount
 import com.cogoport.ares.model.payment.InvoiceStats
 import com.cogoport.ares.model.payment.ListInvoiceResponse
@@ -47,6 +52,7 @@ import com.cogoport.ares.model.payment.response.OutstandingAgeingResponse
 import com.cogoport.ares.model.payment.response.PayableStatsOpenSearchResponse
 import com.cogoport.ares.model.payment.response.PayblesInfoRes
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
+import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.brahma.opensearch.Client
 import com.cogoport.brahma.opensearch.Configuration
 import io.sentry.Sentry
@@ -90,6 +96,9 @@ class OutStandingServiceImpl : OutStandingService {
 
     @Inject
     lateinit var ledgerSummaryRepo: LedgerSummaryRepo
+
+    @Inject
+    lateinit var cogoBackLowLevelClient: CogoBackLowLevelClient
 
     private fun validateInput(request: OutstandingListRequest) {
         try {
@@ -516,6 +525,7 @@ class OutStandingServiceImpl : OutStandingService {
                     onAccountCount = orgOutstandingData.sumOf { it.paymentsCount },
                     entityCode = entity
                 )
+                getCallPriority(customerOutstanding)
                 Client.addDocument("customer_outstanding_$entity", request.organizationId!!, customerOutstanding, true)
             }
         }
@@ -781,6 +791,7 @@ class OutStandingServiceImpl : OutStandingService {
                             onAccountCount = orgOutstandingData.sumOf { it.paymentsCount },
                             entityCode = entity
                         )
+                        getCallPriority(openSearchData)
                         Client.addDocument("customer_outstanding_$entity", id, openSearchData, true)
                     }
                 }
@@ -1028,5 +1039,120 @@ class OutStandingServiceImpl : OutStandingService {
         if (!outstandingData.isNullOrEmpty()) {
             ledgerSummaryRepo.saveAll(outstandingData)
         }
+    }
+
+    private suspend fun getCallPriority(customerData: CustomerOutstandingDocumentResponse) {
+        val orgId = UUID.fromString(customerData.organizationId)
+        val callPriorityScores = CallPriorityScores()
+
+        val totalOutstanding = customerData.totalOutstanding?.ledgerAmount
+        if (totalOutstanding != null) {
+            callPriorityScores.outstandingScore = when {
+                totalOutstanding >= 5000000.toBigDecimal() -> 6
+                totalOutstanding >= 4000000.toBigDecimal() -> 5
+                totalOutstanding >= 3000000.toBigDecimal() -> 4
+                totalOutstanding >= 2000000.toBigDecimal() -> 3
+                totalOutstanding >= 1000000.toBigDecimal() -> 2
+                else -> 1
+            }
+        }
+
+        val oneEightyPlusCount = customerData.openInvoiceAgeingBucket?.get("oneEightyPlus")?.ledgerCount ?: 0
+        val oneEightyCount = customerData.openInvoiceAgeingBucket?.get("oneEighty")?.ledgerCount ?: 0
+        val ninetyCount = customerData.openInvoiceAgeingBucket?.get("ninety")?.ledgerCount ?: 0
+        val sixtyCount = customerData.openInvoiceAgeingBucket?.get("sixty")?.ledgerCount ?: 0
+        val fortyFiveCount = customerData.openInvoiceAgeingBucket?.get("fortyFive")?.ledgerCount ?: 0
+        val thirtyCount = customerData.openInvoiceAgeingBucket?.get("thirty")?.ledgerCount ?: 0
+
+        callPriorityScores.ageingBucketScore = when {
+            oneEightyPlusCount > 0 -> 6
+            oneEightyCount > 0 -> 5
+            ninetyCount > 0 -> 4
+            sixtyCount > 0 -> 3
+            fortyFiveCount > 0 -> 2
+            thirtyCount > 0 -> 1
+            else -> callPriorityScores.ageingBucketScore
+        }
+
+        val monthlyCounts = accountUtilizationRepository.getMonthlyUtilizationCounts(
+            accMode = AccMode.AR,
+            accTypes = listOf(
+                AccountType.SINV,
+                AccountType.SREIMB,
+                AccountType.SCN,
+                AccountType.SREIMBCN
+            ),
+            docStatus = DocumentStatus.FINAL,
+            entityCodes = listOf(customerData.entityCode!!),
+            organizationId = orgId
+        )
+
+        callPriorityScores.businessContinuityScore = listOf(
+            monthlyCounts.lastMonth,
+            monthlyCounts.secondLastMonth,
+            monthlyCounts.thirdLastMonth,
+            monthlyCounts.fourthLastMonth,
+            monthlyCounts.fifthLastMonth,
+            monthlyCounts.sixthLastMonth
+        ).count { it > 0 }
+
+        val outstandingData = accountUtilizationRepo.getTradePartyOutstanding(
+            listOf(orgId),
+            listOf(customerData.entityCode!!)
+        )?.first()
+
+        val overdueAmntPerTotalAmnt = outstandingData?.overdueOpenInvoicesLedAmount?.divideNumbers(
+            outstandingData.openInvoicesLedAmount
+        ) ?: 0.toBigDecimal()
+
+        callPriorityScores.overduePerTotalAmount = when {
+            overdueAmntPerTotalAmnt >= 0.75.toBigDecimal() -> 6
+            overdueAmntPerTotalAmnt >= 0.60.toBigDecimal() -> 5
+            overdueAmntPerTotalAmnt >= 0.45.toBigDecimal() -> 4
+            overdueAmntPerTotalAmnt >= 0.30.toBigDecimal() -> 3
+            overdueAmntPerTotalAmnt >= 0.15.toBigDecimal() -> 2
+            else -> 1
+        }
+
+        val organizationPaymentModes = cogoBackLowLevelClient.listOrganizationPaymentModes(
+            ListOrganizationPaymentModeReq(
+                orgId,
+                "self",
+                "active"
+            )
+        )?.list?.first()
+
+        val paymentHistoryDetails = accountUtilizationRepository.getPaymentHistoryDetails(
+            accMode = AccMode.AR,
+            accTypes = listOf(
+                AccountType.SINV,
+                AccountType.SREIMB,
+            ),
+            entityCodes = listOf(customerData.entityCode!!),
+            organizationId = orgId,
+            destinationTypes = listOf(
+                SettlementType.SINV,
+                SettlementType.SREIMB
+            )
+        )
+
+        val delayedPaymentsPercent: BigDecimal = if (organizationPaymentModes?.mode == "cash")
+            paymentHistoryDetails.delayedPaymentsCash?.toBigDecimal()?.divideNumbers(
+                paymentHistoryDetails.totalPayments?.toBigDecimal() ?: 0.toBigDecimal()
+            ) ?: 0.toBigDecimal()
+        else
+            paymentHistoryDetails.delayedPaymentsCredit?.toBigDecimal()?.divideNumbers(
+                paymentHistoryDetails.totalPayments?.toBigDecimal() ?: 0.toBigDecimal()
+            ) ?: 0.toBigDecimal()
+
+        callPriorityScores.paymentHistoryScore = when {
+            delayedPaymentsPercent >= 0.25.toBigDecimal() -> 6
+            delayedPaymentsPercent >= 0.20.toBigDecimal() -> 5
+            delayedPaymentsPercent >= 0.15.toBigDecimal() -> 4
+            delayedPaymentsPercent >= 0.10.toBigDecimal() -> 3
+            delayedPaymentsPercent >= 0.05.toBigDecimal() -> 2
+            else -> 1
+        }
+        customerData.totalCallPriorityScore = callPriorityScores.geTotalCallPriority()
     }
 }
