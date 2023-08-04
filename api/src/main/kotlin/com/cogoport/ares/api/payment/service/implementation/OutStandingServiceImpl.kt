@@ -1047,7 +1047,7 @@ class OutStandingServiceImpl : OutStandingService {
         val callPriorityScores = CallPriorityScores()
 
         val totalOutstanding = customerData.totalOutstanding?.ledgerAmount
-        if (totalOutstanding != null) {
+        if (totalOutstanding != null && totalOutstanding.compareTo(0.toBigDecimal()) > 0) {
             callPriorityScores.outstandingScore = when {
                 totalOutstanding >= 5000000.toBigDecimal() -> 6
                 totalOutstanding >= 4000000.toBigDecimal() -> 5
@@ -1106,15 +1106,16 @@ class OutStandingServiceImpl : OutStandingService {
             outstandingData.openInvoicesLedAmount
         ) ?: 0.toBigDecimal()
 
-        callPriorityScores.overduePerTotalAmount = when {
-            overdueAmntPerTotalAmnt >= 0.75.toBigDecimal() -> 6
-            overdueAmntPerTotalAmnt >= 0.60.toBigDecimal() -> 5
-            overdueAmntPerTotalAmnt >= 0.45.toBigDecimal() -> 4
-            overdueAmntPerTotalAmnt >= 0.30.toBigDecimal() -> 3
-            overdueAmntPerTotalAmnt >= 0.15.toBigDecimal() -> 2
-            else -> 1
+        if (overdueAmntPerTotalAmnt.compareTo(0.toBigDecimal()) > 0) {
+            callPriorityScores.overduePerTotalAmount = when {
+                overdueAmntPerTotalAmnt >= 0.75.toBigDecimal() -> 6
+                overdueAmntPerTotalAmnt >= 0.60.toBigDecimal() -> 5
+                overdueAmntPerTotalAmnt >= 0.45.toBigDecimal() -> 4
+                overdueAmntPerTotalAmnt >= 0.30.toBigDecimal() -> 3
+                overdueAmntPerTotalAmnt >= 0.15.toBigDecimal() -> 2
+                else -> 1
+            }
         }
-
         val paymentHistoryDetails = accountUtilizationRepository.getPaymentHistoryDetails(
             accMode = AccMode.AR,
             accTypes = listOf(
@@ -1133,13 +1134,15 @@ class OutStandingServiceImpl : OutStandingService {
             paymentHistoryDetails.totalPayments?.toBigDecimal() ?: 0.toBigDecimal()
         ) ?: 0.toBigDecimal()
 
-        callPriorityScores.paymentHistoryScore = when {
-            delayedPaymentsPercent >= 0.25.toBigDecimal() -> 6
-            delayedPaymentsPercent >= 0.20.toBigDecimal() -> 5
-            delayedPaymentsPercent >= 0.15.toBigDecimal() -> 4
-            delayedPaymentsPercent >= 0.10.toBigDecimal() -> 3
-            delayedPaymentsPercent >= 0.05.toBigDecimal() -> 2
-            else -> 1
+        if (delayedPaymentsPercent.compareTo(0.toBigDecimal()) > 0) {
+            callPriorityScores.paymentHistoryScore = when {
+                delayedPaymentsPercent >= 0.25.toBigDecimal() -> 6
+                delayedPaymentsPercent >= 0.20.toBigDecimal() -> 5
+                delayedPaymentsPercent >= 0.15.toBigDecimal() -> 4
+                delayedPaymentsPercent >= 0.10.toBigDecimal() -> 3
+                delayedPaymentsPercent >= 0.05.toBigDecimal() -> 2
+                else -> 1
+            }
         }
         customerData.totalCallPriorityScore = callPriorityScores.geTotalCallPriority()
     }
