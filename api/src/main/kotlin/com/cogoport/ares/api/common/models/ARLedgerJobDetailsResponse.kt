@@ -31,5 +31,8 @@ data class ARLedgerJobDetailsResponse(
     @MappedProperty(type = DataType.JSON)
     val jobDocuments: MutableList<DocumentDetail>?,
     @JsonProperty("shipmentDocumentNumber")
-    var shipmentDocumentNumber: String?
+    var shipmentDocumentNumber: String?,
+    @JsonProperty("houseDocumentNumber")
+    var houseDocumentNumber: String?
+
 )

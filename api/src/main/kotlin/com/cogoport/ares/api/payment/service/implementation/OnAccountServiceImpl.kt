@@ -66,6 +66,7 @@ import com.cogoport.ares.model.payment.ValidateTradePartyRequest
 import com.cogoport.ares.model.payment.enum.CogoBankAccount
 import com.cogoport.ares.model.payment.enum.PaymentSageGLCodes
 import com.cogoport.ares.model.payment.enum.ShipmentDocumentName
+import com.cogoport.ares.model.payment.request.ARLedgerRequest
 import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
 import com.cogoport.ares.model.payment.request.BulkUploadRequest
@@ -1881,7 +1882,7 @@ open class OnAccountServiceImpl : OnAccountService {
         }
     }
 
-    override suspend fun getARLedgerOrganizationAndEntityWise(req: LedgerSummaryRequest): List<ARLedgerResponse> {
+    override suspend fun getARLedgerOrganizationAndEntityWise(req: ARLedgerRequest): List<ARLedgerResponse> {
         val ledgerSelectedDateWise = unifiedDBNewRepository.getARLedger(
             AccMode.AR,
             req.orgId,
@@ -1890,7 +1891,9 @@ open class OnAccountServiceImpl : OnAccountService {
             req.endDate!!
         )
         ledgerSelectedDateWise.forEach {
-            it.shipmentDocumentNumber = getShipmentDocumentDetails(it.jobDocuments)
+            val documentNumbers = getShipmentDocumentDetails(it.jobDocuments)
+            it.shipmentDocumentNumber = documentNumbers.first
+            it.houseDocumentNumber = documentNumbers.second
         }
         var arLedgerResponse = accountUtilizationMapper.convertARLedgerJobDetailsResponseToARLedgerResponse(ledgerSelectedDateWise)
         val openingLedger = accountUtilizationRepository.getOpeningAndClosingLedger(AccMode.AR, req.orgId, req.entityCodes!!, req.startDate!!, AresConstants.OPENING_BALANCE)
@@ -1906,7 +1909,8 @@ open class OnAccountServiceImpl : OnAccountService {
                 debitBalance = if (openingLedger.debit > openingLedger.credit) openingLedger.debit.minus(openingLedger.credit) else BigDecimal.ZERO,
                 creditBalance = if (openingLedger.credit > openingLedger.debit) openingLedger.credit.minus(openingLedger.debit) else BigDecimal.ZERO,
                 transactionRefNumber = "",
-                shipmentDocumentNumber = ""
+                shipmentDocumentNumber = "",
+                houseDocumentNumber = ""
             )
         )
         val completeLedgerList = openingLedgerList + arLedgerResponse
@@ -1940,21 +1944,26 @@ open class OnAccountServiceImpl : OnAccountService {
                     BigDecimal.ZERO
                 },
                 transactionRefNumber = "",
-                shipmentDocumentNumber = ""
+                shipmentDocumentNumber = "",
+                houseDocumentNumber = ""
             )
         )
         return completeLedgerList + closingLedgerList
     }
 
-    private fun getShipmentDocumentDetails(documentDetail: MutableList<DocumentDetail>?): String? {
-        var shipmentDocumentNumber = ""
+    private fun getShipmentDocumentDetails(documentDetail: MutableList<DocumentDetail>?): Pair<String?, String?> {
+        val houseDocumentNumber: MutableList<String?> = mutableListOf()
+        val documentNumber: MutableList<String?> = mutableListOf()
         if (documentDetail != null) {
             for (document in documentDetail) {
-                if (document.name in listOf<String?>(ShipmentDocumentName.DMAWB.value, ShipmentDocumentName.DHBL.value, ShipmentDocumentName.DMBL.value)) {
-                    shipmentDocumentNumber += "${document.number},"
+                if (document.name in listOf<String?>(ShipmentDocumentName.DMAWB.value, ShipmentDocumentName.DMBL.value, ShipmentDocumentName.MAWB.value, ShipmentDocumentName.MBL.value)) {
+                    documentNumber += document.number
+                }
+                if (document.name in listOf<String?>(ShipmentDocumentName.DHAWB.value, ShipmentDocumentName.DHBL.value, ShipmentDocumentName.HAWB.value, ShipmentDocumentName.HBL.value)) {
+                    houseDocumentNumber += document.number
                 }
             }
         }
-        return shipmentDocumentNumber
+        return Pair(documentNumber.distinct().joinToString(","), houseDocumentNumber.distinct().joinToString(","))
     }
 }
