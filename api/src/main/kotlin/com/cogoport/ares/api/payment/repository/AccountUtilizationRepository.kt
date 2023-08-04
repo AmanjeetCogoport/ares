@@ -1264,7 +1264,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             WITH payment_history AS (
                 SELECT
                     document_value, 
-                    (array_agg(ac.due_date::date - s.settlement_date::date order by s.created_at asc))[1] as days
+                    (array_agg(ac.due_date::date - s.settlement_date::date order by s.created_at asc))[1] as days,
+                    (array_agg(CASE WHEN (ac.due_date::date - ac.transaction_date::date) = 0 THEN 'cash' ELSE 'credit' END))[1] as payment_mode
                 FROM
                 account_utilizations AS ac
                 INNER JOIN settlements AS s ON s.destination_id = ac.document_no
@@ -1280,11 +1281,8 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             )
             SELECT
             SUM(
-                CASE WHEN days < 0 THEN 1 ELSE 0 END
-            ) AS delayed_payments_credit,
-            SUM(
-                CASE WHEN (days + 3) < 0 THEN 1 ELSE 0 END
-            ) AS delayed_payments_cash,
+                CASE WHEN ((payment_mode = 'credit') and (days < 0)) OR ((payment_mode = 'cash') and ((days + 3) < 0)) THEN 1 ELSE 0 END
+            ) AS delayed_payments,
             COALESCE(COUNT(*), 0) AS total_payments
             FROM payment_history
         """

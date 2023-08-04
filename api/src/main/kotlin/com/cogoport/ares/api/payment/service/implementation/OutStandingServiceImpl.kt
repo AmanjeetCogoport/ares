@@ -21,7 +21,6 @@ import com.cogoport.ares.api.utils.Util.Companion.divideNumbers
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.CallPriorityScores
-import com.cogoport.ares.model.common.ListOrganizationPaymentModeReq
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.common.TradePartyOutstandingReq
 import com.cogoport.ares.model.common.TradePartyOutstandingRes
@@ -1116,14 +1115,6 @@ class OutStandingServiceImpl : OutStandingService {
             else -> 1
         }
 
-        val organizationPaymentModes = cogoBackLowLevelClient.listOrganizationPaymentModes(
-            ListOrganizationPaymentModeReq(
-                orgId,
-                "self",
-                "active"
-            )
-        )?.list?.first()
-
         val paymentHistoryDetails = accountUtilizationRepository.getPaymentHistoryDetails(
             accMode = AccMode.AR,
             accTypes = listOf(
@@ -1138,15 +1129,9 @@ class OutStandingServiceImpl : OutStandingService {
             )
         )
 
-        val delayedPaymentsPercent: BigDecimal = if (organizationPaymentModes?.mode == "cash") {
-            paymentHistoryDetails.delayedPaymentsCash?.toBigDecimal()?.divideNumbers(
-                paymentHistoryDetails.totalPayments?.toBigDecimal() ?: 0.toBigDecimal()
-            ) ?: 0.toBigDecimal()
-        } else {
-            paymentHistoryDetails.delayedPaymentsCredit?.toBigDecimal()?.divideNumbers(
-                paymentHistoryDetails.totalPayments?.toBigDecimal() ?: 0.toBigDecimal()
-            ) ?: 0.toBigDecimal()
-        }
+        val delayedPaymentsPercent: BigDecimal = paymentHistoryDetails.delayedPayments?.toBigDecimal()?.divideNumbers(
+            paymentHistoryDetails.totalPayments?.toBigDecimal() ?: 0.toBigDecimal()
+        ) ?: 0.toBigDecimal()
 
         callPriorityScores.paymentHistoryScore = when {
             delayedPaymentsPercent >= 0.25.toBigDecimal() -> 6
