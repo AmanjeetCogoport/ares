@@ -1138,14 +1138,15 @@ class OutStandingServiceImpl : OutStandingService {
             )
         )
 
-        val delayedPaymentsPercent: BigDecimal = if (organizationPaymentModes?.mode == "cash")
+        val delayedPaymentsPercent: BigDecimal = if (organizationPaymentModes?.mode == "cash") {
             paymentHistoryDetails.delayedPaymentsCash?.toBigDecimal()?.divideNumbers(
                 paymentHistoryDetails.totalPayments?.toBigDecimal() ?: 0.toBigDecimal()
             ) ?: 0.toBigDecimal()
-        else
+        } else {
             paymentHistoryDetails.delayedPaymentsCredit?.toBigDecimal()?.divideNumbers(
                 paymentHistoryDetails.totalPayments?.toBigDecimal() ?: 0.toBigDecimal()
             ) ?: 0.toBigDecimal()
+        }
 
         callPriorityScores.paymentHistoryScore = when {
             delayedPaymentsPercent >= 0.25.toBigDecimal() -> 6
