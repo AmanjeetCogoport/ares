@@ -1896,7 +1896,7 @@ open class OnAccountServiceImpl : OnAccountService {
             it.houseDocumentNumber = documentNumbers.second
         }
         var arLedgerResponse = accountUtilizationMapper.convertARLedgerJobDetailsResponseToARLedgerResponse(ledgerSelectedDateWise)
-        val openingLedger = accountUtilizationRepository.getOpeningAndClosingLedger(AccMode.AR, req.orgId, req.entityCodes!!, req.startDate!!, AresConstants.OPENING_BALANCE)
+        val openingLedger = unifiedDBNewRepository.getOpeningAndClosingLedger(AccMode.AR, req.orgId, req.entityCodes!!, req.startDate!!, AresConstants.OPENING_BALANCE)
         var openingLedgerList: List<ARLedgerResponse> = listOf(
             ARLedgerResponse(
                 transactionDate = "",
@@ -1906,6 +1906,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 amount = "",
                 debit = openingLedger.debit,
                 credit = openingLedger.credit,
+                unutilizedAmount = null,
                 debitBalance = if (openingLedger.debit > openingLedger.credit) openingLedger.debit.minus(openingLedger.credit) else BigDecimal.ZERO,
                 creditBalance = if (openingLedger.credit > openingLedger.debit) openingLedger.credit.minus(openingLedger.debit) else BigDecimal.ZERO,
                 transactionRefNumber = "",
@@ -1916,11 +1917,14 @@ open class OnAccountServiceImpl : OnAccountService {
         val completeLedgerList = openingLedgerList + arLedgerResponse
 
         for (index in 1..completeLedgerList.lastIndex) {
-            val balance = (completeLedgerList[index].debit - completeLedgerList[index].credit) + (completeLedgerList[index - 1].debitBalance - completeLedgerList[index - 1].creditBalance)
+            val balance = (completeLedgerList[index].unutilizedAmount!!) + (completeLedgerList[index - 1].debitBalance - completeLedgerList[index - 1].creditBalance)
             if (balance.compareTo(BigDecimal.ZERO) == 1) {
                 completeLedgerList[index].debitBalance = balance
             } else {
                 completeLedgerList[index].creditBalance = -balance
+            }
+            if (completeLedgerList[index].unutilizedAmount?.compareTo(BigDecimal.ZERO) != 1) {
+                completeLedgerList[index].unutilizedAmount = -completeLedgerList[index].unutilizedAmount!!
             }
         }
         var closingBalance = completeLedgerList[completeLedgerList.lastIndex].debitBalance - completeLedgerList[completeLedgerList.lastIndex].creditBalance
@@ -1933,6 +1937,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 amount = "",
                 debit = BigDecimal.ZERO,
                 credit = BigDecimal.ZERO,
+                unutilizedAmount = null,
                 debitBalance = if (closingBalance.compareTo(BigDecimal.ZERO) == 1) {
                     closingBalance
                 } else {
