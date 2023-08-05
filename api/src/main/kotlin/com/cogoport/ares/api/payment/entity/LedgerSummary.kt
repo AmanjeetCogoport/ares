@@ -108,10 +108,18 @@ data class LedgerSummary(
     val totalOpenInvoiceAmount: BigDecimal,
     @JsonProperty("total_credit_note_amount")
     val totalCreditNoteAmount: BigDecimal,
-    @JsonProperty("total_on_account_amount")
-    val totalOnAccountAmount: BigDecimal,
+    @JsonProperty("total_open_account_amount")
+    val totalOpenAccountAmount: BigDecimal,
     @JsonProperty("total_outstanding")
     val totalOutstanding: BigDecimal,
+    @JsonProperty("total_invoice_amount")
+    val totalInvoiceAmount: BigDecimal,
+    @JsonProperty("total_on_account_amount")
+    val totalOnAccountAmount: BigDecimal,
+    @JsonProperty("total_on_account_count")
+    val totalOnAccountCount: Long,
+    @JsonProperty("total_invoices_count")
+    val totalInvoicesCount: Long,
     @JsonProperty("created_at")
     val createdAt: Date?
 )
