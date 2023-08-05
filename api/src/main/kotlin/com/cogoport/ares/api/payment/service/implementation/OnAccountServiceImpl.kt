@@ -1923,9 +1923,6 @@ open class OnAccountServiceImpl : OnAccountService {
             } else {
                 completeLedgerList[index].creditBalance = -balance
             }
-            if (completeLedgerList[index].unutilizedAmount?.compareTo(BigDecimal.ZERO) != 1) {
-                completeLedgerList[index].unutilizedAmount = -completeLedgerList[index].unutilizedAmount!!
-            }
         }
         var closingBalance = completeLedgerList[completeLedgerList.lastIndex].debitBalance - completeLedgerList[completeLedgerList.lastIndex].creditBalance
         var closingLedgerList: List<ARLedgerResponse> = listOf(
