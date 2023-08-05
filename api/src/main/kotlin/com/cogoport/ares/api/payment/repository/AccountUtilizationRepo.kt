@@ -1807,7 +1807,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 sign_flag * (amount_loc - pay_loc)
             ELSE
                 0
-            END) AS total_open_account_amount,
+            END) AS total_open_on_account_amount,
         sum(sign_flag * (amount_loc - pay_loc)) AS total_outstanding,
         SUM(
             CASE WHEN (acc_type::VARCHAR IN (:invoiceAccType) or acc_type::VARCHAR IN (:creditNoteAccType)) THEN
