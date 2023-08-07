@@ -1016,7 +1016,12 @@ class OutStandingServiceImpl : OutStandingService {
     }
 
     override suspend fun getTradePartyOutstanding(request: TradePartyOutstandingReq): List<TradePartyOutstandingRes>? {
-        return accountUtilizationRepo.getTradePartyOutstanding(request.orgIds!!, request.entities!!)
+        var responseList = listOf<TradePartyOutstandingRes>()
+        AresConstants.COGO_ENTITIES.forEach {
+            responseList = responseList +
+                (accountUtilizationRepo.getTradePartyOutstanding(request.orgIds!!, listOf(it))?: listOf())
+        }
+        return responseList
     }
 
     override suspend fun createLedgerSummary() {

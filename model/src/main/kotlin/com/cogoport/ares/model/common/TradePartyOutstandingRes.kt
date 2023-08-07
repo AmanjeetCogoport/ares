@@ -12,5 +12,6 @@ data class TradePartyOutstandingRes(
     val openInvoicesLedAmount: BigDecimal,
     val overdueOpenInvoicesLedAmount: BigDecimal,
     val openInvoicesCount: Int,
-    val outstandingLedAmount: BigDecimal
+    val outstandingLedAmount: BigDecimal,
+    val entityCodes: List<Int>?
 )
