@@ -9,9 +9,12 @@ import com.cogoport.ares.api.settlement.entity.JVAdditionalDetails
 import com.cogoport.ares.api.settlement.entity.JournalVoucher
 import com.cogoport.ares.api.settlement.entity.ParentJournalVoucher
 import com.cogoport.ares.api.settlement.entity.Settlement
+import com.cogoport.ares.api.settlement.entity.SettlementListDoc
 import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
 import com.cogoport.ares.api.settlement.repository.ParentJVRepository
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
+import com.cogoport.ares.api.utils.Utilities
+import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
@@ -19,9 +22,12 @@ import com.cogoport.ares.model.payment.PayMode
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
+import com.cogoport.ares.model.settlement.SettlementHistoryRequest
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.ares.model.settlement.enums.SettlementStatus
+import com.cogoport.brahma.hashids.Hashids
+import com.cogoport.plutus.model.invoice.response.InvoiceAdditionalResponseV2
 import jakarta.inject.Singleton
 import java.math.BigDecimal
 import java.sql.Timestamp
@@ -325,5 +331,90 @@ class SettlementHelper(
                 "signFlag" to -1
             )
         )
+    }
+
+    fun getSettlementList(req: SettlementHistoryRequest): ResponseList<SettlementListDoc?> {
+        val settlementDoc = SettlementListDoc(
+            id = "141977",
+            sourceDocumentValue = "CTDS232413645",
+            destinationDocumentValue = "COGOM2324017095",
+            settlementDate = Date("2023-06-09 00:00:00"),
+            amount = BigDecimal(46.2),
+            ledAmount = BigDecimal(46.2),
+            currency = "INR",
+            ledCurrency = "INR",
+            sourceAccType = AccountType.CTDS,
+            destinationAccType = AccountType.SINV,
+            sourceId = 13645,
+            destinationId = 455504,
+            destinationOpenInvoiceAmount = BigDecimal(0),
+            destinationInvoiceAmount = BigDecimal(2725.8),
+        )
+
+        val settlementDocs = listOf(settlementDoc)
+        val validAccTypeForIRN = listOf(AccountType.SINV, AccountType.SCN)
+        val invoiceIdToAccTypeMap = settlementDocs.associateBy({ it.sourceId }, { it.sourceAccType }) +
+            settlementDocs.associateBy({ it.destinationId }, { it.destinationAccType })
+
+        val invoiceNumberList = mutableListOf<String>()
+        invoiceIdToAccTypeMap.forEach { (invoiceId, accType) ->
+            if (accType in validAccTypeForIRN) {
+                invoiceNumberList.add(Hashids.encode(invoiceId))
+            }
+        }
+
+        val updatedSettlementDocs = getInvoiceAdditionalData(invoiceNumberList, mutableListOf("IrnNumber"), settlementDocs)
+        val totalRecords = "1".toLong()
+
+        return ResponseList(
+            list = updatedSettlementDocs,
+            totalPages = Utilities.getTotalPages(totalRecords, req.pageLimit),
+            totalRecords,
+            pageNo = req.page
+        )
+    }
+
+    private fun getInvoiceAdditionalData(invoiceIds: MutableList<String>, keys: MutableList<String>, settlementDocs: List<SettlementListDoc>): List<SettlementListDoc> {
+        val invoiceAdditionalResponse = InvoiceAdditionalResponseV2(
+            value = "45e39fedcc7edee9a2a120f530a77a93defa4ea6cfaa6b44bbe442da2dbdd68b",
+            id = 4922438,
+            invoiceId = 455504,
+            key = "IrnNumber"
+        )
+        val mockInvoiceAdditionalResponse = listOf(invoiceAdditionalResponse)
+
+        settlementDocs.forEach { doc ->
+            mockInvoiceAdditionalResponse.let { data ->
+                val sourceInvoiceAdditionalDoc = data.firstOrNull { it.invoiceId == doc.sourceId && it.key == "IrnNumber" }
+                val destinationInvoiceAdditionalDoc = data.firstOrNull { it.invoiceId == doc.destinationId && it.key == "IrnNumber" }
+
+                sourceInvoiceAdditionalDoc?.let {
+                    if (it.value.toString().isNotBlank()) {
+                        doc.sourceIrnNumber = it.value.toString()
+                    }
+                }
+
+                destinationInvoiceAdditionalDoc?.let {
+                    if (it.value.toString().isNotBlank()) {
+                        doc.destinationIrnNumber = it.value.toString()
+                    }
+                }
+            }
+        }
+
+        return settlementDocs
+    }
+
+    fun getInvoiceAdditionalList(
+        invoiceIds: MutableList<String>,
+        keys: MutableList<String>
+    ): List<InvoiceAdditionalResponseV2> {
+        val invoiceAdditionalResponseV2 = InvoiceAdditionalResponseV2(
+            value = "45e39fedcc7edee9a2a120f530a77a93defa4ea6cfaa6b44bbe442da2dbdd68b",
+            id = 4922438,
+            invoiceId = 455504,
+            key = "IrnNumber"
+        )
+        return listOf(invoiceAdditionalResponseV2)
     }
 }

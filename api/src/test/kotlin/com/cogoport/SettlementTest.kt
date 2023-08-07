@@ -6,7 +6,10 @@ import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.PaymentCode
+import com.cogoport.ares.model.settlement.SettlementHistoryRequest
 import com.cogoport.ares.model.settlement.SettlementType
+import com.cogoport.brahma.hashids.Hashids
+import com.cogoport.plutus.client.PlutusClient
 import com.cogoport.plutus.model.common.ResponseList
 import io.micronaut.core.type.Argument
 import io.micronaut.http.HttpRequest
@@ -19,11 +22,16 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.mockito.Mock
+import org.mockito.Mockito
+import org.mockito.Mockito.verify
 import org.mockito.junit.jupiter.MockitoExtension
 import java.math.BigDecimal
+import java.util.UUID
 
 @ExtendWith(MockitoExtension::class)
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -39,14 +47,19 @@ class SettlementTest() {
     @Inject
     lateinit var helper: SettlementHelper
 
+    @Mock
+    var plutusClient: PlutusClient = Mockito.mock(PlutusClient::class.java)
+
     @BeforeEach
     fun setUp() = runTest {
-        accountUtilizationRepo.deleteAll()
+//        accountUtilizationRepo.deleteAll()
+//        OpenSearchClient.deleteIndex(indexName = AresConstants.ACCOUNT_UTILIZATION_INDEX)
     }
 
     @AfterEach
     fun tearDown() = runTest {
-        accountUtilizationRepo.deleteAll()
+//        accountUtilizationRepo.deleteAll()
+//        OpenSearchClient.deleteIndex(indexName = AresConstants.ACCOUNT_UTILIZATION_INDEX)
     }
 
     @Test
@@ -148,5 +161,28 @@ class SettlementTest() {
         }
 
         logger().info(response.toString())
+    }
+
+    @Test
+    fun canGetSettlementList() = runTest {
+        val endpoint = "/settlement/list?page=1&pageLimit=10&orgId=31a0eaea-dc4b-4699-8575-0bc9012ade0f&accountType=All&entityCode=301&sortBy=settlementDate&sortType=Desc"
+        val request = HttpRequest.GET<Any>(endpoint)
+
+        val apiRequest = SettlementHistoryRequest(
+            orgId = listOf(UUID.fromString("31a0eaea-dc4b-4699-8575-0bc9012ade0f")),
+            accountType = "ALL",
+            entityCode = 301,
+            sortBy = "settlementDate",
+            sortType = "Desc"
+        )
+        val settlementDocs = helper.getSettlementList(apiRequest)
+        val invoiceIds = settlementDocs.list.map { Hashids.encode(it!!.destinationId) }
+        verify(plutusClient, Mockito.times(3)).getInvoiceAdditionalList(invoiceIds.toMutableList(), mutableListOf("IrnNumber"))
+        val response = withContext(Dispatchers.IO) {
+            client.toBlocking().retrieve(
+                request, Argument.of(ResponseList::class.java)
+            )
+        }
+        Assertions.assertEquals(1, response.totalRecords)
     }
 }
