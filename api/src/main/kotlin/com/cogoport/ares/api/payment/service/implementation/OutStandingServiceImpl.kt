@@ -1019,7 +1019,7 @@ class OutStandingServiceImpl : OutStandingService {
         var responseList = listOf<TradePartyOutstandingRes>()
         AresConstants.COGO_ENTITIES.forEach {
             responseList = responseList +
-                (accountUtilizationRepo.getTradePartyOutstanding(request.orgIds!!, listOf(it))?: listOf())
+                (accountUtilizationRepo.getTradePartyOutstanding(request.orgIds!!, listOf(it)) ?: listOf())
         }
         return responseList
     }
