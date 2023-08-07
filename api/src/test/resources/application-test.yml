@@ -2,8 +2,8 @@ micronaut:
   application:
     name: AresTestService
   server:
-    port: 8088
-    context-path: /payment
+    port: 8086
+    context-path: /payments
   metrics:
     binders:
       kafka:
@@ -16,7 +16,7 @@ micronaut:
     datasources:
       default:
         url: r2dbc:postgresql://localhost:5432/ares
-        username: cogoport
+        username: vivekgarg
         password: cogoport123
         dialect: POSTGRES
 

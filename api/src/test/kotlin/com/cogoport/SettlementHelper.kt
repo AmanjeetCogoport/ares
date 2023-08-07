@@ -54,8 +54,8 @@ class SettlementHelper(
         tdsAmountLoc: BigDecimal?,
         amountCurr: BigDecimal,
         amountLoc: BigDecimal,
-    ): Long? {
-        var accUtilDoc = AccountUtilization(
+    ): AccountUtilization {
+        val accUtilDoc = AccountUtilization(
             id = null,
             documentNo = documentNo,
             documentValue = documentValue,
@@ -84,12 +84,11 @@ class SettlementHelper(
             currency = currency,
             ledCurrency = ledCurrency,
             tdsAmount = tdsAmount,
-            tdsAmountLoc = tdsAmountLoc
+            tdsAmountLoc = tdsAmountLoc,
+            settlementEnabled = true
         )
 
-        accUtilDoc = accountUtilizationRepo.save(accUtilDoc)
-
-        return accUtilDoc.id
+        return accountUtilizationRepo.save(accUtilDoc)
     }
 
     suspend fun saveSettlement(
@@ -103,8 +102,8 @@ class SettlementHelper(
         ledCurrency: String,
         settlementNum: String?,
         signFlag: Short
-    ): Long? {
-        var settlementRecord = Settlement(
+    ): Settlement {
+        val settlementRecord = Settlement(
             id = null,
             amount = amount,
             ledAmount = ledAmount,
@@ -124,9 +123,7 @@ class SettlementHelper(
             updatedBy = AresConstants.ARES_USER_ID
         )
 
-        settlementRecord = settlementRepository.save(settlementRecord)
-
-        return settlementRecord.id
+        return settlementRepository.save(settlementRecord)
     }
 
     suspend fun savePayment(
@@ -143,7 +140,7 @@ class SettlementHelper(
         signFlag: Short,
         transRefNumber: String,
         paymentCode: PaymentCode
-    ): Long? {
+    ): Payment {
         val payment = Payment(
             id = null,
             accCode = accCode,
@@ -151,10 +148,10 @@ class SettlementHelper(
             amount = amount,
             ledAmount = ledAmount,
             bankId = UUID.fromString("d646dc1c-f366-453c-b56f-2788f36c4136"),
-            organizationId = UUID.fromString("fb193031-64f6-417c-b538-9064d68db2bd"),
+            organizationId = UUID.fromString("9f03db0c-88cc-450f-bbb1-38fa31861911"),
             organizationName = "Inext Logistics & Supply Chain Private Limited",
-            tradePartyMappingId = UUID.fromString("7fc682ad-b547-4020-b81b-c95d5ee46d16"),
-            taggedOrganizationId = UUID.fromString("6b3bb3c6-4604-4485-acfc-d3fd2820383a"),
+            tradePartyMappingId = UUID.fromString("9f03db0c-88cc-450f-bbb1-38fa31861911"),
+            taggedOrganizationId = UUID.fromString("9f03db0c-88cc-450f-bbb1-38fa31861911"),
             createdBy = UUID.fromString("ec306da2-0d52-4cc1-a7b1-d3a6541f1ce8"),
             currency = currency,
             ledCurrency = ledCurrency,
@@ -200,7 +197,7 @@ class SettlementHelper(
             entityCode = payment.entityCode
         )
 
-        return payment.id
+        return payment
     }
 
     suspend fun saveParentJournalVoucher(
