@@ -1807,15 +1807,47 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 sign_flag * (amount_loc - pay_loc)
             ELSE
                 0
-            END) AS total_on_account_amount,
-            sum(sign_flag * (amount_loc - pay_loc)) AS total_outstanding,
-            CURRENT_DATE as created_at
-            FROM account_utilizations WHERE 
-            acc_mode::VARCHAR = :accMode AND deleted_at IS NULL
-            AND acc_type::varchar in (:accTypes)
-            AND document_status in ('FINAL')
-            AND created_at >= '2023-07-28'
-            group by organization_id, entity_code,led_currency, acc_mode
+            END) AS total_open_on_account_amount,
+        sum(sign_flag * (amount_loc - pay_loc)) AS total_outstanding,
+        SUM(
+            CASE WHEN (acc_type::VARCHAR IN (:invoiceAccType) or acc_type::VARCHAR IN (:creditNoteAccType)) THEN
+              sign_flag * amount_loc
+            ELSE
+              0
+            END
+          ) AS total_invoice_amount,
+          SUM(
+            CASE WHEN acc_type::VARCHAR IN (:onAccountAccountType) THEN
+              sign_flag * amount_loc
+            ELSE
+              0
+            END
+          ) AS total_on_account_amount,
+          SUM(
+            CASE WHEN acc_type::VARCHAR IN (:onAccountAccountType) THEN
+              1
+            ELSE
+              0
+            END
+          ) AS total_on_account_count,
+          SUM(
+            CASE WHEN (acc_type::VARCHAR IN (:invoiceAccType) or acc_type::VARCHAR IN (:creditNoteAccType)) THEN
+              1
+            ELSE
+              0
+            END
+          ) AS total_invoices_count,
+        CURRENT_DATE AS created_at
+    FROM 
+        account_utilizations 
+    WHERE 
+        acc_mode::VARCHAR = :accMode 
+        AND deleted_at IS NULL
+        AND acc_type::VARCHAR IN (:accTypes)
+        AND document_status IN ('FINAL')
+        AND created_at >= '2023-07-28'
+    GROUP BY 
+        organization_id, entity_code, led_currency, acc_mode
         """
     )
     suspend fun getLedgerSummaryForAp(
