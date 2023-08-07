@@ -1696,7 +1696,7 @@ open class SettlementServiceImpl : SettlementService {
         /** Payment ledger amount */
         val paidLedAmount = getExchangeValue(paidAmount, ledgerRate)
         /** Tds Amount in Invoice currency */
-        var invoiceTds = invoice.tds!!
+        var invoiceTds = invoice.tds!! - invoice.settledTds
         /** Tds Amount in Invoice ledger currency */
         val invoiceTdsLed = invoiceTds * (invoice.exchangeRate)
         /** Tds Amount in Payment currency */
