@@ -19,7 +19,6 @@ import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.response.AccPayablesOfOrgRes
 import com.cogoport.ares.model.payment.response.AccountPayablesStats
-import com.cogoport.ares.model.payment.response.CreditDebitBalance
 import com.cogoport.ares.model.payment.response.InvoiceListResponse
 import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
 import com.cogoport.ares.model.payment.response.OverallStatsForTradeParty
@@ -1215,18 +1214,4 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun getInvoiceBalanceAmount(invoiceNumbers: List<String>, accMode: AccMode): List<InvoiceBalanceResponse>?
-    @NewSpan
-    @Query(
-        """
-            SELECT
-            (array_agg(led_currency))[1] AS ledger_currency,
-            COALESCE(SUM(CASE WHEN au.sign_flag < 0 THEN (au.amount_loc - au.pay_loc)  ELSE 0 END), 0) AS credit,
-            COALESCE(SUM(CASE WHEN au.sign_flag > 0 THEN (au.amount_loc - au.pay_loc)  ELSE 0 END), 0) AS debit
-            FROM account_utilizations au 
-            WHERE au.acc_mode = :accMode::ACCOUNT_MODE AND au.organization_id = :organizationId::UUID AND document_status = 'FINAL'
-            AND au.entity_code IN (:entityCodes) AND au.deleted_at IS NULL AND au.acc_type != 'NEWPR'
-            AND CASE WHEN :commonRow = 'OPENING BALANCE' THEN au.transaction_date < :date::DATE ELSE au.transaction_date <= :date::DATE END
-        """
-    )
-    suspend fun getOpeningAndClosingLedger(accMode: AccMode, organizationId: String, entityCodes: List<Int>, date: Timestamp?, commonRow: String): CreditDebitBalance
 }
