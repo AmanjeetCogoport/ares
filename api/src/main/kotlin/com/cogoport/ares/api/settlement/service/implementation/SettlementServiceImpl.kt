@@ -2609,7 +2609,7 @@ open class SettlementServiceImpl : SettlementService {
             }
         }
         return SageFailedResponse(
-                failedIdsList = failedIds
+            failedIdsList = failedIds
         )
     }
 
