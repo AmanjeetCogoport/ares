@@ -1,6 +1,9 @@
 package com.cogoport
 
 import com.cogoport.ares.api.common.AresConstants
+import com.cogoport.ares.api.common.models.TdsDataResponse
+import com.cogoport.ares.api.common.models.TdsDataResponseList
+import com.cogoport.ares.api.common.models.TdsStylesResponse
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.Payment
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
@@ -13,7 +16,6 @@ import com.cogoport.ares.api.settlement.entity.SettlementListDoc
 import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
 import com.cogoport.ares.api.settlement.repository.ParentJVRepository
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
-import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
@@ -22,15 +24,20 @@ import com.cogoport.ares.model.payment.PayMode
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
-import com.cogoport.ares.model.settlement.SettlementHistoryRequest
+import com.cogoport.ares.model.settlement.Document
+import com.cogoport.ares.model.settlement.SettlementInvoiceResponse
 import com.cogoport.ares.model.settlement.SettlementType
+import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.ares.model.settlement.enums.SettlementStatus
 import com.cogoport.brahma.hashids.Hashids
+import com.cogoport.kuber.model.bills.BillDocResponse
 import com.cogoport.plutus.model.invoice.response.InvoiceAdditionalResponseV2
+import com.cogoport.plutus.model.receivables.SidResponse
 import jakarta.inject.Singleton
 import java.math.BigDecimal
 import java.sql.Timestamp
+import java.text.SimpleDateFormat
 import java.time.Instant
 import java.util.Date
 import java.util.UUID
@@ -73,9 +80,9 @@ class SettlementHelper(
             amountLoc = amountLoc,
             category = "ASSET",
             documentStatus = documentStatus,
-            dueDate = Date(),
+            dueDate = SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse("2023-08-08 05:30:00"),
             entityCode = entityCode,
-            transactionDate = Date(),
+            transactionDate = SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse("2023-08-08 05:30:00"),
             migrated = false,
             organizationId = UUID.fromString("9f03db0c-88cc-450f-bbb1-38fa31861911"),
             organizationName = "my_company",
@@ -107,7 +114,8 @@ class SettlementHelper(
         currency: String,
         ledCurrency: String,
         settlementNum: String?,
-        signFlag: Short
+        signFlag: Short,
+        settlementDate: Date,
     ): Settlement {
         val settlementRecord = Settlement(
             id = null,
@@ -121,7 +129,7 @@ class SettlementHelper(
             destinationType = destinationType,
             sourceId = sourceId,
             sourceType = sourceType,
-            settlementDate = Date(),
+            settlementDate = settlementDate,
             settlementNum = settlementNum,
             signFlag = signFlag,
             settlementStatus = SettlementStatus.CREATED,
@@ -333,48 +341,32 @@ class SettlementHelper(
         )
     }
 
-    fun getSettlementList(req: SettlementHistoryRequest): ResponseList<SettlementListDoc?> {
-        val settlementDoc = SettlementListDoc(
-            id = "141977",
-            sourceDocumentValue = "CTDS232413645",
-            destinationDocumentValue = "COGOM2324017095",
-            settlementDate = Date("2023-06-09 00:00:00"),
-            amount = BigDecimal(46.2),
-            ledAmount = BigDecimal(46.2),
-            currency = "INR",
-            ledCurrency = "INR",
-            sourceAccType = AccountType.CTDS,
-            destinationAccType = AccountType.SINV,
-            sourceId = 13645,
-            destinationId = 455504,
-            destinationOpenInvoiceAmount = BigDecimal(0),
-            destinationInvoiceAmount = BigDecimal(2725.8),
-        )
-
-        val settlementDocs = listOf(settlementDoc)
-        val validAccTypeForIRN = listOf(AccountType.SINV, AccountType.SCN)
-        val invoiceIdToAccTypeMap = settlementDocs.associateBy({ it.sourceId }, { it.sourceAccType }) +
-            settlementDocs.associateBy({ it.destinationId }, { it.destinationAccType })
-
-        val invoiceNumberList = mutableListOf<String>()
-        invoiceIdToAccTypeMap.forEach { (invoiceId, accType) ->
-            if (accType in validAccTypeForIRN) {
-                invoiceNumberList.add(Hashids.encode(invoiceId))
-            }
-        }
-
-        val updatedSettlementDocs = getInvoiceAdditionalData(invoiceNumberList, mutableListOf("IrnNumber"), settlementDocs)
-        val totalRecords = "1".toLong()
-
-        return ResponseList(
-            list = updatedSettlementDocs,
-            totalPages = Utilities.getTotalPages(totalRecords, req.pageLimit),
-            totalRecords,
-            pageNo = req.page
+    fun getSettlementList(req: Settlement): List<SettlementListDoc?> {
+        return listOf(
+            SettlementListDoc(
+                id = req.id.toString(),
+                sourceDocumentValue = "REC123456",
+                destinationDocumentValue = "SINV123455",
+                settlementDate = req.settlementDate,
+                amount = BigDecimal(100).setScale(4),
+                ledAmount = BigDecimal(100).setScale(4),
+                currency = "INR",
+                ledCurrency = "INR",
+                sourceAccType = AccountType.REC,
+                destinationAccType = AccountType.SINV,
+                sourceId = req.sourceId!!,
+                destinationId = req.destinationId,
+                destinationOpenInvoiceAmount = BigDecimal(60.0000).setScale(4),
+                destinationInvoiceAmount = BigDecimal(100).setScale(4),
+            )
         )
     }
 
-    private fun getInvoiceAdditionalData(invoiceIds: MutableList<String>, keys: MutableList<String>, settlementDocs: List<SettlementListDoc>): List<SettlementListDoc> {
+    private fun getInvoiceAdditionalData(
+        invoiceIds: MutableList<String>,
+        keys: MutableList<String>,
+        settlementDocs: List<SettlementListDoc>
+    ): List<SettlementListDoc> {
         val invoiceAdditionalResponse = InvoiceAdditionalResponseV2(
             value = "45e39fedcc7edee9a2a120f530a77a93defa4ea6cfaa6b44bbe442da2dbdd68b",
             id = 4922438,
@@ -385,8 +377,10 @@ class SettlementHelper(
 
         settlementDocs.forEach { doc ->
             mockInvoiceAdditionalResponse.let { data ->
-                val sourceInvoiceAdditionalDoc = data.firstOrNull { it.invoiceId == doc.sourceId && it.key == "IrnNumber" }
-                val destinationInvoiceAdditionalDoc = data.firstOrNull { it.invoiceId == doc.destinationId && it.key == "IrnNumber" }
+                val sourceInvoiceAdditionalDoc =
+                    data.firstOrNull { it.invoiceId == doc.sourceId && it.key == "IrnNumber" }
+                val destinationInvoiceAdditionalDoc =
+                    data.firstOrNull { it.invoiceId == doc.destinationId && it.key == "IrnNumber" }
 
                 sourceInvoiceAdditionalDoc?.let {
                     if (it.value.toString().isNotBlank()) {
@@ -416,5 +410,129 @@ class SettlementHelper(
             key = "IrnNumber"
         )
         return listOf(invoiceAdditionalResponseV2)
+    }
+
+    fun getDocumentListResponse(savedRecord: AccountUtilization, isTdsResponse: Boolean): MutableList<Document> {
+        return mutableListOf(
+            Document(
+                id = if (isTdsResponse) savedRecord.id!!.toString() else Hashids.encode(savedRecord.id!!),
+                documentNo = "b1bV",
+                documentValue = "VIVEK/12234",
+                organizationId = UUID.fromString("9f03db0c-88cc-450f-bbb1-38fa31861911"),
+                accountType = "PINV",
+                documentType = "Purchase Invoice",
+                transactionDate = SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse("2023-08-08 05:30:00"),
+                mappingId = null,
+                dueDate = SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse("2023-08-08 05:30:00"),
+                documentAmount = BigDecimal(100).setScale(4),
+                ledgerAmount = BigDecimal(100).setScale(4),
+                ledgerBalance = BigDecimal(60).setScale(4),
+                taxableAmount = BigDecimal(0.0000).setScale(4),
+                tds = BigDecimal(20.0000).setScale(4),
+                tdsPercentage = null,
+                afterTdsAmount = BigDecimal(80.0000).setScale(4),
+                allocationAmount = if (isTdsResponse) null else BigDecimal(40.0000).setScale(4),
+                balanceAfterAllocation = if (isTdsResponse) null else BigDecimal(0.0000),
+                settledAmount = BigDecimal(40.0000).setScale(4),
+                settledAllocation = if (isTdsResponse) null else BigDecimal(0.0000),
+                balanceAmount = BigDecimal(40.0000).setScale(4),
+                currentBalance = BigDecimal(60.0000).setScale(4),
+                status = "Partially Paid",
+                currency = "INR",
+                ledCurrency = "INR",
+                settledTds = BigDecimal(0.0000),
+                exchangeRate = BigDecimal(1.0000).setScale(20),
+                signFlag = -1,
+                nostroAmount = BigDecimal(0.0000),
+                approved = true,
+                accMode = AccMode.AP,
+                hasPayrun = false,
+                migrated = false
+            )
+        )
+    }
+
+    fun getTdsResponse(): TdsDataResponseList {
+        return TdsDataResponseList(
+            data = listOf(
+                TdsStylesResponse(
+                    id = UUID.fromString("3e11a4a6-3e07-4c5d-8ea9-6372b12c7724"),
+                    tdsDeductionStyle = "gross",
+                    tdsDeductionType = "normal",
+                    tdsDeductionRate = BigDecimal(2)
+                )
+            )
+        )
+    }
+
+    fun getTdsDataResponse(): TdsDataResponse {
+        return TdsDataResponse(
+            data = TdsStylesResponse(
+                id = UUID.fromString("3e11a4a6-3e07-4c5d-8ea9-6372b12c7724"),
+                tdsDeductionStyle = "gross",
+                tdsDeductionType = "normal",
+                tdsDeductionRate = BigDecimal(2)
+            )
+        )
+    }
+    fun getBillResponse(): com.cogoport.kuber.model.common.ResponseList<BillDocResponse> {
+        return com.cogoport.kuber.model.common.ResponseList()
+    }
+
+    fun getAccountBalance(): SummaryResponse {
+        return SummaryResponse(
+            openInvoiceAmount = BigDecimal(-60.0000).setScale(4),
+            onAccountAmount = BigDecimal(0),
+            outstandingAmount = BigDecimal(-60.0000).setScale(4),
+            ledgerCurrency = "INR"
+        )
+    }
+
+    fun getSidResponse(): List<SidResponse> {
+        return listOf(
+            SidResponse(
+                invoiceId = 123343,
+                jobNumber = "VIVE134",
+                shipmentType = "LOGISTICS",
+                pdfUrl = "https://google.com"
+            )
+        )
+    }
+
+    fun getInvoiceAdditionalResponse(): List<InvoiceAdditionalResponseV2> {
+        return listOf(
+            InvoiceAdditionalResponseV2(
+                id = 123,
+                invoiceId = 123455,
+                value = "irn_number_1222",
+                key = "irnNumber"
+            )
+        )
+    }
+
+    fun getInvoiceResponse(req: Settlement, destinationDocument: AccountUtilization): List<SettlementInvoiceResponse> {
+        return listOf(
+            SettlementInvoiceResponse(
+                id = destinationDocument.id,
+                invoiceNo = req.destinationId,
+                invoiceValue = destinationDocument.documentValue!!,
+                invoiceDate = destinationDocument.transactionDate!!,
+                invoiceAmount = BigDecimal(100).setScale(4),
+                taxableAmount = BigDecimal(0).setScale(4),
+                tds = BigDecimal(0).setScale(4),
+                afterTdsAmount = BigDecimal(100).setScale(4),
+                settledAmount = BigDecimal(40).setScale(4),
+                balanceAmount = BigDecimal(60).setScale(4),
+                status = "Partially Paid",
+                invoiceStatus = "FINAL",
+                currency = "INR",
+                sid = null,
+                shipmentType = null,
+                pdfUrl = null,
+                tdsPercentage = BigDecimal(2),
+                settledTds = BigDecimal(0),
+                dueDate = destinationDocument.transactionDate!!
+            )
+        )
     }
 }

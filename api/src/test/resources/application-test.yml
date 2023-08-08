@@ -4,22 +4,28 @@ micronaut:
   server:
     port: 8086
     context-path: /payments
-  metrics:
-    binders:
-      kafka:
-        enabled: false
-  netty:
+  http:
+    client:
+      read-timeout: 300s
+netty:
+  default:
+    allocator:
+      max-order: 3
+r2dbc:
+  datasources:
     default:
-      allocator:
-        max-order: 3
-  r2dbc:
-    datasources:
-      default:
-        url: r2dbc:postgresql://localhost:5432/ares
-        username: vivekgarg
-        password: cogoport123
-        dialect: POSTGRES
+      url: r2dbc:postgresql://${DB_HOST:`localhost`}:${DB_PORT:5432}/${DB_NAME:ares}
+      username: vivekgarg
+      password: cogoport123
+      dialect: POSTGRES
+opensearch:
+  host: ${OPENSEARCH_HOST:localhost}
+  port: ${OPENSEARCH_PORT:9200}
+  scheme: ${OPENSEARCH_SCHEME:http}
 
-kafka:
-  bootstrap:
-    servers: localhost:29092
+rabbitmq:
+  uri: amqp://${RABBITMQ_USER:guest}:${RABBITMQ_PASS:guest}@${RABBITMQ_HOST:localhost}:${RABBITMQ_PORT:5672}
+  consumer-executor: rabbit
+
+redis:
+  uri: redis://localhost:6379
