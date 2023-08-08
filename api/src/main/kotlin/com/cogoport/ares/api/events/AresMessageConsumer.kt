@@ -22,6 +22,7 @@ import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.service.interfaces.ParentJVService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.TaggedSettlementService
+import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.CreateCommunicationRequest
 import com.cogoport.ares.model.dunning.request.SendMailOfAllCommunicationToTradePartyReq
 import com.cogoport.ares.model.payment.AccountUtilizationEvent
@@ -47,6 +48,8 @@ import io.micronaut.messaging.annotation.MessageBody
 import io.micronaut.rabbitmq.annotation.Queue
 import io.micronaut.rabbitmq.annotation.RabbitHeaders
 import io.micronaut.rabbitmq.annotation.RabbitListener
+import io.micronaut.rabbitmq.exception.RabbitClientException
+import io.sentry.Sentry
 import jakarta.inject.Inject
 import kotlinx.coroutines.runBlocking
 import java.util.Date
@@ -238,9 +241,16 @@ class AresMessageConsumer {
         onAccountService.postPaymentFromSage(arrayListOf(req.paymentId), req.performedBy)
     }
 
-    @Queue("ares-bulk-post-settlement-to-sage", prefetch = 1, numberOfConsumers = 1)
+    @Queue("ares-bulk-post-settlement-to-sage", prefetch = 1)
     fun bulkMatchingSettlementOnSage(req: PostSettlementRequest) = runBlocking {
-        settlementService.matchingSettlementOnSage(req.settlementId, req.performedBy)
+        try {
+            settlementService.matchingSettlementOnSage(req.settlementId, req.performedBy)
+        } catch (k: RabbitClientException) {
+            logger().error("settlement matching error -> ${k.stackTraceToString()}")
+        } catch (e: Exception) {
+            logger().error("settlement matching error -> ${e.stackTraceToString()}")
+            Sentry.captureException(e)
+        }
     }
 
     @Queue("ares-partial-payment-mismatch", prefetch = 1)
