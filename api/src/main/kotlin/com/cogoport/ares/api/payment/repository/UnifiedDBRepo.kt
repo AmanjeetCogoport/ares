@@ -311,7 +311,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             sinv.ledger_currency as dashboard_currency,
             sinv.invoice_date  as duration
             from plutus.invoices sinv
-            INNER JOIN loki.jobs loutstandingj on sinv.job_id = lj.id
+            INNER JOIN loki.jobs lj on sinv.job_id = lj.id
             INNER JOIN plutus.addresses pa on pa.invoice_id = sinv.id and pa.organization_type = 'SELLER'
             LEFT JOIN plutus.addresses pb on pb.invoice_id = sinv.id and pb.organization_type = 'BOOKING_PARTY'
             LEFT JOIN organizations o on o.id = pb.organization_id
