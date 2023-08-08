@@ -9,7 +9,6 @@ import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.response.CreditDebitBalance
-import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
@@ -92,17 +91,18 @@ class AccountUtilizationHelper {
         accountUtilizationRepo.save(accUtil)
     }
 
-    fun getOrganizationTradePartyOutstandingResponse(): String {
-        val response = TradePartyOutstandingRes(
-            tradePartyDetailId = UUID.fromString("9b92503b-6374-4274-9be4-e83a42fc35fe"),
-            openInvoicesCount = 1,
-            openInvoicesLedAmount = 400.toBigDecimal().setScale(4),
-            overdueOpenInvoicesLedAmount = 0.toBigDecimal(),
-            outstandingLedAmount = 400.toBigDecimal().setScale(4),
-            entityCode = 301,
-            ledCurrency = "INR"
+    fun getOrganizationTradePartyOutstandingResponse(): List<TradePartyOutstandingRes> {
+        return listOf(
+            TradePartyOutstandingRes(
+                tradePartyDetailId = UUID.fromString("9b92503b-6374-4274-9be4-e83a42fc35fe"),
+                openInvoicesCount = 1,
+                openInvoicesLedAmount = 400.toBigDecimal().setScale(4),
+                overdueOpenInvoicesLedAmount = 0.toBigDecimal(),
+                outstandingLedAmount = 400.toBigDecimal().setScale(4),
+                entityCode = 301,
+                ledCurrency = "INR",
+                registrationNumber = "AADCS3124K"
+            )
         )
-        response.registrationNumber = "AADCS3124K"
-        return ObjectMapper().writeValueAsString(listOf(response))
     }
 }

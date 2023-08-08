@@ -1750,16 +1750,4 @@ WHERE
             """
     )
     suspend fun getJobNumbersByDocumentNos(ids: List<Long>): List<BillIdAndJobNumberResponse>
-
-    @NewSpan
-    @Query(
-        """
-            SELECT
-            otpd.registration_number
-            FROM organization_trade_party_details otpd
-            WHERE
-            otpd.id = :orgId
-        """
-    )
-    suspend fun fetchTradePartyRegistrationNumber(orgId: UUID): String?
 }

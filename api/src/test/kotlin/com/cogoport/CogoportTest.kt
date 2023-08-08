@@ -2,10 +2,10 @@ package com.cogoport
 
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.UnifiedDBNewRepository
-import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.implementation.OutStandingServiceImpl
 import com.cogoport.ares.api.reports.services.implementation.ReportServiceImpl
 import com.cogoport.brahma.s3.client.S3Client
+import com.fasterxml.jackson.module.kotlin.jsonMapper
 import io.micronaut.core.type.Argument
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.client.HttpClient
@@ -63,9 +63,6 @@ class CogoportTest(
     @Inject
     lateinit var accountUtilizationRepo: AccountUtilizationRepo
 
-    @Mock
-    var unifiedDBRepo: UnifiedDBRepo = mock(UnifiedDBRepo::class.java)
-
     // @Test
     fun testItWorks() {
         Assertions.assertTrue(application.isRunning)
@@ -104,14 +101,12 @@ class CogoportTest(
         val endPoint = "/outstanding/trade-party-outstanding"
         val orgId = "9b92503b-6374-4274-9be4-e83a42fc35fe"
         val req = "?orgIds=$orgId"
-
-        accountUtilizationHelper.saveAccountUtil()
-        whenever(unifiedDBRepo.fetchTradePartyRegistrationNumber(any())).thenReturn("AADCS3124K")
+        whenever(unifiedDBNewRepository.getTradePartyOutstanding(any(), any())).thenReturn(accountUtilizationHelper.getOrganizationTradePartyOutstandingResponse())
 
         val request = HttpRequest.GET<Any>(URI.create(endPoint + req))
         val response = withContext(Dispatchers.IO) {
             client.toBlocking().retrieve(request, Argument.of(String::class.java))
         }
-        Assertions.assertEquals(accountUtilizationHelper.getOrganizationTradePartyOutstandingResponse(), response)
+        Assertions.assertEquals(jsonMapper().writeValueAsString(accountUtilizationHelper.getOrganizationTradePartyOutstandingResponse()), response)
     }
 }
