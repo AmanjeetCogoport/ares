@@ -92,8 +92,9 @@ jobs:
           IMAGE_TAG: ${{ steps.image_name.outputs.sha_short }}
         run: |
           echo $IMAGE_TAG
-          docker build -t ${{ env.REPO_URL }}:$IMAGE_TAG .
+          docker build -t ${{ env.REPO_URL }}:$IMAGE_TAG -t ${{ env.REPO_URL }}:latest-stage .
           docker push ${{ env.REPO_URL }}:$IMAGE_TAG
+          docker push ${{ env.REPO_URL }}:latest-stage
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
