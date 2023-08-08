@@ -4,6 +4,7 @@ import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.UnifiedDBNewRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.implementation.OutStandingServiceImpl
+import com.cogoport.ares.api.reports.services.implementation.ReportServiceImpl
 import com.cogoport.brahma.s3.client.S3Client
 import io.micronaut.core.type.Argument
 import io.micronaut.http.HttpRequest
@@ -29,6 +30,7 @@ import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import org.mockito.kotlin.whenever
 import java.net.URI
+import java.net.URL
 import java.time.LocalDate
 import java.util.UUID
 
@@ -37,7 +39,9 @@ import java.util.UUID
 @MicronautTest(transactional = false)
 class CogoportTest(
     @InjectMocks
-    val outStandingServiceImpl: OutStandingServiceImpl
+    val outStandingServiceImpl: OutStandingServiceImpl,
+    @InjectMocks
+    val reportServiceImpl: ReportServiceImpl
 ) {
 
     @Inject
@@ -86,6 +90,7 @@ class CogoportTest(
         val orgName = "SUN PHARMACEUTICAL INDUSTRIES"
 
         val excelUrl = "https://business-finance-test.s3.ap-south-1.amazonaws.com/AR_Ledger_Report_${orgName.replace(" ", "_")}_from_${startDate}_to_$endDate.xlsx"
+        whenever(s3Client.upload(any(), any(), any())).thenReturn(URL(excelUrl))
         val req = "orgId=$orgId&startDate=$startDate&endDate=$endDate&orgName=SUN%20PHARMACEUTICAL%20INDUSTRIES&requestedBy=${UUID.randomUUID()}&entityCodes=301"
         val request = HttpRequest.GET<Any>(URI.create(endPoint + req))
         val response = withContext(Dispatchers.IO) {
