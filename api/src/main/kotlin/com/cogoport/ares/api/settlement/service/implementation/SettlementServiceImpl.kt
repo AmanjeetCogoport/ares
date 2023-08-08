@@ -66,6 +66,7 @@ import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.sage.SageCustomerRecord
+import com.cogoport.ares.model.sage.SageFailedResponse
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckResponse
 import com.cogoport.ares.model.settlement.CreateIncidentRequest
@@ -2597,6 +2598,19 @@ open class SettlementServiceImpl : SettlementService {
                 )
             )
         }
+    }
+
+    override suspend fun matchingOnSage(settlementIds: List<Long>, performedBy: UUID): SageFailedResponse {
+        val failedIds: MutableList<Long?> = mutableListOf()
+        settlementIds.forEach {
+            val settlementResponse = matchingSettlementOnSage(it, performedBy)
+            if (!settlementResponse) {
+                failedIds.add(it)
+            }
+        }
+        return SageFailedResponse(
+                failedIdsList = failedIds
+        )
     }
 
     override suspend fun matchingSettlementOnSage(settlementId: Long, performedBy: UUID): Boolean {

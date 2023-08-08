@@ -5,6 +5,7 @@ import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.entity.SettlementListDoc
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
+import com.cogoport.ares.model.sage.SageFailedResponse
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckResponse
 import com.cogoport.ares.model.settlement.CreateIncidentRequest
@@ -62,9 +63,12 @@ interface SettlementService {
     suspend fun sendKnockOffDataToCreditConsumption(request: Settlement)
 
     suspend fun sendInvoiceDataToDebitConsumption(request: AccountUtilization)
+
     suspend fun matchingSettlementOnSage(settlementId: Long, performedBy: UUID): Boolean
 
     suspend fun bulkMatchingSettlementOnSage(settlementIds: List<Long>, performedBy: UUID)
+
+    suspend fun matchingOnSage(settlementIds: List<Long>, performedBy: UUID): SageFailedResponse
 
     suspend fun sendEmailSettlementsMatchingFailed(url: String)
 

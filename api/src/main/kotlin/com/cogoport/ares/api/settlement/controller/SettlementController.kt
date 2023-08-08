@@ -12,6 +12,7 @@ import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.payment.request.OnAccountPaymentRequest
+import com.cogoport.ares.model.sage.SageFailedResponse
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckResponse
 import com.cogoport.ares.model.settlement.CreateIncidentRequest
@@ -207,6 +208,11 @@ class SettlementController {
     @Post("/cron-bulk-matching-on-sage")
     suspend fun cronBulkMatchingSettlementOnSage() {
         return scheduler.bulkMatchingSettlement()
+    }
+
+    @Post("/matching-on-sage")
+    suspend fun matchingOnSage(settlementIds: List<Long>, performedBy: UUID): SageFailedResponse {
+        return settlementService.matchingOnSage(settlementIds, performedBy)
     }
 
     @Post("/email-notification-settlement-matching-failed")
