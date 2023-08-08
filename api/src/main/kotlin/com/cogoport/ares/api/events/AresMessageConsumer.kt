@@ -246,9 +246,9 @@ class AresMessageConsumer {
         try {
             settlementService.matchingSettlementOnSage(req.settlementId, req.performedBy)
         } catch (k: RabbitClientException) {
-            logger().error("settlement matching -> ${k.stackTraceToString()}")
+            logger().error("settlement matching error -> ${k.stackTraceToString()}")
         } catch (e: Exception) {
-            logger().error(e.stackTraceToString())
+            logger().error("settlement matching error -> ${e.stackTraceToString()}")
             Sentry.captureException(e)
         }
     }
