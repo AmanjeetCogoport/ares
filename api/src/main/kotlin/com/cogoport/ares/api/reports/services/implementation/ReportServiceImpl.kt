@@ -16,7 +16,7 @@ import com.cogoport.ares.api.payment.repository.AresDocumentRepository
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.api.reports.services.interfaces.ReportService
 import com.cogoport.ares.model.payment.SupplierOutstandingReportResponse
-import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
+import com.cogoport.ares.model.payment.request.ARLedgerRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.ARLedgerResponse
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
@@ -42,9 +42,7 @@ import java.sql.Timestamp
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Date
 import builders.dsl.spreadsheet.api.FontStyle as ExcelFont
 
 @Singleton
@@ -159,12 +157,12 @@ class ReportServiceImpl(
         )
     }
 
-    override suspend fun getARLedgerReport(req: LedgerSummaryRequest): String {
+    override suspend fun getARLedgerReport(req: ARLedgerRequest): String {
         var reportHeader: MutableMap<String, String?> = mutableMapOf()
 
         val report = onAccountService.getARLedgerOrganizationAndEntityWise(req)
-        val startDate = Date(req.startDate?.time!!).toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
-        val endDate = Date(req.endDate?.time!!).toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+        val startDate = req.startDate
+        val endDate = req.endDate
         val orgName = req.orgName?.replace(" ", "_")
 
         reportHeader["Cogo Entity"] = req.entityCodes.toString()
