@@ -22,6 +22,7 @@ import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.service.interfaces.ParentJVService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.TaggedSettlementService
+import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.CreateCommunicationRequest
 import com.cogoport.ares.model.dunning.request.SendMailOfAllCommunicationToTradePartyReq
 import com.cogoport.ares.model.payment.AccountUtilizationEvent
@@ -238,8 +239,9 @@ class AresMessageConsumer {
         onAccountService.postPaymentFromSage(arrayListOf(req.paymentId), req.performedBy)
     }
 
-    @Queue("ares-bulk-post-settlement-to-sage", prefetch = 1)
+    @Queue("ares-bulk-post-settlement-to-sage", prefetch = 1, numberOfConsumers = 1)
     fun bulkMatchingSettlementOnSage(req: PostSettlementRequest) = runBlocking {
+        logger().info("$req")
         settlementService.matchingSettlementOnSage(req.settlementId, req.performedBy)
     }
 
