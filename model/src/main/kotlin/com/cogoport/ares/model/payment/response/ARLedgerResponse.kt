@@ -24,8 +24,6 @@ data class ARLedgerResponse(
     val debit: BigDecimal,
     @ExcelColumn("Ledger Credit")
     val credit: BigDecimal,
-    @ExcelColumn("Unutilized Amount")
-    var unutilizedAmount: BigDecimal?,
     @ExcelColumn("Debit Balance")
     var debitBalance: BigDecimal,
     @ExcelColumn("Credit Balance")
