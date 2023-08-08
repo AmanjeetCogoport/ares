@@ -238,7 +238,7 @@ class AresMessageConsumer {
         onAccountService.postPaymentFromSage(arrayListOf(req.paymentId), req.performedBy)
     }
 
-    @Queue("ares-bulk-post-settlement-to-sage", prefetch = 1)
+    @Queue("ares-bulk-post-settlement-to-sage", prefetch = 1, numberOfConsumers = 1)
     fun bulkMatchingSettlementOnSage(req: PostSettlementRequest) = runBlocking {
         settlementService.matchingSettlementOnSage(req.settlementId, req.performedBy)
     }
