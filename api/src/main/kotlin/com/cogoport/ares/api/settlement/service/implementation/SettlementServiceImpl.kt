@@ -66,6 +66,7 @@ import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import com.cogoport.ares.model.payment.request.DeleteSettlementRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.sage.SageCustomerRecord
+import com.cogoport.ares.model.sage.SageFailedResponse
 import com.cogoport.ares.model.settlement.CheckDocument
 import com.cogoport.ares.model.settlement.CheckResponse
 import com.cogoport.ares.model.settlement.CreateIncidentRequest
@@ -1696,7 +1697,7 @@ open class SettlementServiceImpl : SettlementService {
         /** Payment ledger amount */
         val paidLedAmount = getExchangeValue(paidAmount, ledgerRate)
         /** Tds Amount in Invoice currency */
-        var invoiceTds = invoice.tds!!
+        var invoiceTds = invoice.tds!! - invoice.settledTds
         /** Tds Amount in Invoice ledger currency */
         val invoiceTdsLed = invoiceTds * (invoice.exchangeRate)
         /** Tds Amount in Payment currency */
@@ -2243,6 +2244,7 @@ open class SettlementServiceImpl : SettlementService {
             it.documentNo = Hashids.decode(it.documentNo)[0].toString()
             it.settledAllocation = BigDecimal.ZERO
             it.settledNostro = BigDecimal.ZERO
+            it.settledTds = BigDecimal.ZERO
             if (it.nostroAmount == null) it.nostroAmount = BigDecimal.ZERO
             if (it.tds == null) it.tds = BigDecimal.ZERO
         }
@@ -2597,6 +2599,19 @@ open class SettlementServiceImpl : SettlementService {
                 )
             )
         }
+    }
+
+    override suspend fun matchingOnSage(settlementIds: List<Long>, performedBy: UUID): SageFailedResponse {
+        val failedIds: MutableList<Long?> = mutableListOf()
+        settlementIds.forEach {
+            val settlementResponse = matchingSettlementOnSage(it, performedBy)
+            if (!settlementResponse) {
+                failedIds.add(it)
+            }
+        }
+        return SageFailedResponse(
+            failedIdsList = failedIds
+        )
     }
 
     override suspend fun matchingSettlementOnSage(settlementId: Long, performedBy: UUID): Boolean {
