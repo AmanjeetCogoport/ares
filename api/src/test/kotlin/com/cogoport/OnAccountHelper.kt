@@ -12,8 +12,8 @@ import java.math.BigDecimal
 import java.util.UUID
 
 @Singleton
-class OnAccountHelper () {
-    fun getUserResponse ():List<GetUserResponse> {
+class OnAccountHelper() {
+    fun getUserResponse(): List<GetUserResponse> {
         return listOf(
             GetUserResponse(
                 userEmail = "vivek.garg@cogoport.com",
@@ -23,7 +23,7 @@ class OnAccountHelper () {
         )
     }
 
-    fun getAccountReceivables (payment: Payment) :  List<PaymentResponse?> {
+    fun getAccountReceivables(payment: Payment): List<PaymentResponse?> {
         return listOf(
             PaymentResponse(
                 id = payment.id,

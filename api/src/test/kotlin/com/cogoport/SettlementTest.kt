@@ -323,7 +323,7 @@ class SettlementTest(
     }
 
     @Test
-    fun canGetHistory () = runTest {
+    fun canGetHistory() = runTest {
         val sourceDocument = helper.saveAccountUtilizations(
             AccMode.AR,
             AccountType.REC,
@@ -389,7 +389,7 @@ class SettlementTest(
     }
 
     @Test
-    fun canGetSettlement () = runTest {
+    fun canGetSettlement() = runTest {
         val sourceDocument = helper.saveAccountUtilizations(
             AccMode.AR,
             AccountType.REC,
@@ -442,7 +442,7 @@ class SettlementTest(
         )
 
         val endpoint = "/settlement?"
-        val req =  "documentNo=${Hashids.encode(settlementData.sourceId!!)}&SettlementType=${settlementData.sourceType}&" + "page=1&pageLimit=10"
+        val req = "documentNo=${Hashids.encode(settlementData.sourceId!!)}&SettlementType=${settlementData.sourceType}&" + "page=1&pageLimit=10"
         val request = HttpRequest.GET<Any>(endpoint + req)
 
         val response = withContext(Dispatchers.IO) {
@@ -455,7 +455,7 @@ class SettlementTest(
     }
 
     @Test
-    fun canGetOrgSummary () = runTest {
+    fun canGetOrgSummary() = runTest {
         helper.saveAccountUtilizations(
             AccMode.AR,
             AccountType.REC,
@@ -494,7 +494,7 @@ class SettlementTest(
         )
 
         val endpoint = "/settlement/org-summary?"
-        val req =  "orgId=9f03db0c-88cc-450f-bbb1-38fa31861911&accMode=AR"
+        val req = "orgId=9f03db0c-88cc-450f-bbb1-38fa31861911&accMode=AR"
         val request = HttpRequest.GET<Any>(endpoint + req)
 
         whenever(cogoClient.getSelfOrgTdsStyles(any())).thenReturn(helper.getTdsDataResponse())

@@ -32,9 +32,9 @@ import org.mockito.kotlin.whenever
 @ExtendWith(MockitoExtension::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 @MicronautTest(transactional = false)
-class OnAccountTest (
+class OnAccountTest(
     @InjectMocks val onAccountServiceImpl: OnAccountServiceImpl
-    ) {
+) {
     @Inject
     @field:Client("/payments")
     lateinit var client: HttpClient
@@ -54,7 +54,6 @@ class OnAccountTest (
     @Mock
     var cogoClient: AuthClient = Mockito.mock(AuthClient::class.java)
 
-
     @BeforeEach
     fun setUp() = runTest {
         accountUtilizationRepo.deleteAll()
@@ -68,7 +67,7 @@ class OnAccountTest (
     }
 
     @Test
-    fun canGetPaymentList () = runTest {
+    fun canGetPaymentList() = runTest {
         val endpoint = "/accounts?page=1&pageLimit=10&entityType=301&sortBy=createdAt&sortType=Desc"
         val payment = settlementHelper.savePayment(
             321000,

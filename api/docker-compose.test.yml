@@ -1,7 +1,7 @@
-version: "3.9" 
+version: "3.9"
 services:
 
-  db: 
+  db:
     image: postgres:14.2-alpine3.15
     ports:
       - "5432:5432"
@@ -37,4 +37,3 @@ services:
     environment:
       - RABBITMQ_DEFAULT_USER=guest
       - RABBITMQ_DEFAULT_PASS=guest
-

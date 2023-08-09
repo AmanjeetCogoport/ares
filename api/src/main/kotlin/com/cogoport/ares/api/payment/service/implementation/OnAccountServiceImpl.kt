@@ -65,6 +65,8 @@ import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
 import com.cogoport.ares.model.payment.ValidateTradePartyRequest
 import com.cogoport.ares.model.payment.enum.CogoBankAccount
 import com.cogoport.ares.model.payment.enum.PaymentSageGLCodes
+import com.cogoport.ares.model.payment.enum.ShipmentDocumentName
+import com.cogoport.ares.model.payment.request.ARLedgerRequest
 import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
 import com.cogoport.ares.model.payment.request.BulkUploadRequest
@@ -105,7 +107,6 @@ import com.cogoport.brahma.sage.model.request.SageResponse
 import com.cogoport.loki.model.job.DocumentDetail
 import com.cogoport.plutus.model.invoice.GetUserRequest
 import com.cogoport.plutus.model.invoice.SageOrganizationRequest
-import com.cogoport.plutus.model.invoice.enums.DocumentName
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import io.micronaut.context.annotation.Value
@@ -1881,7 +1882,7 @@ open class OnAccountServiceImpl : OnAccountService {
         }
     }
 
-    override suspend fun getARLedgerOrganizationAndEntityWise(req: LedgerSummaryRequest): List<ARLedgerResponse> {
+    override suspend fun getARLedgerOrganizationAndEntityWise(req: ARLedgerRequest): List<ARLedgerResponse> {
         val ledgerSelectedDateWise = unifiedDBNewRepository.getARLedger(
             AccMode.AR,
             req.orgId,
@@ -1890,10 +1891,12 @@ open class OnAccountServiceImpl : OnAccountService {
             req.endDate!!
         )
         ledgerSelectedDateWise.forEach {
-            it.shipmentDocumentNumber = getShipmentDocumentDetails(it.jobDocuments)
+            val documentNumbers = getShipmentDocumentDetails(it.jobDocuments)
+            it.shipmentDocumentNumber = documentNumbers.first
+            it.houseDocumentNumber = documentNumbers.second
         }
         var arLedgerResponse = accountUtilizationMapper.convertARLedgerJobDetailsResponseToARLedgerResponse(ledgerSelectedDateWise)
-        val openingLedger = accountUtilizationRepository.getOpeningAndClosingLedger(AccMode.AR, req.orgId, req.entityCodes!!, req.startDate!!, AresConstants.OPENING_BALANCE)
+        val openingLedger = unifiedDBNewRepository.getOpeningAndClosingLedger(AccMode.AR, req.orgId, req.entityCodes!!, req.startDate!!, AresConstants.OPENING_BALANCE)
         var openingLedgerList: List<ARLedgerResponse> = listOf(
             ARLedgerResponse(
                 transactionDate = "",
@@ -1903,16 +1906,18 @@ open class OnAccountServiceImpl : OnAccountService {
                 amount = "",
                 debit = openingLedger.debit,
                 credit = openingLedger.credit,
+                unutilizedAmount = null,
                 debitBalance = if (openingLedger.debit > openingLedger.credit) openingLedger.debit.minus(openingLedger.credit) else BigDecimal.ZERO,
                 creditBalance = if (openingLedger.credit > openingLedger.debit) openingLedger.credit.minus(openingLedger.debit) else BigDecimal.ZERO,
                 transactionRefNumber = "",
-                shipmentDocumentNumber = ""
+                shipmentDocumentNumber = "",
+                houseDocumentNumber = ""
             )
         )
         val completeLedgerList = openingLedgerList + arLedgerResponse
 
         for (index in 1..completeLedgerList.lastIndex) {
-            val balance = (completeLedgerList[index].debit - completeLedgerList[index].credit) + (completeLedgerList[index - 1].debitBalance - completeLedgerList[index - 1].creditBalance)
+            val balance = (completeLedgerList[index].unutilizedAmount!!) + (completeLedgerList[index - 1].debitBalance - completeLedgerList[index - 1].creditBalance)
             if (balance.compareTo(BigDecimal.ZERO) == 1) {
                 completeLedgerList[index].debitBalance = balance
             } else {
@@ -1929,6 +1934,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 amount = "",
                 debit = BigDecimal.ZERO,
                 credit = BigDecimal.ZERO,
+                unutilizedAmount = null,
                 debitBalance = if (closingBalance.compareTo(BigDecimal.ZERO) == 1) {
                     closingBalance
                 } else {
@@ -1940,21 +1946,26 @@ open class OnAccountServiceImpl : OnAccountService {
                     BigDecimal.ZERO
                 },
                 transactionRefNumber = "",
-                shipmentDocumentNumber = ""
+                shipmentDocumentNumber = "",
+                houseDocumentNumber = ""
             )
         )
         return completeLedgerList + closingLedgerList
     }
 
-    private fun getShipmentDocumentDetails(documentDetail: MutableList<DocumentDetail>?): String? {
-        var shipmentDocumentNumber = ""
+    private fun getShipmentDocumentDetails(documentDetail: MutableList<DocumentDetail>?): Pair<String?, String?> {
+        val houseDocumentNumber: MutableList<String?> = mutableListOf()
+        val documentNumber: MutableList<String?> = mutableListOf()
         if (documentDetail != null) {
             for (document in documentDetail) {
-                if (document.name in listOf<String?>(DocumentName.MBL.value, DocumentName.HBL.value, DocumentName.MAWB.value, DocumentName.HAWB.value)) {
-                    shipmentDocumentNumber += "${document.number},"
+                if (document.name in listOf<String?>(ShipmentDocumentName.DMAWB.value, ShipmentDocumentName.DMBL.value, ShipmentDocumentName.MAWB.value, ShipmentDocumentName.MBL.value)) {
+                    documentNumber += document.number
+                }
+                if (document.name in listOf<String?>(ShipmentDocumentName.DHAWB.value, ShipmentDocumentName.DHBL.value, ShipmentDocumentName.HAWB.value, ShipmentDocumentName.HBL.value)) {
+                    houseDocumentNumber += document.number
                 }
             }
         }
-        return shipmentDocumentNumber
+        return Pair(documentNumber.distinct().joinToString(","), houseDocumentNumber.distinct().joinToString(","))
     }
 }

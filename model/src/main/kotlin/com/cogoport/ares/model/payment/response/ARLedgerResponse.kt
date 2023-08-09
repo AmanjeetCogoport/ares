@@ -24,12 +24,16 @@ data class ARLedgerResponse(
     val debit: BigDecimal,
     @ExcelColumn("Ledger Credit")
     val credit: BigDecimal,
+    @ExcelColumn("Unutilized Amount")
+    var unutilizedAmount: BigDecimal?,
     @ExcelColumn("Debit Balance")
     var debitBalance: BigDecimal,
     @ExcelColumn("Credit Balance")
     var creditBalance: BigDecimal,
     @ExcelColumn("Transaction Ref Number")
     val transactionRefNumber: String?,
-    @ExcelColumn("MAWB/HAWB/MBL/HBL")
-    val shipmentDocumentNumber: String?
+    @ExcelColumn("MAWB/MBL")
+    val shipmentDocumentNumber: String?,
+    @ExcelColumn("HAWB/HBL")
+    val houseDocumentNumber: String?,
 )
