@@ -67,10 +67,10 @@ enum class AresError(
     ERR_1541("ERR_1541", "Credit Controller Data not present.", HttpStatus.BAD_REQUEST),
     ERR_1542("ERR_1542", "Wrong Ageing Bucket Selected.", HttpStatus.BAD_REQUEST),
     ERR_1543("ERR_1543", "Wrong Service Type Selected.", HttpStatus.BAD_REQUEST),
-    ERR_1544("ERR_1541", "Settlement has already been post to sage. You have to delete matching on sage.", HttpStatus.FORBIDDEN),
+    ERR_1544("ERR_1544", "Settlement has already been post to sage. You have to delete matching on sage.", HttpStatus.FORBIDDEN),
     ERR_1545("ERR_1545", "Dunning Cycle Execution Not Found for your request.", HttpStatus.BAD_REQUEST),
-    ERR_1546("ERR_1542", "No payment with this utr exists.", HttpStatus.NOT_FOUND),
-    ERR_1547("ERR_1543", "You can not post this settlement.", HttpStatus.FORBIDDEN),
+    ERR_1546("ERR_1546", "No payment with this utr exists.", HttpStatus.NOT_FOUND),
+    ERR_1547("ERR_1547", "You can not post this settlement.", HttpStatus.FORBIDDEN),
     ERR_1548("ERR_1548", "Dunning Cycles have scheduled executions", HttpStatus.BAD_REQUEST),
     ERR_1549("ERR_1549", "Wrong Time string format, Please Send in this (HH:MM) format.", HttpStatus.BAD_REQUEST),
     ERR_1551("ERR_1551", "Please choose dunning schedule time after 1 Hour from now.", HttpStatus.BAD_REQUEST);

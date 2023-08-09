@@ -2244,6 +2244,7 @@ open class SettlementServiceImpl : SettlementService {
             it.documentNo = Hashids.decode(it.documentNo)[0].toString()
             it.settledAllocation = BigDecimal.ZERO
             it.settledNostro = BigDecimal.ZERO
+            it.settledTds = BigDecimal.ZERO
             if (it.nostroAmount == null) it.nostroAmount = BigDecimal.ZERO
             if (it.tds == null) it.tds = BigDecimal.ZERO
         }
