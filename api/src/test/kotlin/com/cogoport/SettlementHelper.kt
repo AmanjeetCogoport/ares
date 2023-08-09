@@ -8,6 +8,7 @@ import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.Payment
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.PaymentRepository
+import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import com.cogoport.ares.api.settlement.entity.JVAdditionalDetails
 import com.cogoport.ares.api.settlement.entity.JournalVoucher
 import com.cogoport.ares.api.settlement.entity.ParentJournalVoucher
@@ -25,9 +26,12 @@ import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.settlement.Document
+import com.cogoport.ares.model.settlement.OrgSummaryResponse
+import com.cogoport.ares.model.settlement.SettledInvoice
 import com.cogoport.ares.model.settlement.SettlementInvoiceResponse
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.SummaryResponse
+import com.cogoport.ares.model.settlement.TdsStyle
 import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.ares.model.settlement.enums.SettlementStatus
 import com.cogoport.brahma.hashids.Hashids
@@ -187,7 +191,8 @@ class SettlementHelper(
             sageRefNumber = null,
             signFlag = signFlag,
             transRefNumber = transRefNumber,
-            transactionDate = Date()
+            transactionDate = SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse("2023-08-08 05:30:00"),
+            createdAt = Timestamp(SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse("2023-08-08 05:30:00").time),
         )
 
         paymentRepo.save(payment)
@@ -533,6 +538,84 @@ class SettlementHelper(
                 settledTds = BigDecimal(0),
                 dueDate = destinationDocument.transactionDate!!
             )
+        )
+    }
+
+    fun getHistoryDocumentResponse(settlementData: Settlement, sourceDocument: AccountUtilization): List<com.cogoport.ares.model.settlement.HistoryDocument> {
+        return listOf(
+            com.cogoport.ares.model.settlement.HistoryDocument(
+                id = Hashids.encode(sourceDocument.id!!),
+                documentNo = Hashids.encode(settlementData.sourceId!!),
+                documentValue = "REC123456",
+                accountType = "REC",
+                currency = "INR",
+                balanceAmount = BigDecimal.valueOf(60.0000).setScale(4),
+                documentAmount = BigDecimal.valueOf(100.0000).setScale(4),
+                ledCurrency = "INR",
+                ledgerAmount = BigDecimal.valueOf(100.0000).setScale(4),
+                tds = BigDecimal.ZERO,
+                afterTdsAmount = BigDecimal.valueOf(100.0000).setScale(4),
+                allocationAmount = BigDecimal.valueOf(40.0000).setScale(4),
+                balanceAfterAllocation = BigDecimal.ZERO,
+                settledAllocation = BigDecimal.ZERO,
+                taxableAmount = BigDecimal(0).setScale(4),
+                settledTds = BigDecimal.ZERO,
+                transactionDate = Date(1691452800000),
+                signFlag = -1,
+                exchangeRate = BigDecimal.valueOf(1.00000000000000000000).setScale(20),
+                settledAmount = BigDecimal.valueOf(40.0000).setScale(4),
+                lastEditedDate = Date(1691452800000),
+                status = "",
+                accMode = AccMode.AR,
+                supportingDocUrl = null,
+                notPostedSettlementIds = mutableListOf(settlementData.id!!)
+            )
+        )
+    }
+
+    fun getSettledInvoiceResponse(settlementData: Settlement, destinationDocument: AccountUtilization?): List<SettledInvoice> {
+        return listOf(
+            SettledInvoice(
+                id = Hashids.encode(destinationDocument?.id!!),
+                organizationId = UUID.fromString("9f03db0c-88cc-450f-bbb1-38fa31861911"),
+                documentNo = Hashids.encode(settlementData.destinationId),
+                documentValue = destinationDocument.documentValue!!,
+                documentType = SettlementType.SINV,
+                accountType = "SINV",
+                currency = "INR",
+                paymentCurrency = "INR",
+                balanceAmount = 60.0000.toBigDecimal().setScale(4),
+                currentBalance = 60.0000.toBigDecimal().setScale(4),
+                documentAmount = 100.0000.toBigDecimal().setScale(4),
+                ledCurrency = "INR",
+                ledgerAmount = 100.0000.toBigDecimal().setScale(4),
+                taxableAmount = 0.0000.toBigDecimal().setScale(4),
+                tds = 0.toBigDecimal(),
+                afterTdsAmount = 100.0000.toBigDecimal().setScale(4),
+                allocationAmount = 100.0000.toBigDecimal().setScale(4),
+                balanceAfterAllocation = 0.toBigDecimal(),
+                settledAmount = 100.0000.toBigDecimal().setScale(4),
+                settledAllocation = 0.toBigDecimal(),
+                transactionDate = settlementData.settlementDate,
+                status = "Knocked Off",
+                settledTds = 0.toBigDecimal(),
+                exchangeRate = 1.0.toBigDecimal().setScale(20),
+                signFlag = -1,
+                sid = null,
+                nostroAmount = 0.toBigDecimal(),
+                accMode = AccMode.AR,
+                settlementStatus = SettlementStatus.CREATED
+            )
+        )
+    }
+
+    fun getOrgResponse(): OrgSummaryResponse {
+        return OrgSummaryResponse(
+            orgId = UUID.fromString("9f03db0c-88cc-450f-bbb1-38fa31861911"),
+            orgName = "my_company",
+            outstanding = BigDecimal(-120.0000).setScale(4),
+            currency = "INR",
+            tdsStyle = TdsStyle(style = "gross", rate = BigDecimal(2), type = "normal")
         )
     }
 }
