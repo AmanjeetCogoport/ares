@@ -65,7 +65,6 @@ import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
 import com.cogoport.ares.model.payment.ValidateTradePartyRequest
 import com.cogoport.ares.model.payment.enum.CogoBankAccount
 import com.cogoport.ares.model.payment.enum.PaymentSageGLCodes
-import com.cogoport.ares.model.payment.enum.ShipmentDocumentName
 import com.cogoport.ares.model.payment.request.ARLedgerRequest
 import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
@@ -104,7 +103,6 @@ import com.cogoport.brahma.sage.SageException
 import com.cogoport.brahma.sage.model.request.PaymentLineItem
 import com.cogoport.brahma.sage.model.request.PaymentRequest
 import com.cogoport.brahma.sage.model.request.SageResponse
-import com.cogoport.loki.model.job.DocumentDetail
 import com.cogoport.plutus.model.invoice.GetUserRequest
 import com.cogoport.plutus.model.invoice.SageOrganizationRequest
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -1890,11 +1888,6 @@ open class OnAccountServiceImpl : OnAccountService {
             req.startDate!!,
             req.endDate!!
         )
-        ledgerSelectedDateWise.forEach {
-            val documentNumbers = getShipmentDocumentDetails(it.jobDocuments)
-            it.shipmentDocumentNumber = documentNumbers.first
-            it.houseDocumentNumber = documentNumbers.second
-        }
         var arLedgerResponse = accountUtilizationMapper.convertARLedgerJobDetailsResponseToARLedgerResponse(ledgerSelectedDateWise)
         val openingLedger = unifiedDBNewRepository.getOpeningAndClosingLedger(AccMode.AR, req.orgId, req.entityCodes!!, req.startDate!!, AresConstants.OPENING_BALANCE)
         var openingLedgerList: List<ARLedgerResponse> = listOf(
@@ -1949,21 +1942,5 @@ open class OnAccountServiceImpl : OnAccountService {
             )
         )
         return completeLedgerList + closingLedgerList
-    }
-
-    private fun getShipmentDocumentDetails(documentDetail: MutableList<DocumentDetail>?): Pair<String?, String?> {
-        val houseDocumentNumber: MutableList<String?> = mutableListOf()
-        val documentNumber: MutableList<String?> = mutableListOf()
-        if (documentDetail != null) {
-            for (document in documentDetail) {
-                if (document.name in listOf<String?>(ShipmentDocumentName.DMAWB.value, ShipmentDocumentName.DMBL.value, ShipmentDocumentName.MAWB.value, ShipmentDocumentName.MBL.value)) {
-                    documentNumber += document.number
-                }
-                if (document.name in listOf<String?>(ShipmentDocumentName.DHAWB.value, ShipmentDocumentName.DHBL.value, ShipmentDocumentName.HAWB.value, ShipmentDocumentName.HBL.value)) {
-                    houseDocumentNumber += document.number
-                }
-            }
-        }
-        return Pair(documentNumber.distinct().joinToString(","), houseDocumentNumber.distinct().joinToString(","))
     }
 }

@@ -7,6 +7,5 @@ import java.util.UUID
 @Introspected
 data class TradePartyOutstandingReq(
     @field: NotNull
-    var orgIds: List<UUID>? = listOf(),
-    var entities: List<Int>? = AresModelConstants.COGO_INDIA
+    var orgIds: List<UUID>? = listOf()
 )
