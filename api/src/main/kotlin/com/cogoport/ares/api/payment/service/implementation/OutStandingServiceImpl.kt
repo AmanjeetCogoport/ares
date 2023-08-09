@@ -118,7 +118,13 @@ class OutStandingServiceImpl : OutStandingService {
         request.orgIds.map {
             orgIds.add(UUID.fromString(it))
         }
-        val queryResponse = accountUtilizationRepository.getOutstandingAgeingBucket(request.zone, "%" + request.query + "%", orgIds, request.page, request.pageLimit, defaultersOrgIds, request.flag!!)
+        val query: String? =
+            if (request.query != null) {
+                "%${request.query}%"
+            } else {
+                null
+            }
+        val queryResponse = accountUtilizationRepository.getOutstandingAgeingBucket(request.zone, query, orgIds, request.page, request.pageLimit, defaultersOrgIds, request.flag!!)
         val ageingBucket = mutableListOf<OutstandingAgeingResponse>()
         val orgId = mutableListOf<String>()
         queryResponse.forEach { ageing ->

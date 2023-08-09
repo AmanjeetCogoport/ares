@@ -83,7 +83,8 @@ dependencies {
     implementation("com.cogoport.brahma.hashids:hashid:0.1.0")
     implementation("com.cogoport.brahma.sage:sage-client:1.5.7")
     implementation("com.cogoport.brahma.authentication:authentication:1.0.8")
-    implementation("com.cogoport.brahma.opensearch:client:0.1.4-beta")
+    implementation("com.cogoport.brahma.opensearch:client:1.0.2")
+    api("org.opensearch.client:opensearch-java:1.0.0")
     implementation("com.cogoport.brahma.rabbitmq:client:1.0.0-beta")
     implementation("org.json:json:20220320")
 

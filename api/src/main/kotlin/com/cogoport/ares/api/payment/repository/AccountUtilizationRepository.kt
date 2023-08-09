@@ -109,7 +109,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sum(case when (now()::date - due_date) between 180 and 365 then 1 else 0 end) as threesixfive_count,
         sum(case when (now()::date - due_date) > 365 then 1 else 0 end) as threesixfiveplus_count
         from account_utilizations
-        where organization_name ilike :queryName and (:zone is null or zone_code = :zone) and acc_mode = 'AR'  and is_void = false
+        where (:queryName IS NULL OR organization_name ilike :queryName) and (:zone is null or zone_code = :zone) and acc_mode = 'AR'  and is_void = false
         and due_date is not null and document_status in ('FINAL', 'PROFORMA') and organization_id is not null 
         AND ((:orgId) is NULL OR organization_id in (:orgId::uuid)) and  acc_type = 'SINV' and deleted_at is null
         AND (CASE WHEN :flag = 'defaulters' THEN organization_id IN (:defaultersOrgIds)
