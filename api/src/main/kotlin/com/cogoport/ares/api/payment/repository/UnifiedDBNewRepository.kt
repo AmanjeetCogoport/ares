@@ -28,14 +28,21 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
             au.amount_curr::varchar AS amount,
             CASE WHEN au.sign_flag = -1 THEN au.amount_loc ELSE 0 END AS credit,
             CASE WHEN au.sign_flag = 1 THEN au.amount_loc ELSE 0 END AS debit,
-            p.trans_ref_number AS transaction_ref_number,
-            j.job_details -> 'documentDetails' AS job_documents,
-            '' AS shipment_document_number,
-            '' AS house_document_number
+            p.trans_ref_number AS transaction_ref_number, 
+            CASE WHEN sd.document_type in ('airway_bill', 'draft_airway_bill', 'bill_of_lading', 'draft_bill_of_lading')
+                THEN 
+                   (CASE WHEN sd.data -> 'document_number' IS NULL THEN sd.data -> 'bl_number' ELSE sd.data -> 'document_number' END)
+            END AS shipment_document_number,
+            CASE WHEN sd.document_type in ('house_bill_of_lading', 'draft_house_bill_of_lading', 'house_airway_bill', 'draft_house_airway_bill')
+                THEN 
+                   (CASE WHEN sd.data -> 'document_number' IS NULL THEN sd.data -> 'bl_number' ELSE sd.data -> 'document_number' END)
+            END AS house_document_number
             FROM ares.account_utilizations au
             LEFT JOIN ares.payments p ON p.payment_num = au.document_no AND p.payment_num_value = au.document_value
-            LEFT JOIN plutus.invoices i ON i.invoice_number = au.document_value::varchar and i.id = au.document_no
+            LEFT JOIN plutus.invoices i ON i.invoice_number = au.document_value::varchar AND i.id = au.document_no
             LEFT JOIN loki.jobs j ON j.id = i.job_id
+            LEFT JOIN shipment_documents sd ON sd.shipment_id::varchar = j.reference_id AND sd.state = 'document_accepted' AND
+            sd.document_type in ('airway_bill', 'draft_airway_bill', 'bill_of_lading', 'draft_bill_of_lading', 'house_bill_of_lading', 'draft_house_bill_of_lading', 'house_airway_bill', 'draft_house_airway_bill')
             WHERE au.acc_mode = :accMode AND au.organization_id = :organizationId::UUID AND document_status = 'FINAL'
             AND au.transaction_date >= :startDate::DATE AND au.transaction_date <= :endDate::DATE AND au.entity_code IN (:entityCodes)
             AND au.deleted_at IS NULL AND au.acc_type != 'NEWPR' AND p.deleted_at IS NULL
