@@ -3,6 +3,7 @@ package com.cogoport.ares.api.payment.repository
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.models.ARLedgerJobDetailsResponse
 import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.model.common.TradePartyOutstandingRes
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.response.CreditDebitBalance
 import io.micronaut.data.annotation.Query
@@ -12,6 +13,7 @@ import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
 import io.micronaut.transaction.annotation.TransactionalAdvice
 import java.time.LocalDate
+import java.util.UUID
 
 @TransactionalAdvice(AresConstants.UNIFIED)
 @R2dbcRepository(value = AresConstants.UNIFIED, dialect = Dialect.POSTGRES)
@@ -63,4 +65,28 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
         """
     )
     suspend fun getOpeningAndClosingLedger(accMode: AccMode, organizationId: String, entityCodes: List<Int>, date: LocalDate?, commonRow: String): CreditDebitBalance
+
+    @NewSpan
+    @Query(
+        """
+            select au.organization_id::varchar,
+            au.entity_code,
+            otpd.registration_number,
+            (array_agg(DISTINCT (au.led_currency)))[1] AS led_currency,
+            sum(case when au.acc_type in ('SINV', 'SREIMB', 'SCN', 'SREIMBCN') and au.amount_curr - au.pay_curr <> 0 and au.document_status = 'FINAL' then 1 else 0 end) as open_invoices_count,
+            sum(case when au.acc_type in ('SINV', 'SREIMB', 'SCN', 'SREIMBCN') and au.document_status = 'FINAL' then au.sign_flag * (au.amount_loc - au.pay_loc)  else 0 end) as open_invoices_led_amount,
+            sum(case when au.acc_type in ('SINV', 'SREIMB', 'SCN', 'SREIMBCN') and au.document_status = 'FINAL' AND au.due_date < now()::date then au.sign_flag * (au.amount_loc - au.pay_loc) else 0 end) as overdue_open_invoices_led_amount,
+            sum(case when au.acc_type in ('SINV', 'SREIMB', 'SCN', 'SREIMBCN', 'REC', 'CTDS', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'PAY') and au.document_status = 'FINAL' then au.sign_flag * (au.amount_loc - au.pay_loc) else 0 end) as outstanding_led_amount
+            from ares.account_utilizations au
+            inner join  organization_trade_party_details otpd on au.organization_id = otpd.id
+            where au.acc_type in ('SINV','SCN','REC', 'CTDS', 'SREIMB', 'SREIMBCN', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC', 'PAY') 
+            and au.acc_mode = 'AR'
+            and au.document_status = 'FINAL'  
+            and au.organization_id IN (:orgIds) 
+            and (COALESCE(:entityCodes) IS NULL OR au.entity_code IN (:entityCodes))
+            and au.deleted_at is null
+            group by au.organization_id, au.entity_code, otpd.registration_number
+        """
+    )
+    suspend fun getTradePartyOutstanding(orgIds: List<UUID>, entityCodes: List<Int>): List<TradePartyOutstandingRes>?
 }
