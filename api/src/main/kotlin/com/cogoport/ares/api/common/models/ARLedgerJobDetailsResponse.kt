@@ -25,8 +25,6 @@ data class ARLedgerJobDetailsResponse(
     val debit: BigDecimal,
     @JsonProperty("Ledger Credit")
     val credit: BigDecimal,
-    @JsonProperty("Unutilized Amount")
-    val unutilizedAmount: BigDecimal,
     @JsonProperty("Transaction Ref Number")
     val transactionRefNumber: String?,
     @JsonProperty("Job Documents")

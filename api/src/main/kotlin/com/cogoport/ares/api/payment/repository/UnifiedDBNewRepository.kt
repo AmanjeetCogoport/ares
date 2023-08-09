@@ -28,7 +28,6 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
             au.amount_curr::varchar AS amount,
             CASE WHEN au.sign_flag = -1 THEN au.amount_loc ELSE 0 END AS credit,
             CASE WHEN au.sign_flag = 1 THEN au.amount_loc ELSE 0 END AS debit,
-            au.sign_flag * (au.amount_loc - au.pay_loc) AS unutilized_amount,
             p.trans_ref_number AS transaction_ref_number,
             j.job_details -> 'documentDetails' AS job_documents,
             '' AS shipment_document_number,
@@ -50,8 +49,8 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
         """
             SELECT
             (array_agg(led_currency))[1] AS ledger_currency,
-            COALESCE(SUM(CASE WHEN au.sign_flag = -1 THEN (au.amount_loc - au.pay_loc)  ELSE 0 END), 0) AS credit,
-            COALESCE(SUM(CASE WHEN au.sign_flag = 1 THEN (au.amount_loc - au.pay_loc)  ELSE 0 END), 0) AS debit
+            COALESCE(SUM(CASE WHEN au.sign_flag = -1 THEN (au.amount_loc) ELSE 0 END), 0) AS credit,
+            COALESCE(SUM(CASE WHEN au.sign_flag = 1 THEN (au.amount_loc) ELSE 0 END), 0) AS debit
             FROM ares.account_utilizations au 
             WHERE au.acc_mode = :accMode AND au.organization_id = :organizationId::UUID AND document_status = 'FINAL'
             AND au.entity_code IN (:entityCodes) AND au.deleted_at IS NULL AND au.acc_type != 'NEWPR' AND

@@ -1906,7 +1906,6 @@ open class OnAccountServiceImpl : OnAccountService {
                 amount = "",
                 debit = openingLedger.debit,
                 credit = openingLedger.credit,
-                unutilizedAmount = null,
                 debitBalance = if (openingLedger.debit > openingLedger.credit) openingLedger.debit.minus(openingLedger.credit) else BigDecimal.ZERO,
                 creditBalance = if (openingLedger.credit > openingLedger.debit) openingLedger.credit.minus(openingLedger.debit) else BigDecimal.ZERO,
                 transactionRefNumber = "",
@@ -1917,7 +1916,7 @@ open class OnAccountServiceImpl : OnAccountService {
         val completeLedgerList = openingLedgerList + arLedgerResponse
 
         for (index in 1..completeLedgerList.lastIndex) {
-            val balance = (completeLedgerList[index].unutilizedAmount!!) + (completeLedgerList[index - 1].debitBalance - completeLedgerList[index - 1].creditBalance)
+            val balance = (completeLedgerList[index].debit - completeLedgerList[index].credit) + (completeLedgerList[index - 1].debitBalance - completeLedgerList[index - 1].creditBalance)
             if (balance.compareTo(BigDecimal.ZERO) == 1) {
                 completeLedgerList[index].debitBalance = balance
             } else {
@@ -1934,7 +1933,6 @@ open class OnAccountServiceImpl : OnAccountService {
                 amount = "",
                 debit = BigDecimal.ZERO,
                 credit = BigDecimal.ZERO,
-                unutilizedAmount = null,
                 debitBalance = if (closingBalance.compareTo(BigDecimal.ZERO) == 1) {
                     closingBalance
                 } else {
