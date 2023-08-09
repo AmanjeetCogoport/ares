@@ -1,11 +1,8 @@
 package com.cogoport.ares.api.common.models
 
-import com.cogoport.loki.model.job.DocumentDetail
 import com.fasterxml.jackson.annotation.JsonProperty
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.data.annotation.MappedEntity
-import io.micronaut.data.annotation.MappedProperty
-import io.micronaut.data.model.DataType
 import java.math.BigDecimal
 
 @Introspected
@@ -27,9 +24,6 @@ data class ARLedgerJobDetailsResponse(
     val credit: BigDecimal,
     @JsonProperty("Transaction Ref Number")
     val transactionRefNumber: String?,
-    @JsonProperty("Job Documents")
-    @MappedProperty(type = DataType.JSON)
-    val jobDocuments: MutableList<DocumentDetail>?,
     @JsonProperty("shipmentDocumentNumber")
     var shipmentDocumentNumber: String?,
     @JsonProperty("houseDocumentNumber")
