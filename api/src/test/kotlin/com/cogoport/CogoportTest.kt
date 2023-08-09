@@ -1,9 +1,12 @@
 package com.cogoport
 
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
+import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBNewRepository
+import com.cogoport.ares.api.payment.service.implementation.DashboardServiceImpl
 import com.cogoport.ares.api.payment.service.implementation.OutStandingServiceImpl
 import com.cogoport.ares.api.reports.services.implementation.ReportServiceImpl
+import com.cogoport.ares.model.common.OverallStatsForCustomers
 import com.cogoport.brahma.s3.client.S3Client
 import com.fasterxml.jackson.module.kotlin.jsonMapper
 import io.micronaut.core.type.Argument
@@ -41,7 +44,9 @@ class CogoportTest(
     @InjectMocks
     val outStandingServiceImpl: OutStandingServiceImpl,
     @InjectMocks
-    val reportServiceImpl: ReportServiceImpl
+    val reportServiceImpl: ReportServiceImpl,
+    @InjectMocks
+    val dashboardServiceImpl: DashboardServiceImpl
 ) {
 
     @Inject
@@ -62,6 +67,9 @@ class CogoportTest(
 
     @Inject
     lateinit var accountUtilizationRepo: AccountUtilizationRepo
+
+    @Inject
+    lateinit var accountUtilizationRepository: AccountUtilizationRepository
 
     // @Test
     fun testItWorks() {
@@ -108,5 +116,18 @@ class CogoportTest(
             client.toBlocking().retrieve(request, Argument.of(String::class.java))
         }
         Assertions.assertEquals(jsonMapper().writeValueAsString(accountUtilizationHelper.getOrganizationTradePartyOutstandingResponse()), response)
+    }
+
+    @Test
+    fun getOverallStatsForMultipleCustomersTest() = runTest {
+        val endPoint = "/dashboard/customers/overall-stats"
+        val taggedOrganizationId = "1e3ed3f5-da62-4c81-bbab-7608fdac892d"
+        val requestBody = OverallStatsForCustomers(bookingPartyIds = listOf(taggedOrganizationId))
+        accountUtilizationHelper.saveAccountUtil()
+        val request = HttpRequest.POST<Any>(URI.create(endPoint), requestBody)
+        val response = withContext(Dispatchers.IO) {
+            client.toBlocking().exchange(request, Argument.of(String::class.java))
+        }
+        Assertions.assertEquals(jsonMapper().writeValueAsString(accountUtilizationHelper.getOverallStatsForMultipleConsumersTest()), response.body())
     }
 }
