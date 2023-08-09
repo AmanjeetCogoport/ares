@@ -102,7 +102,8 @@ class SettlementHelper(
             ledCurrency = ledCurrency,
             tdsAmount = tdsAmount,
             tdsAmountLoc = tdsAmountLoc,
-            settlementEnabled = true
+            settlementEnabled = true,
+            updatedAt = Timestamp(SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse("2023-08-08 05:30:00").time)
         )
 
         return accountUtilizationRepo.save(accUtilDoc)
