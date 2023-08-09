@@ -18,9 +18,7 @@ class AccountUtilizationHelper {
                 amount = "15000",
                 debit = 15000.toBigDecimal(),
                 credit = BigDecimal.ZERO,
-                unutilizedAmount = 7500.toBigDecimal(),
                 transactionRefNumber = null,
-                jobDocuments = mutableListOf(),
                 shipmentDocumentNumber = "1234qwerty",
                 houseDocumentNumber = ""
             )
