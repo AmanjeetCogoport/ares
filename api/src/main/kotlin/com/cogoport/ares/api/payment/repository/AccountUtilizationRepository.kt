@@ -252,7 +252,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         FROM
             account_utilizations
         WHERE
-            organization_name ILIKE :queryName
+            (:queryName IS NULL OR organization_name ILIKE :queryName)
             AND (:zone IS NULL OR zone_code = :zone)
             AND (:entityCode IS NULL OR entity_code = :entityCode)
             AND acc_mode = 'AP'
@@ -282,7 +282,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 FROM
                     account_utilizations
                 WHERE
-                    organization_name ILIKE :queryName
+                    (:queryName IS NULL OR organization_name ILIKE :queryName)
                     AND (:zone IS NULL OR zone_code = :zone)
                     AND acc_mode = 'AP'
                     AND due_date IS NOT NULL

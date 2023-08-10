@@ -233,8 +233,14 @@ class OutStandingServiceImpl : OutStandingService {
 
     override suspend fun getSupplierOutstandingList(request: OutstandingListRequest): SupplierOutstandingList {
         validateInput(request)
-        val queryResponse = accountUtilizationRepository.getBillsOutstandingAgeingBucket(request.zone, "%" + request.query + "%", request.orgId, request.entityCode, request.page, request.pageLimit)
-        val totalRecords = accountUtilizationRepository.getBillsOutstandingAgeingBucketCount(request.zone, "%" + request.query + "%", request.orgId)
+        val query: String? =
+            if (request.query != null) {
+                "%${request.query}%"
+            } else {
+                null
+            }
+        val queryResponse = accountUtilizationRepository.getBillsOutstandingAgeingBucket(request.zone, query, request.orgId, request.entityCode, request.page, request.pageLimit)
+        val totalRecords = accountUtilizationRepository.getBillsOutstandingAgeingBucketCount(request.zone, query, request.orgId)
         val ageingBucket = mutableListOf<BillOutStandingAgeingResponse>()
         val listOrganization: MutableList<SuppliersOutstanding?> = mutableListOf()
         val listOrganizationIds: MutableList<String?> = mutableListOf()

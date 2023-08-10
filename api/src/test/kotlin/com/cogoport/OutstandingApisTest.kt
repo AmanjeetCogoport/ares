@@ -54,12 +54,15 @@ class OutstandingApisTest(
     @BeforeEach
     fun setUp() = runTest {
         accountUtilizationRepository.deleteAll()
+        Client.createIndex("supplier_outstanding_overall")
+        Client.createIndex(indexName = "index_ares_sales_outstanding")
     }
 
     @AfterEach
     fun tearDown() = runTest {
         accountUtilizationRepository.deleteAll()
         Client.deleteIndex(indexName = "index_ares_sales_outstanding")
+        Client.deleteIndex("supplier_outstanding_overall")
     }
 
     @Test
@@ -68,8 +71,7 @@ class OutstandingApisTest(
         accountUtilizationHelper.saveAccountUtil()
         openSearchServiceImpl.pushOutstandingData(
             OpenSearchRequest(
-                orgId = "9b92503b-6374-4274-9be4-e83a42fc35fe",
-
+                orgId = "9b92503b-6374-4274-9be4-e83a42fc35fe"
             )
         )
         val request = HttpRequest.GET<Any>(URI.create(endPoint))
@@ -87,6 +89,34 @@ class OutstandingApisTest(
         val request = HttpRequest.GET<Any>(URI.create(endPoint))
         val response = withContext(Dispatchers.IO) {
             client.toBlocking().exchange(request, Any::class.java)
+        }
+        Assertions.assertEquals(HttpStatus.OK, response.status)
+    }
+
+    @Test
+    fun supplierOutstandingOverallTest() = runTest {
+        val endPoint = "/outstanding/bill-overall?orgId=9b92503b-6374-4274-9be4-e83a42fc35fe"
+        accountUtilizationHelper.saveApAccountUtil()
+        openSearchServiceImpl.pushOutstandingData(
+            OpenSearchRequest(
+                orgId = "9b92503b-6374-4274-9be4-e83a42fc35fe"
+            )
+        )
+        val request = HttpRequest.GET<Any>(URI.create(endPoint))
+        val response = withContext(Dispatchers.IO) {
+            client.toBlocking().exchange(request, OutstandingList::class.java)
+        }
+        val content = jsonMapper().readValue(javaClass.getResource("/fixtures/response/SupplierOutstandingList.json")!!.readText(), OutstandingList::class.java)
+        Assertions.assertEquals(content, response.body())
+    }
+
+    @Test
+    fun createSupplierDetailsTest() = runTest {
+        val endPoint = "/outstanding/supplier"
+        val requestBody = outstandingHelper.getSupplierDetailObject()
+        val request = HttpRequest.POST<Any>(URI.create(endPoint), requestBody)
+        val response = withContext(Dispatchers.IO) {
+            client.toBlocking().exchange(request, String::class.java)
         }
         Assertions.assertEquals(HttpStatus.OK, response.status)
     }
