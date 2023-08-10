@@ -113,11 +113,24 @@ class OutstandingApisTest(
     @Test
     fun createSupplierDetailsTest() = runTest {
         val endPoint = "/outstanding/supplier"
-        val requestBody = outstandingHelper.getSupplierDetailObject()
+        val requestBody = outstandingHelper.getSupplierOutstandingDocument()
         val request = HttpRequest.POST<Any>(URI.create(endPoint), requestBody)
         val response = withContext(Dispatchers.IO) {
             client.toBlocking().exchange(request, String::class.java)
         }
         Assertions.assertEquals(HttpStatus.OK, response.status)
+    }
+
+    @Test
+    fun listSupplierOutstandingOverallTest() = runTest {
+        val endPoint = "/outstanding/by-supplier"
+        val supplierDetails = outstandingHelper.getSupplierOutstandingDocument()
+        outStandingServiceImpl.createSupplierDetails(supplierDetails)
+        val request = HttpRequest.GET<Any>(URI.create(endPoint))
+        val response = withContext(Dispatchers.IO) {
+            client.toBlocking().exchange(request, OutstandingList::class.java)
+        }
+        val content = jsonMapper().readValue(javaClass.getResource("/fixtures/response/ListSupplierOutstandingOverall.json")!!.readText(), OutstandingList::class.java)
+        Assertions.assertEquals(content, response.body())
     }
 }
