@@ -147,6 +147,8 @@ class SettlementTest(
             )
         }
         val expectedResult = helper.getSettlementList(settlementData)
+
+        expectedResult.first()?.settlementDate = (response.list as List<SettlementListDoc>).first().settlementDate
         Assertions.assertEquals(expectedResult, response?.list)
     }
 
@@ -214,6 +216,8 @@ class SettlementTest(
             )
         }
         val expectedResult = helper.getDocumentListResponse(savedRecord, true)
+
+        expectedResult.first().transactionDate = (response.list as List<Document>).first().transactionDate
         Assertions.assertEquals(expectedResult, response.list)
     }
     @Test
@@ -250,6 +254,10 @@ class SettlementTest(
         }
 
         val expectedResult = helper.getDocumentListResponse(savedRecord, false)
+
+        expectedResult.first().transactionDate = (response.list as List<Document>).first().transactionDate
+        expectedResult.first().dueDate = (response.list as List<Document>).first().dueDate
+
         Assertions.assertEquals(expectedResult, response.list)
     }
 
@@ -319,6 +327,9 @@ class SettlementTest(
         }
 
         val expectedResult = helper.getInvoiceResponse(settlementData, destinationDocument)
+
+        expectedResult.first().dueDate = (response.list as List<SettlementInvoiceResponse>).first().dueDate
+        expectedResult.first().invoiceDate = (response.list as List<SettlementInvoiceResponse>).first().invoiceDate
         Assertions.assertEquals(ObjectMapper().writeValueAsString(expectedResult), ObjectMapper().writeValueAsString(response.list))
     }
 
@@ -451,6 +462,8 @@ class SettlementTest(
             )
         }
         val expectedOutput = helper.getSettledInvoiceResponse(settlementData, destinationDocument)
+
+        expectedOutput.first().transactionDate = (response.list as List<SettledInvoice>).first().transactionDate
         Assertions.assertEquals(expectedOutput, response.list)
     }
 

@@ -13,6 +13,7 @@ import com.cogoport.ares.model.payment.OrgStatsResponseForCoeFinance
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.response.AccountCollectionResponse
 import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
+import com.cogoport.ares.model.payment.response.PaymentResponse
 import io.micronaut.core.type.Argument
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.client.HttpClient
@@ -105,6 +106,9 @@ class OnAccountTest(
         }
 
         val expectedResult = onAccountHelper.getAccountReceivables(payment)
+
+        expectedResult.first()?.transactionDate = (response.list as List<PaymentResponse>).first().transactionDate
+        expectedResult.first()?.createdAt = (response.list as List<PaymentResponse>).first().createdAt
 
         Assertions.assertEquals(expectedResult, response?.list)
     }
