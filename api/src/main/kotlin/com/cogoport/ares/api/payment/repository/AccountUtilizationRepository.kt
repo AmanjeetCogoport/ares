@@ -486,7 +486,6 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     AND (:query is null OR document_value ilike :query)
                     AND s.deleted_at is null
                     AND au.deleted_at is null
-                    AND (:entityCode is null OR :entityCode = entity_code)
                 GROUP BY au.id
                 LIMIT :limit
                 OFFSET :offset

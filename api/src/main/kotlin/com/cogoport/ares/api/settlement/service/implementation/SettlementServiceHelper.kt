@@ -15,7 +15,7 @@ import jakarta.inject.Singleton
 import java.math.BigDecimal
 
 @Singleton
-class SettlementServiceHelper {
+open class SettlementServiceHelper {
 
     @Inject
     lateinit var exchangeClient: ExchangeClient
