@@ -3,12 +3,14 @@ package com.cogoport
 import com.cogoport.ares.api.common.models.ARLedgerJobDetailsResponse
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
+import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.common.TradePartyOutstandingRes
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.response.CreditDebitBalance
+import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
@@ -34,7 +36,7 @@ class AccountUtilizationHelper {
                 credit = BigDecimal.ZERO,
                 transactionRefNumber = null,
                 shipmentDocumentNumber = "1234qwerty",
-                houseDocumentNumber = ""
+                houseDocumentNumber = "56789"
             )
         )
     }
@@ -59,7 +61,7 @@ class AccountUtilizationHelper {
             orgSerialId = 25440,
             sageOrganizationId = "",
             organizationId = UUID.fromString("9b92503b-6374-4274-9be4-e83a42fc35fe"),
-            taggedOrganizationId = null,
+            taggedOrganizationId = UUID.fromString("1e3ed3f5-da62-4c81-bbab-7608fdac892d"),
             tradePartyMappingId = null,
             organizationName = null,
             accCode = 223000,
@@ -73,7 +75,7 @@ class AccountUtilizationHelper {
             taxableAmount = 333.toBigDecimal(),
             payCurr = 0.toBigDecimal(),
             payLoc = 0.toBigDecimal(),
-            dueDate = null,
+            dueDate = Date(),
             transactionDate = Date(),
             createdAt = Timestamp.from(Instant.now()),
             updatedAt = Timestamp.from(Instant.now()),
@@ -102,5 +104,31 @@ class AccountUtilizationHelper {
                 registrationNumber = "AADCS3124K"
             )
         )
+    }
+
+    fun getOverallStatsForMultipleConsumersTest(): ResponseList<StatsForCustomerResponse> {
+        val invoiceDetails = StatsForCustomerResponse(
+            organizationId = UUID.fromString("1e3ed3f5-da62-4c81-bbab-7608fdac892d"),
+            totalProformaAmount = 0.toBigDecimal(),
+            proformaInvoicesCount = 0,
+            totalDueAmount = 0.toBigDecimal(),
+            dueInvoicesCount = 0,
+            totalOverdueAmount = 400.0000.toBigDecimal().setScale(4),
+            overdueInvoicesCount = 1,
+            totalAmountReceivables = 400.0000.toBigDecimal().setScale(4),
+            receivablesInvoicesCount = 1,
+            onAccountPayment = 0.toBigDecimal(),
+            dueByThirtyDaysAmount = 400.0000.toBigDecimal().setScale(4),
+            dueBySixtyDaysAmount = 0.toBigDecimal(),
+            dueByNinetyDaysAmount = 0.toBigDecimal(),
+            dueByNinetyPlusDaysAmount = 0.toBigDecimal(),
+            dueByThirtyDaysCount = 1,
+            dueBySixtyDaysCount = 0,
+            dueByNinetyDaysCount = 0,
+            dueByNinetyPlusDaysCount = 0
+        )
+        val response = ResponseList<StatsForCustomerResponse>()
+        response.list = listOf(invoiceDetails)
+        return response
     }
 }
