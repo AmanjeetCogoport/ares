@@ -87,6 +87,7 @@ import com.cogoport.ares.model.payment.response.PlatformOrganizationResponse
 import com.cogoport.ares.model.payment.response.UploadSummary
 import com.cogoport.ares.model.sage.SageCustomerRecord
 import com.cogoport.ares.model.sage.SageFailedResponse
+import com.cogoport.ares.model.sage.SageOrganizationAccountTypeRequest
 import com.cogoport.ares.model.settlement.PostPaymentToSage
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.enums.JVSageAccount
@@ -104,7 +105,6 @@ import com.cogoport.brahma.sage.model.request.PaymentLineItem
 import com.cogoport.brahma.sage.model.request.PaymentRequest
 import com.cogoport.brahma.sage.model.request.SageResponse
 import com.cogoport.plutus.model.invoice.GetUserRequest
-import com.cogoport.plutus.model.invoice.SageOrganizationRequest
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import io.micronaut.context.annotation.Value
@@ -1354,9 +1354,10 @@ open class OnAccountServiceImpl : OnAccountService {
             }
             val sageOrganizationFromSageId = if (paymentDetails.accMode == AccMode.AR) recordsForSageOrganization.recordSet?.get(0)?.sageOrganizationId else recordsForSageOrganization.recordSet?.get(0)?.sageSupplierId
 
-            val sageOrganization = authClient.getSageOrganization(
-                SageOrganizationRequest(
-                    paymentDetails.orgSerialId.toString()
+            val sageOrganization = authClient.getSageOrganizationAccountType(
+                SageOrganizationAccountTypeRequest(
+                    paymentDetails.orgSerialId.toString(),
+                    if (paymentDetails.accMode == AccMode.AR) AresConstants.IMPORTER_EXPORTER else AresConstants.SERVICE_PROVIDER
                 )
             )
 
