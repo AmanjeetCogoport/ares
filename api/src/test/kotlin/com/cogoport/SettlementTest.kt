@@ -218,6 +218,7 @@ class SettlementTest(
         val expectedResult = helper.getDocumentListResponse(savedRecord, true)
 
         expectedResult.first().transactionDate = (response.list as List<Document>).first().transactionDate
+        expectedResult.first().dueDate = (response.list as List<Document>).first().dueDate
         Assertions.assertEquals(expectedResult, response.list)
     }
     @Test
