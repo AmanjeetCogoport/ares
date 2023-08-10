@@ -42,7 +42,7 @@ interface ParentJVRepository : CoroutineCrudRepository<ParentJournalVoucher, Lon
             AND
                 (:category IS NULL OR pjv.category = :category::VARCHAR) 
             AND
-                (pjv.jv_num ILIKE :query OR
+                (:query IS NULL OR pjv.jv_num ILIKE :query OR pjv.description ILIKE :query OR
                 ((pjv.id IN (SELECT parent_jv_id FROM journal_vouchers jv WHERE (jv.trade_party_name ILIKE :query)))))
             AND
                 pjv.deleted_at is NULL
