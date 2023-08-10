@@ -220,11 +220,7 @@ open class ParentJVServiceImpl : ParentJVService {
                 jvListRequest.status,
                 if (jvListRequest.category != null) jvListRequest.category!! else null,
                 query,
-                jvListRequest.page,
                 entityCodes,
-                jvListRequest.pageLimit,
-                sortType,
-                sortBy,
                 jvListRequest.startDate,
                 jvListRequest.endDate
             )

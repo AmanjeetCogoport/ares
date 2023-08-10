@@ -102,18 +102,13 @@ interface ParentJVRepository : CoroutineCrudRepository<ParentJournalVoucher, Lon
                 pjv.deleted_at is NULL
             AND
                 (coalesce(:entityCodes) is null OR pjv.entity_code IN (:entityCodes))
-            OFFSET GREATEST(0, ((:page - 1) * :pageLimit)) LIMIT :pageLimit
         """
     )
     fun countDocument(
         status: JVStatus?,
         category: String?,
         query: String?,
-        page: Int,
         entityCodes: List<Int?>?,
-        pageLimit: Int,
-        sortType: String?,
-        sortBy: String?,
         startDate: String?,
         endDate: String?
     ): Long
