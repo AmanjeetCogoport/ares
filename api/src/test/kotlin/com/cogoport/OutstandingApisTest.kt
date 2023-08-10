@@ -7,6 +7,7 @@ import com.cogoport.ares.api.payment.service.implementation.OpenSearchServiceImp
 import com.cogoport.ares.api.payment.service.implementation.OutStandingServiceImpl
 import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
+import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.brahma.opensearch.Client
 import com.fasterxml.jackson.module.kotlin.jsonMapper
 import io.micronaut.http.HttpRequest
@@ -26,6 +27,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.InjectMocks
 import org.mockito.junit.jupiter.MockitoExtension
 import java.net.URI
+import java.util.UUID
 
 @ExtendWith(MockitoExtension::class)
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -158,5 +160,39 @@ class OutstandingApisTest(
             client.toBlocking().exchange(request, String::class.java)
         }
         Assertions.assertEquals("0", response.body())
+    }
+
+    @Test
+    fun getCustomerOutstandingInInrTest() = runTest {
+        val endPoint = "/outstanding/customer-outstanding"
+        accountUtilizationHelper.saveAccountUtil()
+        openSearchServiceImpl.pushOutstandingData(
+            OpenSearchRequest(
+                orgId = "9b92503b-6374-4274-9be4-e83a42fc35fe"
+            )
+        )
+        val request = HttpRequest.POST<Any>(URI.create(endPoint), listOf("9b92503b-6374-4274-9be4-e83a42fc35fe"))
+        val response = withContext(Dispatchers.IO) {
+            client.toBlocking().exchange(request, String::class.java)
+        }
+        val expected = hashMapOf("9b92503b-6374-4274-9be4-e83a42fc35fe" to 400.toBigDecimal().setScale(4))
+        Assertions.assertEquals(jsonMapper().writeValueAsString(expected), response.body())
+    }
+
+    @Test
+    fun updateSupplierDetailsTest() = runTest {
+        val endPoint = "/outstanding/supplier"
+        val requestBody = outstandingHelper.getSupplierOutstandingDocument()
+        outStandingServiceImpl.createSupplierDetails(requestBody)
+        val request = HttpRequest.PUT<Any>(
+            URI.create(endPoint),
+            UpdateSupplierOutstandingRequest(
+                orgId = UUID.fromString("9b92503b-6374-4274-9be4-e83a42fc35fe")
+            )
+        )
+        val response = withContext(Dispatchers.IO) {
+            client.toBlocking().exchange(request, String::class.java)
+        }
+        Assertions.assertEquals(HttpStatus.OK, response.status)
     }
 }
