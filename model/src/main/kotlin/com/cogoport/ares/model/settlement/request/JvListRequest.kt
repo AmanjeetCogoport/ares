@@ -5,13 +5,12 @@ import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.http.annotation.QueryValue
-import java.sql.Timestamp
 
 @Introspected
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class JvListRequest(
-    @QueryValue(AresModelConstants.START_DATE) val startDate: Timestamp? = null,
-    @QueryValue(AresModelConstants.END_DATE) val endDate: Timestamp? = null,
+    @QueryValue(AresModelConstants.START_DATE) val startDate: String? = null,
+    @QueryValue(AresModelConstants.END_DATE) val endDate: String? = null,
     @QueryValue(AresModelConstants.STATUS) val status: JVStatus? = null,
     @QueryValue(AresModelConstants.CATEGORY) val category: String? = null,
     @QueryValue(AresModelConstants.TYPE) val type: String? = null,
