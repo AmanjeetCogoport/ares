@@ -29,7 +29,7 @@ data class SettledInvoice(
     var balanceAfterAllocation: BigDecimal? = BigDecimal.ZERO,
     var settledAmount: BigDecimal,
     var settledAllocation: BigDecimal? = BigDecimal.ZERO,
-    val transactionDate: Date?,
+    var transactionDate: Date?,
     var status: String?,
     var settledTds: BigDecimal,
     var exchangeRate: BigDecimal,
