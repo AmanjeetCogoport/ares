@@ -17,6 +17,7 @@ import com.cogoport.ares.api.payment.model.response.BfTodayStatsResp
 import com.cogoport.ares.api.payment.model.response.ServiceWiseOverdueResp
 import com.cogoport.ares.api.payment.model.response.ServiceWiseRecPayResp
 import com.cogoport.ares.api.payment.model.response.ShipmentProfitResp
+import com.cogoport.ares.model.common.OverallStatsForCustomers
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.CompanyType
 import com.cogoport.ares.model.payment.CustomerStatsRequest
@@ -87,4 +88,6 @@ interface DashboardService {
     suspend fun getFinanceServiceWiseRecPay(request: ServiceWiseRecPayReq): MutableList<ServiceWiseRecPayResp>
 
     suspend fun getFinanceServiceWiseOverdue(request: BfServiceWiseOverdueReq): ServiceWiseOverdueResp
+
+    suspend fun getCustomersOverallStats(request: OverallStatsForCustomers): ResponseList<StatsForCustomerResponse?>
 }
