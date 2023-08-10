@@ -21,28 +21,36 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
     @NewSpan
     @Query(
         """
-            SELECT au.transaction_date::varchar AS transaction_date,
+          WITH shipment_documents_on_document_level AS
+            (SELECT shipment_id, document_type,
+            CASE WHEN sd.document_type IN ('airway_bill', 'draft_airway_bill', 'bill_of_lading', 'draft_bill_of_lading')
+            THEN (array_agg(COALESCE(sd.data -> 'document_number', sd.data -> 'bl_number')))[1] END AS shipment_document_number,
+            CASE WHEN sd.document_type IN ('house_bill_of_lading', 'draft_house_bill_of_lading', 'house_airway_bill', 'draft_house_airway_bill')
+            THEN (array_agg(COALESCE(sd.data -> 'document_number', sd.data -> 'bl_number')))[1] END AS house_document_number
+            FROM shipment_documents sd WHERE sd.state = 'document_accepted' AND
+            sd.document_type in ('airway_bill', 'draft_airway_bill', 'bill_of_lading', 'draft_bill_of_lading',
+            'house_bill_of_lading', 'draft_house_bill_of_lading', 'house_airway_bill', 'draft_house_airway_bill')
+            GROUP BY shipment_id, document_type),
+          grouped_shipment_documents AS
+            (SELECT shipment_id, (array_remove(array_agg(shipment_document_number), NULL))[1] AS shipment_document_number, (array_remove(array_agg(house_document_number), NULL))[1] AS house_document_number
+            FROM shipment_documents_on_document_level
+            WHERE (shipment_document_number IS NOT NULL OR house_document_number IS NOT NULL)
+            GROUP BY shipment_id)
+          SELECT au.transaction_date::varchar AS transaction_date,
             au.acc_type as document_type,
             au.document_value::varchar AS document_number,
             au.currency as currency,
             au.amount_curr::varchar AS amount,
             CASE WHEN au.sign_flag = -1 THEN au.amount_loc ELSE 0 END AS credit,
             CASE WHEN au.sign_flag = 1 THEN au.amount_loc ELSE 0 END AS debit,
-            p.trans_ref_number AS transaction_ref_number, 
-            CASE WHEN sd.document_type in ('airway_bill', 'draft_airway_bill', 'bill_of_lading', 'draft_bill_of_lading')
-                THEN 
-                   (CASE WHEN sd.data -> 'document_number' IS NULL THEN sd.data -> 'bl_number' ELSE sd.data -> 'document_number' END)
-            END AS shipment_document_number,
-            CASE WHEN sd.document_type in ('house_bill_of_lading', 'draft_house_bill_of_lading', 'house_airway_bill', 'draft_house_airway_bill')
-                THEN 
-                   (CASE WHEN sd.data -> 'document_number' IS NULL THEN sd.data -> 'bl_number' ELSE sd.data -> 'document_number' END)
-            END AS house_document_number
+            p.trans_ref_number AS transaction_ref_number,
+            gsd.shipment_document_number,
+            gsd.house_document_number
             FROM ares.account_utilizations au
             LEFT JOIN ares.payments p ON p.payment_num = au.document_no AND p.payment_num_value = au.document_value
             LEFT JOIN plutus.invoices i ON i.invoice_number = au.document_value::varchar AND i.id = au.document_no
             LEFT JOIN loki.jobs j ON j.id = i.job_id
-            LEFT JOIN shipment_documents sd ON sd.shipment_id::varchar = j.reference_id AND sd.state = 'document_accepted' AND
-            sd.document_type in ('airway_bill', 'draft_airway_bill', 'bill_of_lading', 'draft_bill_of_lading', 'house_bill_of_lading', 'draft_house_bill_of_lading', 'house_airway_bill', 'draft_house_airway_bill')
+            LEFT JOIN grouped_shipment_documents gsd ON gsd.shipment_id::varchar = j.reference_id
             WHERE au.acc_mode = :accMode AND au.organization_id = :organizationId::UUID AND document_status = 'FINAL'
             AND au.transaction_date >= :startDate::DATE AND au.transaction_date <= :endDate::DATE AND au.entity_code IN (:entityCodes)
             AND au.deleted_at IS NULL AND au.acc_type != 'NEWPR' AND p.deleted_at IS NULL

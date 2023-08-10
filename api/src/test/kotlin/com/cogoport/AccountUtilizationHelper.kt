@@ -36,7 +36,7 @@ class AccountUtilizationHelper {
                 credit = BigDecimal.ZERO,
                 transactionRefNumber = null,
                 shipmentDocumentNumber = "1234qwerty",
-                houseDocumentNumber = ""
+                houseDocumentNumber = "56789"
             )
         )
     }
