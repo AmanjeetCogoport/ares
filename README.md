@@ -30,7 +30,7 @@ We have to install jdk explicitly to use Intellj build and run functionality.
    ```
    tar -xzf graalvm-ce-java17-darwin-amd64-22.0.0.2.tar.gz
    ```
-3. Move the downloaded package to its proper location using follwing command.
+3. Move the downloaded package to its proper location using following command.
   ```
     sudo mv graalvm-ce-java17-22.0.0.2 /Library/Java/JavaVirtualMachines
   ```
