@@ -231,6 +231,7 @@ jacocoTestReport {
                     "**/constants/**",
                     "**/model/**",
                     "**/enum/**",
+                    "*/repository/**"
             ])
         }))
     }

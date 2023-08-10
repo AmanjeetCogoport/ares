@@ -362,7 +362,7 @@ class OutStandingServiceImpl : OutStandingService {
         } else {
 
             val supplierOutstandingDocument = outstandingAgeingConverter.convertSupplierDetailsRequestToDocument(request)
-            supplierOutstandingDocument.updatedAt = Timestamp.valueOf(LocalDateTime.now())
+            supplierOutstandingDocument.updatedAt = supplierOutstandingDocument.updatedAt ?: Timestamp.valueOf(LocalDateTime.now())
             supplierOutstandingDocument.onAccountPayment = listOf<DueAmount>()
             supplierOutstandingDocument.totalOutstanding = listOf<DueAmount>()
             supplierOutstandingDocument.openInvoice = listOf<DueAmount>()

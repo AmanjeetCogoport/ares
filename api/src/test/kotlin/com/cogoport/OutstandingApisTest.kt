@@ -5,6 +5,7 @@ import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.implementation.DefaultedBusinessPartnersServiceImpl
 import com.cogoport.ares.api.payment.service.implementation.OpenSearchServiceImpl
 import com.cogoport.ares.api.payment.service.implementation.OutStandingServiceImpl
+import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
 import com.cogoport.brahma.opensearch.Client
 import com.fasterxml.jackson.module.kotlin.jsonMapper
@@ -56,6 +57,7 @@ class OutstandingApisTest(
         accountUtilizationRepository.deleteAll()
         Client.createIndex("supplier_outstanding_overall")
         Client.createIndex(indexName = "index_ares_sales_outstanding")
+        Client.createIndex(indexName = "index_ares_invoice_outstanding")
     }
 
     @AfterEach
@@ -63,6 +65,7 @@ class OutstandingApisTest(
         accountUtilizationRepository.deleteAll()
         Client.deleteIndex(indexName = "index_ares_sales_outstanding")
         Client.deleteIndex("supplier_outstanding_overall")
+        Client.deleteIndex(indexName = "index_ares_invoice_outstanding")
     }
 
     @Test
@@ -104,9 +107,9 @@ class OutstandingApisTest(
         )
         val request = HttpRequest.GET<Any>(URI.create(endPoint))
         val response = withContext(Dispatchers.IO) {
-            client.toBlocking().exchange(request, OutstandingList::class.java)
+            client.toBlocking().exchange(request, String::class.java)
         }
-        val content = jsonMapper().readValue(javaClass.getResource("/fixtures/response/SupplierOutstandingList.json")!!.readText(), OutstandingList::class.java)
+        val content = javaClass.getResource("/fixtures/response/SupplierOutstandingList.json")!!.readText()
         Assertions.assertEquals(content, response.body())
     }
 
@@ -128,9 +131,21 @@ class OutstandingApisTest(
         outStandingServiceImpl.createSupplierDetails(supplierDetails)
         val request = HttpRequest.GET<Any>(URI.create(endPoint))
         val response = withContext(Dispatchers.IO) {
-            client.toBlocking().exchange(request, OutstandingList::class.java)
+            client.toBlocking().exchange(request, String::class.java)
         }
-        val content = jsonMapper().readValue(javaClass.getResource("/fixtures/response/ListSupplierOutstandingOverall.json")!!.readText(), OutstandingList::class.java)
+        val content = javaClass.getResource("/fixtures/response/ListSupplierOutstandingOverall.json")!!.readText()
+        Assertions.assertEquals(content, response.body())
+    }
+
+    @Test
+    fun listOutstandingInvoicesTest() = runTest {
+        val endPoint = "/outstanding/invoice-list?orgId=9b92503b-6374-4274-9be4-e83a42fc35fe"
+        outstandingHelper.saveCustomerInvoiceResponseDoc()
+        val request = HttpRequest.GET<Any>(URI.create(endPoint))
+        val response = withContext(Dispatchers.IO) {
+            client.toBlocking().exchange(request, ListInvoiceResponse::class.java)
+        }
+        val content = jsonMapper().readValue(javaClass.getResource("/fixtures/response/ListInvoiceResponse.json")!!.readText(), ListInvoiceResponse::class.java)
         Assertions.assertEquals(content, response.body())
     }
 }
