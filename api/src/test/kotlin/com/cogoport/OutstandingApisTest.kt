@@ -148,4 +148,15 @@ class OutstandingApisTest(
         val content = jsonMapper().readValue(javaClass.getResource("/fixtures/response/ListInvoiceResponse.json")!!.readText(), ListInvoiceResponse::class.java)
         Assertions.assertEquals(content, response.body())
     }
+
+    @Test
+    fun getCurrOutstandingTest() = runTest {
+        val endPoint = "/outstanding/outstanding-days"
+        accountUtilizationHelper.saveAccountUtil()
+        val request = HttpRequest.POST<Any>(URI.create(endPoint), listOf(113121115))
+        val response = withContext(Dispatchers.IO) {
+            client.toBlocking().exchange(request, String::class.java)
+        }
+        Assertions.assertEquals("0", response.body())
+    }
 }
