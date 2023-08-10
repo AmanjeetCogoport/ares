@@ -7,6 +7,8 @@ micronaut:
   http:
     client:
       read-timeout: 300s
+  timezone:
+    zone: IST
 netty:
   default:
     allocator:
@@ -15,7 +17,7 @@ r2dbc:
   datasources:
     default:
       url: r2dbc:postgresql://${DB_HOST:`localhost`}:${DB_PORT:5432}/${DB_NAME:ares}
-      username: cogoport
+      username: vivekgarg
       password: cogoport123
       dialect: POSTGRES
 opensearch:
