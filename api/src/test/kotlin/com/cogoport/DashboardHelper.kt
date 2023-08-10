@@ -62,13 +62,14 @@ class DashboardHelper {
     }
 
     fun getOutstandingByAge(): List<OverallAgeingStats> {
-        return listOf(
+        val durationKey = listOf("Not Due", "1-30", "31-60", "61-90", "91-180", "181-365", ">365")
+        return durationKey.map {
             OverallAgeingStats(
-                ageingDuration = "1-30",
+                ageingDuration = it,
                 amount = BigDecimal(0),
                 dashboardCurrency = "INR"
             )
-        )
+        }
     }
 
     fun getOutstandingByAgeResponse(): LinkedHashMap<String, OverallAgeingStatsResponse> {
@@ -79,7 +80,7 @@ class DashboardHelper {
                 it,
                 OverallAgeingStatsResponse(
                     ageingDuration = it,
-                    amount = BigDecimal(0),
+                    amount = BigDecimal(0).setScale(4),
                     dashboardCurrency = "INR"
                 )
             )

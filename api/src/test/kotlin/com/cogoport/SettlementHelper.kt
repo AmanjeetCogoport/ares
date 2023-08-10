@@ -8,7 +8,6 @@ import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.Payment
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.PaymentRepository
-import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import com.cogoport.ares.api.settlement.entity.JVAdditionalDetails
 import com.cogoport.ares.api.settlement.entity.JournalVoucher
 import com.cogoport.ares.api.settlement.entity.ParentJournalVoucher
@@ -367,57 +366,6 @@ class SettlementHelper(
             )
         )
     }
-
-    private fun getInvoiceAdditionalData(
-        invoiceIds: MutableList<String>,
-        keys: MutableList<String>,
-        settlementDocs: List<SettlementListDoc>
-    ): List<SettlementListDoc> {
-        val invoiceAdditionalResponse = InvoiceAdditionalResponseV2(
-            value = "45e39fedcc7edee9a2a120f530a77a93defa4ea6cfaa6b44bbe442da2dbdd68b",
-            id = 4922438,
-            invoiceId = 455504,
-            key = "IrnNumber"
-        )
-        val mockInvoiceAdditionalResponse = listOf(invoiceAdditionalResponse)
-
-        settlementDocs.forEach { doc ->
-            mockInvoiceAdditionalResponse.let { data ->
-                val sourceInvoiceAdditionalDoc =
-                    data.firstOrNull { it.invoiceId == doc.sourceId && it.key == "IrnNumber" }
-                val destinationInvoiceAdditionalDoc =
-                    data.firstOrNull { it.invoiceId == doc.destinationId && it.key == "IrnNumber" }
-
-                sourceInvoiceAdditionalDoc?.let {
-                    if (it.value.toString().isNotBlank()) {
-                        doc.sourceIrnNumber = it.value.toString()
-                    }
-                }
-
-                destinationInvoiceAdditionalDoc?.let {
-                    if (it.value.toString().isNotBlank()) {
-                        doc.destinationIrnNumber = it.value.toString()
-                    }
-                }
-            }
-        }
-
-        return settlementDocs
-    }
-
-    fun getInvoiceAdditionalList(
-        invoiceIds: MutableList<String>,
-        keys: MutableList<String>
-    ): List<InvoiceAdditionalResponseV2> {
-        val invoiceAdditionalResponseV2 = InvoiceAdditionalResponseV2(
-            value = "45e39fedcc7edee9a2a120f530a77a93defa4ea6cfaa6b44bbe442da2dbdd68b",
-            id = 4922438,
-            invoiceId = 455504,
-            key = "IrnNumber"
-        )
-        return listOf(invoiceAdditionalResponseV2)
-    }
-
     fun getDocumentListResponse(savedRecord: AccountUtilization, isTdsResponse: Boolean): MutableList<Document> {
         return mutableListOf(
             Document(
