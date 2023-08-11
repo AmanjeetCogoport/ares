@@ -40,7 +40,11 @@ interface ParentJVRepository : CoroutineCrudRepository<ParentJournalVoucher, Lon
             WHERE 
                 (:status IS NULL OR pjv.status = :status::JV_STATUS) 
             AND
-                (:category IS NULL OR pjv.category = :category::VARCHAR) 
+                (:category IS NULL OR pjv.category = :category::VARCHAR)
+            AND 
+                (:startDate IS NULL OR transaction_date::VARCHAR >= :startDate)
+            AND 
+                (:endDate IS NULL OR transaction_date::VARCHAR <= :endDate)
             AND
                 (:query IS NULL OR pjv.jv_num ILIKE :query OR pjv.description ILIKE :query OR
                 ((pjv.id IN (SELECT parent_jv_id FROM journal_vouchers jv WHERE (jv.trade_party_name ILIKE :query)))))
@@ -72,28 +76,42 @@ interface ParentJVRepository : CoroutineCrudRepository<ParentJournalVoucher, Lon
         entityCodes: List<Int?>?,
         pageLimit: Int,
         sortType: String?,
-        sortBy: String?
+        sortBy: String?,
+        startDate: String?,
+        endDate: String?
     ): List<ParentJournalVoucher>
 
     @NewSpan
     @Query(
         """
-        SELECT count(1)
+        SELECT count(pjv.id)
         FROM
-            parent_journal_vouchers j
+            parent_journal_vouchers pjv
         WHERE 
-            (:status IS NULL OR  status = :status::JV_STATUS) 
-        AND
-            (:category IS NULL OR  category = :category::VARCHAR) 
-        AND
-            jv_num ILIKE :query
-        AND 
-            (coalesce(:entityCodes) is null OR entity_code IN (:entityCodes))
-        AND
-            deleted_at is NULL
+                (:status IS NULL OR pjv.status = :status::JV_STATUS) 
+            AND
+                (:category IS NULL OR pjv.category = :category::VARCHAR)
+            AND 
+                (:startDate IS NULL OR transaction_date::VARCHAR >= :startDate)
+            AND 
+                (:endDate IS NULL OR transaction_date::VARCHAR <= :endDate)
+            AND
+                (:query IS NULL OR pjv.jv_num ILIKE :query OR pjv.description ILIKE :query OR
+                ((pjv.id IN (SELECT parent_jv_id FROM journal_vouchers jv WHERE (jv.trade_party_name ILIKE :query)))))
+            AND
+                pjv.deleted_at is NULL
+            AND
+                (coalesce(:entityCodes) is null OR pjv.entity_code IN (:entityCodes))
         """
     )
-    fun countDocument(status: JVStatus?, category: String?, query: String?, entityCodes: List<Int?>?): Long
+    fun countDocument(
+        status: JVStatus?,
+        category: String?,
+        query: String?,
+        entityCodes: List<Int?>?,
+        startDate: String?,
+        endDate: String?
+    ): Long
 
     @NewSpan
     @Query(
