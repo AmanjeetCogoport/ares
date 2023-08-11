@@ -433,13 +433,13 @@ ORDER BY
             SELECT s.id
             FROM settlements s
             INNER JOIN account_utilizations aau ON aau.document_no = s.destination_id
-            WHERE s.settlement_status::varchar = 'CREATED'
+            WHERE s.settlement_status::varchar in ('CREATED', 'POSTING_FAILED')
               AND s.deleted_at IS NULL
               AND s.led_currency != 'VND'
               AND s.source_type NOT IN ('SECH', 'PECH')
               AND CASE
                     WHEN aau.acc_mode = 'AR' THEN s.created_at >= '2023-05-16'
-                    ELSE aau.created_at <=  current_date - INTERVAL '3 days' and aau.created_at >= '2023-07-28'
+                    ELSE aau.created_at <=  current_date - INTERVAL '3 days' and aau.created_at >= '2023-07-28' and is_proforma = false
                   END
             ORDER BY s.created_at DESC
         """
