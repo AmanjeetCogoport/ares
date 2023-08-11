@@ -1,5 +1,7 @@
 package com.cogoport
 
+import com.cogoport.ares.api.common.service.implementation.Scheduler
+import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.implementation.DefaultedBusinessPartnersServiceImpl
@@ -25,7 +27,11 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.InjectMocks
+import org.mockito.Mock
+import org.mockito.Mockito
 import org.mockito.junit.jupiter.MockitoExtension
+import org.mockito.kotlin.any
+import org.mockito.kotlin.whenever
 import java.net.URI
 import java.util.UUID
 
@@ -38,7 +44,9 @@ class OutstandingApisTest(
     @InjectMocks
     val defaultedBusinessPartnersServiceImpl: DefaultedBusinessPartnersServiceImpl,
     @InjectMocks
-    val openSearchServiceImpl: OpenSearchServiceImpl
+    val openSearchServiceImpl: OpenSearchServiceImpl,
+    @InjectMocks
+    val scheduler: Scheduler
 ) {
 
     @Inject
@@ -54,12 +62,20 @@ class OutstandingApisTest(
     @Inject
     lateinit var accountUtilizationRepository: AccountUtilizationRepository
 
+    @Mock
+    var emitter: AresMessagePublisher = Mockito.mock(AresMessagePublisher::class.java)
+
     @BeforeEach
     fun setUp() = runTest {
         accountUtilizationRepository.deleteAll()
         Client.createIndex("supplier_outstanding_overall")
         Client.createIndex(indexName = "index_ares_sales_outstanding")
         Client.createIndex(indexName = "index_ares_invoice_outstanding")
+        Client.createIndex(indexName = "customer_outstanding_101")
+        Client.createIndex(indexName = "customer_outstanding_201")
+        Client.createIndex(indexName = "customer_outstanding_301")
+        Client.createIndex(indexName = "customer_outstanding_401")
+        Client.createIndex(indexName = "customer_outstanding_501")
     }
 
     @AfterEach
@@ -68,6 +84,11 @@ class OutstandingApisTest(
         Client.deleteIndex(indexName = "index_ares_sales_outstanding")
         Client.deleteIndex("supplier_outstanding_overall")
         Client.deleteIndex(indexName = "index_ares_invoice_outstanding")
+        Client.deleteIndex(indexName = "customer_outstanding_101")
+        Client.deleteIndex(indexName = "customer_outstanding_201")
+        Client.deleteIndex(indexName = "customer_outstanding_301")
+        Client.deleteIndex(indexName = "customer_outstanding_401")
+        Client.deleteIndex(indexName = "customer_outstanding_501")
     }
 
     @Test
@@ -189,6 +210,35 @@ class OutstandingApisTest(
             UpdateSupplierOutstandingRequest(
                 orgId = UUID.fromString("9b92503b-6374-4274-9be4-e83a42fc35fe")
             )
+        )
+        val response = withContext(Dispatchers.IO) {
+            client.toBlocking().exchange(request, String::class.java)
+        }
+        Assertions.assertEquals(HttpStatus.OK, response.status)
+    }
+
+    @Test
+    fun migrateSupplierOutstanding() = runTest {
+        val endPoint = "/outstanding/supplier-outstanding-migrate"
+        accountUtilizationHelper.saveApAccountUtil()
+        val request = HttpRequest.PUT<Any>(
+            URI.create(endPoint),
+            null
+        )
+        whenever(emitter.emitUpdateSupplierOutstanding(any())).thenReturn(Unit)
+        val response = withContext(Dispatchers.IO) {
+            client.toBlocking().exchange(request, String::class.java)
+        }
+        Assertions.assertEquals(HttpStatus.OK, response.status)
+    }
+
+    @Test
+    fun createCustomerDetailsTest() = runTest {
+        val endPoint = "/outstanding/customer"
+        accountUtilizationHelper.saveAccountUtil()
+        val request = HttpRequest.POST<Any>(
+            URI.create(endPoint),
+            outstandingHelper.getCustomerOutstandingDocument()
         )
         val response = withContext(Dispatchers.IO) {
             client.toBlocking().exchange(request, String::class.java)
