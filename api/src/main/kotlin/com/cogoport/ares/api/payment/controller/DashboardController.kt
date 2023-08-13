@@ -22,6 +22,7 @@ import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.utils.Util
 import com.cogoport.ares.common.models.Response
+import com.cogoport.ares.model.common.OverallStatsForCustomers
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.CompanyType
 import com.cogoport.ares.model.payment.CustomerStatsRequest
@@ -285,5 +286,10 @@ class DashboardController {
         val authEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt()
         request.entityCode = if (authEntityCode == null) request.entityCode else mutableListOf(authEntityCode)
         return dashboardService.getFinanceServiceWiseOverdue(request)
+    }
+
+    @Post("/customers/overall-stats")
+    suspend fun getOverallCustomersStats(@Valid @Body request: OverallStatsForCustomers): ResponseList<StatsForCustomerResponse?> {
+        return dashboardService.getCustomersOverallStats(request)
     }
 }

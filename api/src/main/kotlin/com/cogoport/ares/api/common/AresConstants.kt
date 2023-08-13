@@ -309,4 +309,7 @@ object AresConstants {
     const val OPENING_BALANCE = "Opening Balance"
     const val CLOSING_BALANCE = "Closing Balance"
     const val DOCUMENT_DATE = "Document Date"
+
+    const val IMPORTER_EXPORTER = "importer_exporter"
+    const val SERVICE_PROVIDER = "service_provider"
 }

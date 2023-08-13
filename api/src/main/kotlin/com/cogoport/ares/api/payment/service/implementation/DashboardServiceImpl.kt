@@ -39,6 +39,7 @@ import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.interfaces.DashboardService
 import com.cogoport.ares.api.utils.toLocalDate
 import com.cogoport.ares.model.common.AresModelConstants
+import com.cogoport.ares.model.common.OverallStatsForCustomers
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
@@ -1229,6 +1230,12 @@ class DashboardServiceImpl : DashboardService {
             )
             else -> throw AresException(AresError.ERR_1009, "interface type is invalid")
         }
+    }
+
+    override suspend fun getCustomersOverallStats(request: OverallStatsForCustomers): ResponseList<StatsForCustomerResponse?> {
+        val responseList = ResponseList<StatsForCustomerResponse?>()
+        responseList.list = accountUtilizationRepository.getOverallStatsForMultipleCustomers(request.bookingPartyIds)
+        return responseList
     }
 
     private fun getCompanyType(companyType: CompanyType?): List<String>? {
