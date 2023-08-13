@@ -112,7 +112,7 @@ object AresConstants {
         "ee09645b-5f34-4d2e-8ec7-6ac83a7946e1" to 301,
         "04bd1037-c110-4aad-8ecc-fc43e9d4069d" to 401,
         "b67d40b1-616c-4471-b77b-de52b4c9f2ff" to 501,
-        "6d92cf58-3392-44c3-8e1b-09192f98f8be" to 601 ,
+        "6d92cf58-3392-44c3-8e1b-09192f98f8be" to 601,
         "ef9a7145-b1b6-46ff-8de7-a348de635574" to 701,
         "ff9a7145-b1b6-46ff-8de7-a348de635574" to 801
     )
