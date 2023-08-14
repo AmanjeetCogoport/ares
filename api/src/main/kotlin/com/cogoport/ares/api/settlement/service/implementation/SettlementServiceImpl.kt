@@ -110,6 +110,7 @@ import com.cogoport.plutus.model.invoice.SageOrganizationRequest
 import com.cogoport.plutus.model.invoice.TransactionDocuments
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.micronaut.context.annotation.Value
+import io.micronaut.http.client.exceptions.ReadTimeoutException
 import io.sentry.Sentry
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -2640,7 +2641,9 @@ open class SettlementServiceImpl : SettlementService {
             val sageOrganizationResponse = checkIfOrganizationIdIsValid(settlementId, sourceDocument.accMode, sourceDocument)
             val sourcePresentOnSage = if (sourceDocument.migrated == true && listOf(AccountType.REC, AccountType.CTDS, AccountType.VTDS, AccountType.PAY).contains(sourceDocument.accType)) {
                 paymentRepo.findBySinglePaymentNumValue(sourceDocument.documentValue!!)
-            } else { sageService.checkIfDocumentExistInSage(sourceDocument.documentValue!!, sageOrganizationResponse[0]!!, sourceDocument.orgSerialId, sourceDocument.accType, sageOrganizationResponse[1]!!) }
+            } else {
+                sageService.checkIfDocumentExistInSage(sourceDocument.documentValue!!, sageOrganizationResponse[0]!!, sourceDocument.orgSerialId, sourceDocument.accType, sageOrganizationResponse[1]!!)
+            }
             val destinationPresentOnSage = sageService.checkIfDocumentExistInSage(destinationDocument.documentValue!!, sageOrganizationResponse[0]!!, destinationDocument.orgSerialId, destinationDocument.accType, sageOrganizationResponse[1]!!)
 
             val nullDoc: MutableList<String> = mutableListOf<String>()
@@ -2681,6 +2684,13 @@ open class SettlementServiceImpl : SettlementService {
                 settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTING_FAILED, performedBy)
                 recordAudits(settlementId, result.requestString, result.response, false)
             }
+        } catch (readTimeOutException: ReadTimeoutException) {
+            aresMessagePublisher.emitBulkMatchingSettlementOnSage(
+                PostSettlementRequest(
+                    settlementId = settlementId,
+                    performedBy = performedBy
+                )
+            )
         } catch (sageException: SageException) {
             settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTING_FAILED, performedBy)
             recordAudits(settlementId, sageException.data, sageException.context, false)
