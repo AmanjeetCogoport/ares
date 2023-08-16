@@ -2685,6 +2685,7 @@ open class SettlementServiceImpl : SettlementService {
                 recordAudits(settlementId, result.requestString, result.response, false)
             }
         } catch (readTimeOutException: ReadTimeoutException) {
+            logger().info("ReadTimeoutException: $settlementId")
             aresMessagePublisher.emitBulkMatchingSettlementOnSage(
                 PostSettlementRequest(
                     settlementId = settlementId,
@@ -2692,12 +2693,15 @@ open class SettlementServiceImpl : SettlementService {
                 )
             )
         } catch (sageException: SageException) {
+            logger().info("SageException: $settlementId")
             settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTING_FAILED, performedBy)
             recordAudits(settlementId, sageException.data, sageException.context, false)
         } catch (aresException: AresException) {
+            logger().info("AresException: $settlementId")
             settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTING_FAILED, performedBy)
             recordAudits(settlementId, settlementId.toString(), "${aresException.error.message} ${aresException.context}", false)
         } catch (e: Exception) {
+            logger().info("Exception: $settlementId")
             settlementRepository.updateSettlementStatus(settlementId, SettlementStatus.POSTING_FAILED, performedBy)
             recordAudits(settlementId, settlementId.toString(), e.toString(), false)
         }
