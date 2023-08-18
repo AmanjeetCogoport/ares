@@ -65,6 +65,7 @@ import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
 import com.cogoport.ares.model.payment.ValidateTradePartyRequest
 import com.cogoport.ares.model.payment.enum.CogoBankAccount
 import com.cogoport.ares.model.payment.enum.PaymentSageGLCodes
+import com.cogoport.ares.model.payment.request.ARLedgerRequest
 import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
 import com.cogoport.ares.model.payment.request.BulkUploadRequest
@@ -86,6 +87,7 @@ import com.cogoport.ares.model.payment.response.PlatformOrganizationResponse
 import com.cogoport.ares.model.payment.response.UploadSummary
 import com.cogoport.ares.model.sage.SageCustomerRecord
 import com.cogoport.ares.model.sage.SageFailedResponse
+import com.cogoport.ares.model.sage.SageOrganizationAccountTypeRequest
 import com.cogoport.ares.model.settlement.PostPaymentToSage
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.enums.JVSageAccount
@@ -102,10 +104,7 @@ import com.cogoport.brahma.sage.SageException
 import com.cogoport.brahma.sage.model.request.PaymentLineItem
 import com.cogoport.brahma.sage.model.request.PaymentRequest
 import com.cogoport.brahma.sage.model.request.SageResponse
-import com.cogoport.loki.model.job.DocumentDetail
 import com.cogoport.plutus.model.invoice.GetUserRequest
-import com.cogoport.plutus.model.invoice.SageOrganizationRequest
-import com.cogoport.plutus.model.invoice.enums.DocumentName
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import io.micronaut.context.annotation.Value
@@ -1355,9 +1354,10 @@ open class OnAccountServiceImpl : OnAccountService {
             }
             val sageOrganizationFromSageId = if (paymentDetails.accMode == AccMode.AR) recordsForSageOrganization.recordSet?.get(0)?.sageOrganizationId else recordsForSageOrganization.recordSet?.get(0)?.sageSupplierId
 
-            val sageOrganization = authClient.getSageOrganization(
-                SageOrganizationRequest(
-                    paymentDetails.orgSerialId.toString()
+            val sageOrganization = authClient.getSageOrganizationAccountType(
+                SageOrganizationAccountTypeRequest(
+                    paymentDetails.orgSerialId.toString(),
+                    if (paymentDetails.accMode == AccMode.AR) AresConstants.IMPORTER_EXPORTER else AresConstants.SERVICE_PROVIDER
                 )
             )
 
@@ -1881,7 +1881,7 @@ open class OnAccountServiceImpl : OnAccountService {
         }
     }
 
-    override suspend fun getARLedgerOrganizationAndEntityWise(req: LedgerSummaryRequest): List<ARLedgerResponse> {
+    override suspend fun getARLedgerOrganizationAndEntityWise(req: ARLedgerRequest): List<ARLedgerResponse> {
         val ledgerSelectedDateWise = unifiedDBNewRepository.getARLedger(
             AccMode.AR,
             req.orgId,
@@ -1889,11 +1889,8 @@ open class OnAccountServiceImpl : OnAccountService {
             req.startDate!!,
             req.endDate!!
         )
-        ledgerSelectedDateWise.forEach {
-            it.shipmentDocumentNumber = getShipmentDocumentDetails(it.jobDocuments)
-        }
         var arLedgerResponse = accountUtilizationMapper.convertARLedgerJobDetailsResponseToARLedgerResponse(ledgerSelectedDateWise)
-        val openingLedger = accountUtilizationRepository.getOpeningAndClosingLedger(AccMode.AR, req.orgId, req.entityCodes!!, req.startDate!!, AresConstants.OPENING_BALANCE)
+        val openingLedger = unifiedDBNewRepository.getOpeningAndClosingLedger(AccMode.AR, req.orgId, req.entityCodes!!, req.startDate!!, AresConstants.OPENING_BALANCE)
         var openingLedgerList: List<ARLedgerResponse> = listOf(
             ARLedgerResponse(
                 transactionDate = "",
@@ -1906,7 +1903,8 @@ open class OnAccountServiceImpl : OnAccountService {
                 debitBalance = if (openingLedger.debit > openingLedger.credit) openingLedger.debit.minus(openingLedger.credit) else BigDecimal.ZERO,
                 creditBalance = if (openingLedger.credit > openingLedger.debit) openingLedger.credit.minus(openingLedger.debit) else BigDecimal.ZERO,
                 transactionRefNumber = "",
-                shipmentDocumentNumber = ""
+                shipmentDocumentNumber = "",
+                houseDocumentNumber = ""
             )
         )
         val completeLedgerList = openingLedgerList + arLedgerResponse
@@ -1940,21 +1938,10 @@ open class OnAccountServiceImpl : OnAccountService {
                     BigDecimal.ZERO
                 },
                 transactionRefNumber = "",
-                shipmentDocumentNumber = ""
+                shipmentDocumentNumber = "",
+                houseDocumentNumber = ""
             )
         )
         return completeLedgerList + closingLedgerList
-    }
-
-    private fun getShipmentDocumentDetails(documentDetail: MutableList<DocumentDetail>?): String? {
-        var shipmentDocumentNumber = ""
-        if (documentDetail != null) {
-            for (document in documentDetail) {
-                if (document.name in listOf<String?>(DocumentName.MBL.value, DocumentName.HBL.value, DocumentName.MAWB.value, DocumentName.HAWB.value)) {
-                    shipmentDocumentNumber += "${document.number},"
-                }
-            }
-        }
-        return shipmentDocumentNumber
     }
 }

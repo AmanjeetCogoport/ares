@@ -8,7 +8,6 @@ import com.cogoport.ares.api.payment.entity.LedgerSummary
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.api.payment.model.response.DocumentResponse
 import com.cogoport.ares.api.settlement.entity.Document
-import com.cogoport.ares.model.common.TradePartyOutstandingRes
 import com.cogoport.ares.model.dunning.response.CustomerOutstandingAndOnAccountResponse
 import com.cogoport.ares.model.dunning.response.DunningCardData
 import com.cogoport.ares.model.dunning.response.MonthWiseStatisticsOfAccountUtilizationResponse
@@ -1203,22 +1202,6 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
     @NewSpan
     @Query(
         """
-            select organization_id::varchar,
-            sum(case when acc_type in ('SINV', 'SREIMB', 'SCN', 'SREIMBCN') and amount_curr - pay_curr <> 0 and document_status = 'FINAL' then 1 else 0 end) as open_invoices_count,
-            sum(case when acc_type in ('SINV', 'SREIMB', 'SCN', 'SREIMBCN') and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc)  else 0 end) as open_invoices_led_amount,
-            sum(case when acc_type in ('SINV', 'SREIMB', 'SCN', 'SREIMBCN') and document_status = 'FINAL' AND due_date < now()::date then sign_flag * (amount_loc - pay_loc) else 0 end) as overdue_open_invoices_led_amount,
-            sum(case when acc_type in ('SINV', 'SREIMB', 'SCN', 'SREIMBCN', 'REC', 'CTDS', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'PAY') and document_status = 'FINAL' then sign_flag * (amount_loc - pay_loc) else 0 end) as outstanding_led_amount
-            from account_utilizations
-            where acc_type in ('SINV','SCN','REC', 'CTDS', 'SREIMB', 'SREIMBCN', 'BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC', 'PAY') and acc_mode = 'AR' and document_status = 'FINAL'  
-            and organization_id IN (:orgIds) and entity_code IN (:entityCodes) and deleted_at is null
-            group by organization_id
-        """
-    )
-    suspend fun getTradePartyOutstanding(orgIds: List<UUID>, entityCodes: List<Int>): List<TradePartyOutstandingRes>?
-
-    @NewSpan
-    @Query(
-        """
                 SELECT organization_id::VARCHAR, currency,led_currency , sign_flag, amount_curr, pay_curr,amount_loc, pay_loc, transaction_date,due_date,entity_code
                 FROM account_utilizations 
                 WHERE acc_type::varchar in (:accType)
@@ -1807,15 +1790,47 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 sign_flag * (amount_loc - pay_loc)
             ELSE
                 0
-            END) AS total_on_account_amount,
-            sum(sign_flag * (amount_loc - pay_loc)) AS total_outstanding,
-            CURRENT_DATE as created_at
-            FROM account_utilizations WHERE 
-            acc_mode::VARCHAR = :accMode AND deleted_at IS NULL
-            AND acc_type::varchar in (:accTypes)
-            AND document_status in ('FINAL')
-            AND created_at >= '2023-07-28'
-            group by organization_id, entity_code,led_currency, acc_mode
+            END) AS total_open_on_account_amount,
+        sum(sign_flag * (amount_loc - pay_loc)) AS total_outstanding,
+        SUM(
+            CASE WHEN (acc_type::VARCHAR IN (:invoiceAccType) or acc_type::VARCHAR IN (:creditNoteAccType)) THEN
+              sign_flag * amount_loc
+            ELSE
+              0
+            END
+          ) AS total_invoice_amount,
+          SUM(
+            CASE WHEN acc_type::VARCHAR IN (:onAccountAccountType) THEN
+              sign_flag * amount_loc
+            ELSE
+              0
+            END
+          ) AS total_on_account_amount,
+          SUM(
+            CASE WHEN acc_type::VARCHAR IN (:onAccountAccountType) THEN
+              1
+            ELSE
+              0
+            END
+          ) AS total_on_account_count,
+          SUM(
+            CASE WHEN (acc_type::VARCHAR IN (:invoiceAccType) or acc_type::VARCHAR IN (:creditNoteAccType)) THEN
+              1
+            ELSE
+              0
+            END
+          ) AS total_invoices_count,
+        CURRENT_DATE AS created_at
+    FROM 
+        account_utilizations 
+    WHERE 
+        acc_mode::VARCHAR = :accMode 
+        AND deleted_at IS NULL
+        AND acc_type::VARCHAR IN (:accTypes)
+        AND document_status IN ('FINAL')
+        AND created_at >= '2023-07-28'
+    GROUP BY 
+        organization_id, entity_code, led_currency, acc_mode
         """
     )
     suspend fun getLedgerSummaryForAp(

@@ -2,7 +2,7 @@ package com.cogoport.ares.api.reports.controller
 
 import com.cogoport.ares.api.reports.services.interfaces.ReportService
 import com.cogoport.ares.api.utils.Util
-import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
+import com.cogoport.ares.model.payment.request.ARLedgerRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.brahma.authentication.Auth
 import com.cogoport.brahma.authentication.AuthResponse
@@ -39,7 +39,7 @@ class ReportController {
         return HttpResponse.ok(file).header("Content-Disposition", "filename=${file.name}")
     }
     @Get("/ar-ledger{?request*}")
-    suspend fun getARLedgerReport(@Valid request: LedgerSummaryRequest): String {
+    suspend fun getARLedgerReport(@Valid request: ARLedgerRequest): String {
         return reportService.getARLedgerReport(request)
     }
 }
