@@ -278,4 +278,19 @@ class OutstandingApisTest(
         val content = javaClass.getResource("/fixtures/response/ListCustomerOutstandingOverall.json")!!.readText()
         Assertions.assertEquals(content, response.body())
     }
+
+    @Test
+    fun migrateCustomerOutstanding() = runTest {
+        val endPoint = "/outstanding/customer-outstanding-migrate"
+        accountUtilizationHelper.saveAccountUtil()
+        val request = HttpRequest.PUT<Any>(
+            URI.create(endPoint),
+            null
+        )
+        whenever(emitter.emitUpdateCustomerOutstanding(any())).thenReturn(Unit)
+        val response = withContext(Dispatchers.IO) {
+            client.toBlocking().exchange(request, String::class.java)
+        }
+        Assertions.assertEquals(HttpStatus.OK, response.status)
+    }
 }
