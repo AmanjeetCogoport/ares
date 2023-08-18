@@ -1101,7 +1101,7 @@ class OutStandingServiceImpl : OutStandingService {
             monthlyCounts.sixthLastMonth
         ).count { it > 0 }
 
-        val outstandingData = accountUtilizationRepo.getTradePartyOutstanding(
+        val outstandingData = unifiedDBNewRepository.getTradePartyOutstanding(
             listOf(orgId),
             listOf(customerData.entityCode!!)
         )?.first()
