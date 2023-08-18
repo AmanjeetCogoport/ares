@@ -287,4 +287,9 @@ class AresMessageConsumer {
             false
         )
     }
+
+    @Queue("ares-sage-jv-migration-admin", prefetch = 1)
+    fun migrateJournalVoucherAdmin(journalVoucherRecord: JVParentDetails) = runBlocking {
+        paymentMigration.migrateAdminJV(journalVoucherRecord)
+    }
 }
