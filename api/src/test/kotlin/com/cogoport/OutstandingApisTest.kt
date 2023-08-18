@@ -203,6 +203,7 @@ class OutstandingApisTest(
     @Test
     fun updateSupplierDetailsTest() = runTest {
         val endPoint = "/outstanding/supplier"
+        accountUtilizationHelper.saveApAccountUtil()
         val requestBody = outstandingHelper.getSupplierOutstandingDocument()
         outStandingServiceImpl.createSupplierDetails(requestBody)
         val request = HttpRequest.PUT<Any>(
@@ -244,5 +245,37 @@ class OutstandingApisTest(
             client.toBlocking().exchange(request, String::class.java)
         }
         Assertions.assertEquals(HttpStatus.OK, response.status)
+    }
+
+    @Test
+    fun updateCustomerDetailsTest() = runTest {
+        val endPoint = "/outstanding/customer"
+        accountUtilizationHelper.saveAccountUtil()
+        val requestBody = outstandingHelper.getCustomerOutstandingDocument()
+        outStandingServiceImpl.createCustomerDetails(requestBody)
+        val request = HttpRequest.PUT<Any>(
+            URI.create(endPoint),
+            UpdateSupplierOutstandingRequest(
+                orgId = UUID.fromString("9b92503b-6374-4274-9be4-e83a42fc35fe")
+            )
+        )
+        val response = withContext(Dispatchers.IO) {
+            client.toBlocking().exchange(request, String::class.java)
+        }
+        Assertions.assertEquals(HttpStatus.OK, response.status)
+    }
+
+    @Test
+    fun listCustomerOutstandingOverallTest() = runTest {
+        val endPoint = "/outstanding/by-customer?tradePartyDetailId=9b92503b-6374-4274-9be4-e83a42fc35fe"
+        accountUtilizationHelper.saveAccountUtil()
+        val customerDetails = outstandingHelper.getCustomerOutstandingDocument()
+        outStandingServiceImpl.createCustomerDetails(customerDetails)
+        val request = HttpRequest.GET<Any>(URI.create(endPoint))
+        val response = withContext(Dispatchers.IO) {
+            client.toBlocking().exchange(request, String::class.java)
+        }
+        val content = javaClass.getResource("/fixtures/response/ListCustomerOutstandingOverall.json")!!.readText()
+        Assertions.assertEquals(content, response.body())
     }
 }

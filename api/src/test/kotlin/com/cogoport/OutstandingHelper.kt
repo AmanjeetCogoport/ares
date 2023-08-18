@@ -15,7 +15,7 @@ class OutstandingHelper {
     fun getCustomerOutstandingDocument(): CustomerOutstandingDocumentResponse {
         return CustomerOutstandingDocumentResponse(
             organizationId = "9b92503b-6374-4274-9be4-e83a42fc35fe",
-            tradePartyId = UUID.randomUUID().toString(),
+            tradePartyId = "1e3ed3f5-da62-4c81-bbab-7608fdac892d",
             businessName = "",
             companyType = "",
             countryCode = "IN",
@@ -39,7 +39,8 @@ class OutstandingHelper {
             totalOutstanding = null,
             tradePartyName = "",
             tradePartySerialId = "",
-            tradePartyType = null
+            tradePartyType = null,
+            lastUpdatedAt = Timestamp(1691663743000),
         )
     }
 

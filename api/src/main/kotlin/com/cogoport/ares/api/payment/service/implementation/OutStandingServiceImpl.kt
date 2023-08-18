@@ -504,7 +504,7 @@ class OutStandingServiceImpl : OutStandingService {
                 val creditNote = getCreditNoteDetails(orgOutstandingData, entity)
 
                 customerOutstanding = CustomerOutstandingDocumentResponse(
-                    lastUpdatedAt = Timestamp.valueOf(LocalDateTime.now()),
+                    lastUpdatedAt = request.lastUpdatedAt ?: Timestamp.valueOf(LocalDateTime.now()),
                     organizationId = request.organizationId,
                     tradePartyId = request.tradePartyId,
                     businessName = request.businessName,
