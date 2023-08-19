@@ -70,6 +70,7 @@ import java.time.LocalTime
 import java.time.Year
 import java.util.UUID
 import kotlin.math.ceil
+import com.cogoport.ares.api.common.AresConstants.PERCENTILES as PERCENTILES
 
 @Singleton
 class OutStandingServiceImpl : OutStandingService {
@@ -1050,14 +1051,39 @@ class OutStandingServiceImpl : OutStandingService {
         val orgId = UUID.fromString(customerData.organizationId)
         val callPriorityScores = CallPriorityScores()
 
+        val index = "customer_outstanding_${customerData.entityCode}"
+        val response = Client.search(
+            { s ->
+                s.index(index)
+                    .size(0)
+                    .aggregations("percentile_agg") { a ->
+                        a.percentiles { p ->
+                            p.field("totalOutstanding.ledgerAmount")
+                            p.percents(
+                                PERCENTILES
+                            )
+                        }
+                    }
+            },
+            Any::class.java
+        )
+
+        val percentileValues = response?.aggregations()
+            ?.get("percentile_agg")
+            ?.tdigestPercentiles()
+            ?.values()
+            ?.keyed()
         val totalOutstanding = customerData.totalOutstanding?.ledgerAmount
-        if (totalOutstanding != null && totalOutstanding.compareTo(0.toBigDecimal()) > 0) {
+        if (totalOutstanding != null &&
+            totalOutstanding.compareTo(0.toBigDecimal()) > 0 &&
+            percentileValues != null
+        ) {
             callPriorityScores.outstandingScore = when {
-                totalOutstanding >= 5000000.toBigDecimal() -> 6
-                totalOutstanding >= 4000000.toBigDecimal() -> 5
-                totalOutstanding >= 3000000.toBigDecimal() -> 4
-                totalOutstanding >= 2000000.toBigDecimal() -> 3
-                totalOutstanding >= 1000000.toBigDecimal() -> 2
+                totalOutstanding >= percentileValues[PERCENTILES[0].toString()]?.toBigDecimal() -> 6
+                totalOutstanding >= percentileValues[PERCENTILES[1].toString()]?.toBigDecimal() -> 5
+                totalOutstanding >= percentileValues[PERCENTILES[2].toString()]?.toBigDecimal() -> 4
+                totalOutstanding >= percentileValues[PERCENTILES[5].toString()]?.toBigDecimal() -> 3
+                totalOutstanding >= percentileValues[PERCENTILES[6].toString()]?.toBigDecimal() -> 2
                 else -> 1
             }
         }

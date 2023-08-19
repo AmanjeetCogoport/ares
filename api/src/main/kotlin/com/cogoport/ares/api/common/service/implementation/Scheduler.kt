@@ -72,7 +72,7 @@ class Scheduler(
         }
     }
 
-    @Scheduled(cron = "0 0 * * *")
+    @Scheduled(cron = "* * * * *")
     fun updateCustomerOutstandingOnOpenSearch() {
         runBlocking {
             val orgIds = accountUtilizationRepository.getTradePartyOrgIds(AccMode.AR)

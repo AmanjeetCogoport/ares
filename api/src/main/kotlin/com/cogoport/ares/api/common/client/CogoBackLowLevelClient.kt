@@ -53,6 +53,9 @@ class CogoBackLowLevelClient(private val httpClient: HttpClient) {
         return res
     }
 
+    /**
+     * Get Payment Modes related data for an organization
+     */
     fun listOrganizationPaymentModes(listOrganizationPaymentModeReq: ListOrganizationPaymentModeReq): ListOrganizationPaymentModesRes? {
         val uri: URI = URI.create("$apiUrl/organization/list_organization_payment_modes?filters[organization_trade_party_detail_id]=${listOrganizationPaymentModeReq.tradePartyDetailId}&filters[trade_party_type]=${listOrganizationPaymentModeReq.tradePartyType}")
         val req: HttpRequest<*> = HttpRequest.GET<Any>(uri)
