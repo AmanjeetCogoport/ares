@@ -1266,12 +1266,12 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             FROM account_utilizations
             WHERE  (:accMode IS NULL OR acc_mode::VARCHAR = :accMode)
             AND (COALESCE(:accTypes) IS NULL OR acc_type::VARCHAR IN (:accTypes))
-            AND (:docStatus IS NULL OR document_status::VARCHAR = :docStatus)
+            AND document_status = 'FINAL'
             AND (:organizationId IS NULL OR organization_id = :organizationId)
             AND (:entityCodes IS NULL OR entity_code IN (:entityCodes))
         """
     )
-    suspend fun getMonthlyUtilizationCounts(accMode: AccMode?, accTypes: List<AccountType>?, docStatus: DocumentStatus?, organizationId: UUID?, entityCodes: List<Int>?): MonthlyUtilizationCount
+    suspend fun getMonthlyUtilizationCounts(accMode: AccMode?, accTypes: List<AccountType>?, organizationId: UUID?, entityCodes: List<Int>?): MonthlyUtilizationCount
 
     @NewSpan
     @Query(

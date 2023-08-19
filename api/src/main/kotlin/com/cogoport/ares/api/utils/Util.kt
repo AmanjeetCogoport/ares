@@ -29,7 +29,7 @@ class Util {
 
     companion object {
         fun BigDecimal.divideNumbers(num: BigDecimal): BigDecimal {
-            return if (num.compareTo(0.toBigDecimal()) > 0) {
+            return if (num.compareTo(0.toBigDecimal()) != 0) {
                 this.divide(num, 4, RoundingMode.UP)
             } else {
                 0.toBigDecimal()

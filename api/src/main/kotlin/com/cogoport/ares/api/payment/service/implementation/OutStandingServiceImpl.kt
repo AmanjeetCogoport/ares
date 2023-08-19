@@ -30,7 +30,6 @@ import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.AgeingBucket
 import com.cogoport.ares.model.payment.AgeingBucketOutstanding
 import com.cogoport.ares.model.payment.CustomerOutstanding
-import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.DueAmount
 import com.cogoport.ares.model.payment.InvoiceStats
 import com.cogoport.ares.model.payment.ListInvoiceResponse
@@ -1082,8 +1081,8 @@ class OutStandingServiceImpl : OutStandingService {
                 totalOutstanding >= percentileValues[PERCENTILES[0].toString()]?.toBigDecimal() -> 6
                 totalOutstanding >= percentileValues[PERCENTILES[1].toString()]?.toBigDecimal() -> 5
                 totalOutstanding >= percentileValues[PERCENTILES[2].toString()]?.toBigDecimal() -> 4
-                totalOutstanding >= percentileValues[PERCENTILES[5].toString()]?.toBigDecimal() -> 3
-                totalOutstanding >= percentileValues[PERCENTILES[6].toString()]?.toBigDecimal() -> 2
+                totalOutstanding >= percentileValues[PERCENTILES[3].toString()]?.toBigDecimal() -> 3
+                totalOutstanding >= percentileValues[PERCENTILES[4].toString()]?.toBigDecimal() -> 2
                 else -> 1
             }
         }
@@ -1113,12 +1112,11 @@ class OutStandingServiceImpl : OutStandingService {
                 AccountType.SCN,
                 AccountType.SREIMBCN
             ),
-            docStatus = DocumentStatus.FINAL,
             entityCodes = listOf(customerData.entityCode!!),
             organizationId = orgId
         )
 
-        callPriorityScores.businessContinuityScore = listOf(
+        callPriorityScores.businessContinuityScore = 6 - listOf(
             monthlyCounts.lastMonth,
             monthlyCounts.secondLastMonth,
             monthlyCounts.thirdLastMonth,
