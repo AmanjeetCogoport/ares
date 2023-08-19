@@ -40,6 +40,7 @@ import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
 import com.cogoport.ares.api.settlement.model.PaymentInfo
 import com.cogoport.ares.api.settlement.model.Sid
 import com.cogoport.ares.api.settlement.repository.IncidentMappingsRepository
+import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.api.settlement.service.interfaces.ParentJVService
@@ -82,6 +83,7 @@ import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import com.cogoport.ares.model.settlement.TdsStyle
+import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.ares.model.settlement.enums.SettlementStatus
 import com.cogoport.ares.model.settlement.event.InvoiceBalance
 import com.cogoport.ares.model.settlement.event.PaymentInfoRec
@@ -223,6 +225,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var parentJvService: ParentJVService
+
+    @Inject
+    lateinit var journalVoucherRepository: JournalVoucherRepository
 
     /**
      * Get documents for Given Business partner/partners in input request.
@@ -1284,10 +1289,29 @@ open class SettlementServiceImpl : SettlementService {
     private suspend fun deleteSettlement(documentNo: String, settlementType: SettlementType, deletedBy: UUID, deletedByUserType: String?): String {
         val documentNo = Hashids.decode(documentNo)[0]
 
-        if (settlementType in listOf(SettlementType.PAY, SettlementType.VTDS)) {
-            val paymentId = if (settlementType == SettlementType.PAY) paymentRepo.findByPaymentNumAndPaymentCode(documentNo, PaymentCode.PAY) else documentNo
-            if (invoicePaymentMappingRepo.findByPaymentIdFromPaymentInvoiceMapping(paymentId) != 0L) {
-                throw AresException(AresError.ERR_1515, "")
+        when (settlementType) {
+            SettlementType.VTDS -> {
+                val sourceDocument = journalVoucherRepository.findById(documentNo)
+                if (sourceDocument != null) {
+                    if (sourceDocument.status == JVStatus.POSTED) {
+                        throw AresException(AresError.ERR_1552, "")
+                    }
+                }
+            }
+            SettlementType.CTDS -> {
+                val sourceDoc = paymentRepository.findByPaymentNumAndPaymentCode(documentNo, PaymentCode.valueOf(settlementType.name))
+
+                if (sourceDoc != null) {
+                    if (sourceDoc.paymentDocumentStatus in listOf(PaymentDocumentStatus.POSTED, PaymentDocumentStatus.FINAL_POSTED)) {
+                        throw AresException(AresError.ERR_1552, "")
+                    }
+                }
+            }
+            SettlementType.PAY -> {
+                val paymentId = paymentRepo.findByPaymentNumAndPaymentCode(documentNo, PaymentCode.PAY)?.id
+                if (invoicePaymentMappingRepo.findByPaymentIdFromPaymentInvoiceMapping(paymentId) != 0L) {
+                    throw AresException(AresError.ERR_1515, "")
+                }
             }
         }
 
