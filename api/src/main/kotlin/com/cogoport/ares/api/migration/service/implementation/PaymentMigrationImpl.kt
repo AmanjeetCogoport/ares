@@ -1149,4 +1149,54 @@ class PaymentMigrationImpl : PaymentMigration {
             this.migrateJournalVoucher(it, parentJVId)
         }
     }
+
+    override suspend fun migrateAdminJV(jvParentDetail: JVParentDetails) {
+        var jvParentRecord: ParentJournalVoucherMigration? = null
+        var jvRecords: List<JournalVoucherRecord>? = null
+        var parentJVId = parentJournalVoucherRepo.checkIfParentJVExists(jvParentDetail.jvNum, jvParentDetail.jvType)
+        val jvRecordsWithoutBpr = sageServiceImpl.getJVLineItemWithNoBPR(jvParentDetail.jvNum, jvParentDetail.jvType)
+        try {
+            jvRecords = sageServiceImpl.getJournalVoucherFromSageCorrected(null, null, "'${jvParentDetail.jvNum}'", jvParentDetail.jvType)
+            if (parentJVId == null) {
+                jvParentRecord = parentJournalVoucherRepo.save(
+                    ParentJournalVoucherMigration(
+                        id = null,
+                        status = JVStatus.valueOf(jvParentDetail.jvStatus),
+                        category = AccountTypeMapping.getAccountType(jvParentDetail.jvType),
+                        jvNum = jvParentDetail.jvNum,
+                        validityDate = jvParentDetail.validityDate,
+                        createdAt = jvParentDetail.createdAt,
+                        updatedAt = jvParentDetail.updatedAt,
+                        createdBy = MigrationConstants.createdUpdatedBy,
+                        updatedBy = MigrationConstants.createdUpdatedBy,
+                        migrated = true,
+                        currency = jvParentDetail.currency,
+                        ledCurrency = jvParentDetail.ledgerCurrency,
+                        exchangeRate = jvParentDetail.exchangeRate,
+                        description = jvParentDetail.description,
+                        jvCodeNum = jvParentDetail.jvCodeNum,
+                        entityCode = jvRecords.firstOrNull()?.entityCode,
+                        transactionDate = jvParentDetail.validityDate
+                    )
+                )
+                parentJVId = jvParentRecord.id!!
+                migrationLogService.saveMigrationLogs(
+                    null, null, jvParentDetail.jvNum, jvParentDetail.currency,
+                    jvParentDetail.amount, null, null,
+                    null, null, null
+                )
+            }
+        } catch (ex: Exception) {
+            logger().error("$ex")
+            migrationLogService.saveMigrationLogs(
+                null, null, jvParentDetail.jvNum, null, null,
+                null, null, null, null, "Error while storing jv header: ${ex.message}"
+            )
+            return
+        }
+        storeJVLineItems(jvRecordsWithoutBpr, parentJVId)
+        jvRecords.forEach {
+            this.migrateJournalVoucher(it, parentJVId)
+        }
+    }
 }
