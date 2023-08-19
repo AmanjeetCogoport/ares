@@ -1308,6 +1308,10 @@ open class SettlementServiceImpl : SettlementService {
         }
 
         val fetchedDoc = settlementRepository.findBySourceIdAndSourceType(documentNo, sourceType)
+        if (fetchedDoc.any { it!!.settlementStatus == SettlementStatus.POSTED }) {
+            throw AresException(AresError.ERR_1544, "")
+        }
+
         val paymentTdsDoc = fetchedDoc.find { it?.destinationId == documentNo }
         val debitDoc = fetchedDoc.filter { it?.destinationId != documentNo }.groupBy { it?.destinationId }
         val sourceCurr = fetchedDoc.sumOf { it?.amount ?: BigDecimal.ZERO }
@@ -1550,6 +1554,7 @@ open class SettlementServiceImpl : SettlementService {
                 }
                 if (payment.tds!!.compareTo(BigDecimal.ZERO) != 0 &&
                     payment.settledTds.compareTo(BigDecimal.ZERO) == 0 &&
+                    payment.accountType in (listOf(SettlementType.PINV, SettlementType.SINV)) &&
                     performDbOperation
                 ) {
                     createTdsRecord(
