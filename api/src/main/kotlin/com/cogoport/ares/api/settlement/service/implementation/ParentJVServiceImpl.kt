@@ -910,7 +910,8 @@ open class ParentJVServiceImpl : ParentJVService {
 
             val jvData = journalVoucherRepository.findByJvNums(filteredJvs.map { it.jvNum!! })
             if (!jvData.isNullOrEmpty()) {
-                val accUtilData = accountUtilizationRepo.getAccountUtilizationsByDocumentNo(jvData.filter { it.accMode != AccMode.OTHER && it.accMode != null }.map { it.id!! }, jvData.map { it.category })
+                val filteredJvDataWithAccMode = jvData.filter { it.accMode != AccMode.OTHER && it.accMode != null }
+                val accUtilData = accountUtilizationRepo.getAccountUtilizationsByDocumentNoAndDocumentValue(filteredJvDataWithAccMode.map { it.id!! }, jvData.map { it.category }, filteredJvDataWithAccMode.map { it.jvNum })
                 accountUtilizationRepo.deleteAll(accUtilData)
                 journalVoucherRepository.deleteAll(jvData)
             }

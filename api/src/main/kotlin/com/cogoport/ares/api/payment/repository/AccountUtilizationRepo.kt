@@ -1844,8 +1844,8 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
     @NewSpan
     @Query(
         """
-        select * from account_utilizations where document_no in (:docNumbers) and acc_type::varchar in (:accTypes)
+        select * from account_utilizations where document_no in (:docNumbers) and acc_type::varchar in (:accTypes) and document_value in (:docValues)
     """
     )
-    suspend fun getAccountUtilizationsByDocumentNo(docNumbers: List<Long>, accTypes: List<String>): List<AccountUtilization>
+    suspend fun getAccountUtilizationsByDocumentNoAndDocumentValue(docNumbers: List<Long>, accTypes: List<String>, docValues: List<String>): List<AccountUtilization>
 }
