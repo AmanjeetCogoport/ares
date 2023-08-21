@@ -112,4 +112,7 @@ interface AresMessagePublisher {
     suspend fun sendMailOfAllCommunicationOfTradeParty(
         sendMailOfAllCommunicationToTradePartyReq: SendMailOfAllCommunicationToTradePartyReq
     )
+
+    @Binding("ares.sage.jv.migration.admin")
+    suspend fun emitJournalVoucherMigrationAdmin(journalVoucherRecord: JVParentDetails)
 }

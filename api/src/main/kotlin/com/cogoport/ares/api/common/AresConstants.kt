@@ -202,7 +202,8 @@ object AresConstants {
         "send-email",
         "sage-tds-jv-migration",
         "dunning-scheduler",
-        "send-dunning-payment-reminder"
+        "send-dunning-payment-reminder",
+        "sage-jv-migration-admin"
     )
 
     val RETRY_QUEUES = listOf(
@@ -237,7 +238,8 @@ object AresConstants {
         "partial-payment-mismatch",
         "bulk-update-payment-and-post-on-sage",
         "bulk-post-payment-from-sage",
-        "sage-tds-jv-migration"
+        "sage-tds-jv-migration",
+        "sage-jv-migration-admin"
     )
 
     const val performedByUserNameForMail = "Business Finance Tech Team"
@@ -312,4 +314,6 @@ object AresConstants {
 
     const val IMPORTER_EXPORTER = "importer_exporter"
     const val SERVICE_PROVIDER = "service_provider"
+
+    val PERCENTILES = listOf(96.0, 90.0, 80.0, 70.0, 40.0)
 }
