@@ -13,6 +13,7 @@ import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.model.AuditRequest
+import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
@@ -122,6 +123,9 @@ open class ParentJVServiceImpl : ParentJVService {
 
     @Inject
     lateinit var util: Util
+
+    @Inject
+    lateinit var accountUtilizationRepo: AccountUtilizationRepo
 
     @Value("\${sage.databaseName}")
     var sageDatabase: String? = null
@@ -894,6 +898,21 @@ open class ParentJVServiceImpl : ParentJVService {
                     )
                 )
             }
+        }
+    }
+
+    override suspend fun bulkJvDeletion(jvNumbers: List<String>) {
+        val parentJvDetails = parentJVRepository.getParentJournalVoucherByJvNums(jvNumbers)
+
+        if (!parentJvDetails.isNullOrEmpty()) {
+            val filteredJvs = parentJvDetails.filter { it.isUtilized == false }
+
+            parentJVRepository.deleteAll(filteredJvs)
+            val accUtilData = accountUtilizationRepo.getAccountUtilizationsByDocumentValue(filteredJvs.map { it.jvNum!! }, filteredJvs.map { it.category })
+            accountUtilizationRepo.deleteAll(accUtilData)
+
+            val jvData = journalVoucherRepository.findByJvNums(filteredJvs.map { it.jvNum!! })
+            if (!jvData.isNullOrEmpty()) journalVoucherRepository.deleteAll(jvData)
         }
     }
 }
