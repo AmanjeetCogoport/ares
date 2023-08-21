@@ -906,13 +906,14 @@ open class ParentJVServiceImpl : ParentJVService {
 
         if (!parentJvDetails.isNullOrEmpty()) {
             val filteredJvs = parentJvDetails.filter { it.isUtilized == false }
-
             parentJVRepository.deleteAll(filteredJvs)
-            val accUtilData = accountUtilizationRepo.getAccountUtilizationsByDocumentValue(filteredJvs.map { it.jvNum!! }, filteredJvs.map { it.category })
-            accountUtilizationRepo.deleteAll(accUtilData)
 
             val jvData = journalVoucherRepository.findByJvNums(filteredJvs.map { it.jvNum!! })
-            if (!jvData.isNullOrEmpty()) journalVoucherRepository.deleteAll(jvData)
+            if (!jvData.isNullOrEmpty()) {
+                val accUtilData = accountUtilizationRepo.getAccountUtilizationsByDocumentNo(jvData.filter { it.accMode != AccMode.OTHER && it.accMode != null }.map { it.id!! }, jvData.map { it.category })
+                accountUtilizationRepo.deleteAll(accUtilData)
+                journalVoucherRepository.deleteAll(jvData)
+            }
         }
     }
 }
