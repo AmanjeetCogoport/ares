@@ -126,7 +126,13 @@ class OutStandingServiceImpl : OutStandingService {
         request.orgIds.map {
             orgIds.add(UUID.fromString(it))
         }
-        val queryResponse = accountUtilizationRepository.getOutstandingAgeingBucket(request.zone, "%" + request.query + "%", orgIds, request.page, request.pageLimit, defaultersOrgIds, request.flag!!)
+        val query: String? =
+            if (request.query != null) {
+                "%${request.query}%"
+            } else {
+                null
+            }
+        val queryResponse = accountUtilizationRepository.getOutstandingAgeingBucket(request.zone, query, orgIds, request.page, request.pageLimit, defaultersOrgIds, request.flag!!)
         val ageingBucket = mutableListOf<OutstandingAgeingResponse>()
         val orgId = mutableListOf<String>()
         queryResponse.forEach { ageing ->
@@ -235,8 +241,14 @@ class OutStandingServiceImpl : OutStandingService {
 
     override suspend fun getSupplierOutstandingList(request: OutstandingListRequest): SupplierOutstandingList {
         validateInput(request)
-        val queryResponse = accountUtilizationRepository.getBillsOutstandingAgeingBucket(request.zone, "%" + request.query + "%", request.orgId, request.entityCode, request.page, request.pageLimit)
-        val totalRecords = accountUtilizationRepository.getBillsOutstandingAgeingBucketCount(request.zone, "%" + request.query + "%", request.orgId)
+        val query: String? =
+            if (request.query != null) {
+                "%${request.query}%"
+            } else {
+                null
+            }
+        val queryResponse = accountUtilizationRepository.getBillsOutstandingAgeingBucket(request.zone, query, request.orgId, request.entityCode, request.page, request.pageLimit)
+        val totalRecords = accountUtilizationRepository.getBillsOutstandingAgeingBucketCount(request.zone, query, request.orgId)
         val ageingBucket = mutableListOf<BillOutStandingAgeingResponse>()
         val listOrganization: MutableList<SuppliersOutstanding?> = mutableListOf()
         val listOrganizationIds: MutableList<String?> = mutableListOf()
@@ -358,7 +370,7 @@ class OutStandingServiceImpl : OutStandingService {
         } else {
 
             val supplierOutstandingDocument = outstandingAgeingConverter.convertSupplierDetailsRequestToDocument(request)
-            supplierOutstandingDocument.updatedAt = Timestamp.valueOf(LocalDateTime.now())
+            supplierOutstandingDocument.updatedAt = supplierOutstandingDocument.updatedAt ?: Timestamp.valueOf(LocalDateTime.now())
             supplierOutstandingDocument.onAccountPayment = listOf<DueAmount>()
             supplierOutstandingDocument.totalOutstanding = listOf<DueAmount>()
             supplierOutstandingDocument.openInvoice = listOf<DueAmount>()
@@ -500,7 +512,7 @@ class OutStandingServiceImpl : OutStandingService {
                 val creditNote = getCreditNoteDetails(orgOutstandingData, entity)
 
                 customerOutstanding = CustomerOutstandingDocumentResponse(
-                    lastUpdatedAt = Timestamp.valueOf(LocalDateTime.now()),
+                    lastUpdatedAt = request.lastUpdatedAt ?: Timestamp.valueOf(LocalDateTime.now()),
                     organizationId = request.organizationId,
                     tradePartyId = request.tradePartyId,
                     businessName = request.businessName,
