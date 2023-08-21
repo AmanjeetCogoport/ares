@@ -91,6 +91,49 @@ class AccountUtilizationHelper {
         accountUtilizationRepo.save(accUtil)
     }
 
+    suspend fun saveApAccountUtil() {
+        val accUtil = AccountUtilization(
+            id = null,
+            documentNo = 11312111,
+            documentValue = null,
+            zoneCode = null,
+            serviceType = ServiceType.LCL_FREIGHT.name,
+            documentStatus = DocumentStatus.FINAL,
+            entityCode = 301,
+            category = null,
+            orgSerialId = 25440,
+            sageOrganizationId = "",
+            organizationId = UUID.fromString("9b92503b-6374-4274-9be4-e83a42fc35fe"),
+            taggedOrganizationId = UUID.fromString("1e3ed3f5-da62-4c81-bbab-7608fdac892d"),
+            tradePartyMappingId = null,
+            organizationName = null,
+            accCode = 223000,
+            accType = AccountType.PINV,
+            accMode = AccMode.AP,
+            signFlag = 1,
+            currency = "INR",
+            ledCurrency = "INR",
+            amountCurr = 400.toBigDecimal(),
+            amountLoc = 400.toBigDecimal(),
+            taxableAmount = 333.toBigDecimal(),
+            payCurr = 0.toBigDecimal(),
+            payLoc = 0.toBigDecimal(),
+            dueDate = Date(),
+            transactionDate = Date(),
+            createdAt = Timestamp.from(Instant.now()),
+            updatedAt = Timestamp.from(Instant.now()),
+            migrated = false,
+            isVoid = false,
+            taggedBillId = null,
+            tdsAmountLoc = 0.toBigDecimal(),
+            tdsAmount = 0.toBigDecimal(),
+            settlementEnabled = true,
+            deletedAt = null,
+            isProforma = null
+        )
+        accountUtilizationRepo.save(accUtil)
+    }
+
     fun getOrganizationTradePartyOutstandingResponse(): List<TradePartyOutstandingRes> {
         return listOf(
             TradePartyOutstandingRes(
