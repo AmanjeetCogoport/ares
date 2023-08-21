@@ -13,6 +13,7 @@ import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.model.AuditRequest
+import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
@@ -123,6 +124,9 @@ open class ParentJVServiceImpl : ParentJVService {
     @Inject
     lateinit var util: Util
 
+    @Inject
+    lateinit var accountUtilizationRepo: AccountUtilizationRepo
+
     @Value("\${sage.databaseName}")
     var sageDatabase: String? = null
 
@@ -211,14 +215,18 @@ open class ParentJVServiceImpl : ParentJVService {
             entityCodes,
             jvListRequest.pageLimit,
             sortType,
-            sortBy
+            sortBy,
+            jvListRequest.startDate,
+            jvListRequest.endDate
         )
         val totalRecords =
             parentJVRepository.countDocument(
                 jvListRequest.status,
                 if (jvListRequest.category != null) jvListRequest.category!! else null,
                 query,
-                entityCodes
+                entityCodes,
+                jvListRequest.startDate,
+                jvListRequest.endDate
             )
 
         val jvList = mutableListOf<ParentJournalVoucherResponse>()
@@ -893,6 +901,23 @@ open class ParentJVServiceImpl : ParentJVService {
                         performedBy = AresConstants.ARES_USER_ID
                     )
                 )
+            }
+        }
+    }
+
+    override suspend fun bulkJvDeletion(jvNumbers: List<String>) {
+        val parentJvDetails = parentJVRepository.getParentJournalVoucherByJvNums(jvNumbers)
+
+        if (!parentJvDetails.isNullOrEmpty()) {
+            val filteredJvs = parentJvDetails.filter { it.isUtilized == false }
+            parentJVRepository.deleteAll(filteredJvs)
+
+            val jvData = journalVoucherRepository.findByJvNums(filteredJvs.map { it.jvNum!! })
+            if (!jvData.isNullOrEmpty()) {
+                val filteredJvDataWithAccMode = jvData.filter { it.accMode != AccMode.OTHER && it.accMode != null }
+                val accUtilData = accountUtilizationRepo.getAccountUtilizationsByDocumentNoAndDocumentValue(filteredJvDataWithAccMode.map { it.id!! }, jvData.map { it.category }, filteredJvDataWithAccMode.map { it.jvNum })
+                accountUtilizationRepo.deleteAll(accUtilData)
+                journalVoucherRepository.deleteAll(jvData)
             }
         }
     }
