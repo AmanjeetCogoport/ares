@@ -169,8 +169,8 @@ interface ParentJVRepository : CoroutineCrudRepository<ParentJournalVoucher, Lon
         """
             SELECT *
               FROM parent_journal_vouchers
-              where jv_num in (:jvNumbers)
-              and deleted_at is null
+              WHERE jv_num IN (:jvNumbers)
+              AND deleted_at IS NULL
         """
     )
     suspend fun getParentJournalVoucherByJvNums(jvNumbers: List<String>): List<ParentJournalVoucher>?
