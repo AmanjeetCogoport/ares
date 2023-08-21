@@ -73,7 +73,8 @@ enum class AresError(
     ERR_1547("ERR_1547", "You can not post this settlement.", HttpStatus.FORBIDDEN),
     ERR_1548("ERR_1548", "Dunning Cycles have scheduled executions", HttpStatus.BAD_REQUEST),
     ERR_1549("ERR_1549", "Wrong Time string format, Please Send in this (HH:MM) format.", HttpStatus.BAD_REQUEST),
-    ERR_1551("ERR_1551", "Please choose dunning schedule time after 1 Hour from now.", HttpStatus.BAD_REQUEST);
+    ERR_1551("ERR_1551", "Please choose dunning schedule time after 1 Hour from now.", HttpStatus.BAD_REQUEST),
+    ERR_1552("ERR_1552", "You can not delete this settlement as tds document has already been posted to sage", HttpStatus.FORBIDDEN);
 
     fun getMessage(param: String): String {
         if (param.isNotEmpty()) {
