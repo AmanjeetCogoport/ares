@@ -1841,4 +1841,12 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
         onAccountAccountType: List<String>,
         creditNoteAccType: List<String>
     ): List<LedgerSummary>?
+
+    @NewSpan
+    @Query(
+        """
+        SELECT * FROM account_utilizations WHERE document_no IN (:docNumbers) AND acc_type::varchar IN (:accTypes) AND document_value IN (:docValues)
+    """
+    )
+    suspend fun getAccountUtilizationsByDocumentNoAndDocumentValue(docNumbers: List<Long>, accTypes: List<String>, docValues: List<String>): List<AccountUtilization>
 }
