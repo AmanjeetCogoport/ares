@@ -221,7 +221,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
                 S.destination_id = :documentNo
                 And (p.acc_mode = 'AP' OR p.acc_mode IS NULL)
                 AND s.destination_type in ('PINV','PREIMB')
-                AND s.source_type not in ('VTDS') and s.is_void = false
+                AND s.is_void = false
                 order by s.created_at desc
            LIMIT 1
         """
@@ -298,7 +298,7 @@ ORDER BY
                 settlements s where 
                 s.source_id = :documentNo
                 AND s.destination_type in ('PINV','PREIMB')
-                AND s.source_type not in ('VTDS') and is_void = false
+                and is_void = false
                 order by s.created_at desc
            LIMIT 1
         """
