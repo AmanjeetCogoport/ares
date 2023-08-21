@@ -515,6 +515,7 @@ class OpenSearchClient {
         var ninety = false
         var oneEighty = false
         var oneEightyPlus = false
+        var callPriority = false
 
         when (request.sortBy) {
             "totalOutstandingLedgerAmount" -> totalOutstanding = true
@@ -527,6 +528,7 @@ class OpenSearchClient {
             "openInvoiceNinetyLedgerAmount" -> ninety = true
             "openInvoiceOneEightyLedgerAmount" -> oneEighty = true
             "openInvoiceOneEightyPlusLedgerAmount" -> oneEightyPlus = true
+            "callPriority" -> callPriority = true
         }
 
         val searchFilterFields: MutableList<String> = mutableListOf("businessName", "registrationNumber.keyword")
@@ -664,6 +666,7 @@ class OpenSearchClient {
                 }
                 .sort { t ->
                     when {
+                        callPriority -> t.field { f -> f.field("totalCallPriorityScore").order(SortOrder.valueOf(request.sortType.toString())) }
                         totalOutstanding -> t.field { f -> f.field("totalOutstanding.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
                         onAccountPayment -> t.field { f -> f.field("onAccount.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
                         creditNote -> t.field { f -> f.field("creditNote.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }

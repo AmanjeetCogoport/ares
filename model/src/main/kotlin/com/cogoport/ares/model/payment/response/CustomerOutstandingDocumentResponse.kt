@@ -66,4 +66,6 @@ data class CustomerOutstandingDocumentResponse(
     var entityCode: Int?,
     @JsonProperty("lastUpdatedAt")
     var lastUpdatedAt: Timestamp? = Timestamp.valueOf(LocalDateTime.now()),
+    @JsonProperty("totalCallPriorityScore")
+    var totalCallPriorityScore: Int? = 0
 )
