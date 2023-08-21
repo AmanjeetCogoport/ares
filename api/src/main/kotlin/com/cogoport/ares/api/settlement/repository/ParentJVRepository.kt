@@ -181,4 +181,15 @@ interface ParentJVRepository : CoroutineCrudRepository<ParentJournalVoucher, Lon
         """
     )
     suspend fun getParentJournalVoucherIds(): List<Long>?
+
+    @NewSpan
+    @Query(
+        """
+            SELECT *
+              FROM parent_journal_vouchers
+              WHERE jv_num IN (:jvNumbers)
+              AND deleted_at IS NULL
+        """
+    )
+    suspend fun getParentJournalVoucherByJvNums(jvNumbers: List<String>): List<ParentJournalVoucher>?
 }

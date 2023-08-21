@@ -56,4 +56,6 @@ interface ParentJVService {
     ): Long?
 
     suspend fun bulkPostingJvToSage()
+
+    suspend fun bulkJvDeletion(jvNumbers: List<String>)
 }
