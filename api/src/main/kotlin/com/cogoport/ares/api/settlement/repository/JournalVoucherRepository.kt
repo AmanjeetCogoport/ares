@@ -110,4 +110,12 @@ interface JournalVoucherRepository : CoroutineCrudRepository<JournalVoucher, Lon
     """
     )
     suspend fun findByDescription(utr: String): JournalVoucher?
+
+    @NewSpan
+    @Query(
+        """
+        SELECT * FROM journal_vouchers WHERE jv_num IN (:jvNums)
+    """
+    )
+    suspend fun findByJvNums(jvNums: List<String>): List<JournalVoucher>?
 }
