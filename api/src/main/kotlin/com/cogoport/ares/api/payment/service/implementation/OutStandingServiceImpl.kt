@@ -1090,11 +1090,11 @@ class OutStandingServiceImpl : OutStandingService {
             percentileValues != null
         ) {
             callPriorityScores.outstandingScore = when {
-                totalOutstanding >= percentileValues[PERCENTILES[0].toString()]?.toBigDecimal() -> 6
-                totalOutstanding >= percentileValues[PERCENTILES[1].toString()]?.toBigDecimal() -> 5
-                totalOutstanding >= percentileValues[PERCENTILES[2].toString()]?.toBigDecimal() -> 4
-                totalOutstanding >= percentileValues[PERCENTILES[3].toString()]?.toBigDecimal() -> 3
-                totalOutstanding >= percentileValues[PERCENTILES[4].toString()]?.toBigDecimal() -> 2
+                totalOutstanding >= (percentileValues[PERCENTILES[0].toString()] ?: "0").toBigDecimal() -> 6
+                totalOutstanding >= (percentileValues[PERCENTILES[1].toString()] ?: "0").toBigDecimal() -> 5
+                totalOutstanding >= (percentileValues[PERCENTILES[2].toString()] ?: "0").toBigDecimal() -> 4
+                totalOutstanding >= (percentileValues[PERCENTILES[3].toString()] ?: "0").toBigDecimal() -> 3
+                totalOutstanding >= (percentileValues[PERCENTILES[4].toString()] ?: "0").toBigDecimal() -> 2
                 else -> 1
             }
         }
