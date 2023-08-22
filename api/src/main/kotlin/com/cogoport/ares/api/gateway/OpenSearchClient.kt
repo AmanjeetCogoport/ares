@@ -680,6 +680,11 @@ class OpenSearchClient {
                     }
                     t
                 }
+                .sort { t ->
+                    if (callPriority)
+                        t.field { f -> f.field("totalOutstanding.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
+                    t
+                }
                 .from(offset).size(request.limit)
         }, CustomerOutstandingDocumentResponse::class.java)
 
