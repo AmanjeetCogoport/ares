@@ -102,7 +102,9 @@ jobs:
           cache: 'gradle'
 
       - name: Run tests with code coverage
-        run: ./gradlew flywayMigrate jacocoTestReport --no-daemon
+        run: |
+          sudo timedatectl set-timezone Asia/Kolkata
+          ./gradlew flywayMigrate jacocoTestReport --no-daemon
         env:
           GITHUB_USERNAME: cogoport-dev
           GITHUB_TOKEN: ${{ secrets.COGOPORT_DEV_ADMIN_TOKEN }}

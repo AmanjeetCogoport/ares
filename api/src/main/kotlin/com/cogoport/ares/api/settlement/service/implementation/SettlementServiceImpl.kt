@@ -40,6 +40,7 @@ import com.cogoport.ares.api.settlement.mapper.SettledInvoiceMapper
 import com.cogoport.ares.api.settlement.model.PaymentInfo
 import com.cogoport.ares.api.settlement.model.Sid
 import com.cogoport.ares.api.settlement.repository.IncidentMappingsRepository
+import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.api.settlement.service.interfaces.ParentJVService
@@ -82,6 +83,7 @@ import com.cogoport.ares.model.settlement.SummaryRequest
 import com.cogoport.ares.model.settlement.SummaryResponse
 import com.cogoport.ares.model.settlement.TdsSettlementDocumentRequest
 import com.cogoport.ares.model.settlement.TdsStyle
+import com.cogoport.ares.model.settlement.enums.JVStatus
 import com.cogoport.ares.model.settlement.enums.SettlementStatus
 import com.cogoport.ares.model.settlement.event.InvoiceBalance
 import com.cogoport.ares.model.settlement.event.PaymentInfoRec
@@ -223,6 +225,9 @@ open class SettlementServiceImpl : SettlementService {
 
     @Inject
     lateinit var parentJvService: ParentJVService
+
+    @Inject
+    lateinit var journalVoucherRepository: JournalVoucherRepository
 
     /**
      * Get documents for Given Business partner/partners in input request.
@@ -832,16 +837,17 @@ open class SettlementServiceImpl : SettlementService {
             docType == AresConstants.TDS && accMode == AccMode.AR -> { listOf(AccountType.CTDS) }
             docType == AresConstants.TDS && accMode == AccMode.AP -> { listOf(AccountType.VTDS) }
             docType == AresConstants.TDS && accMode == AccMode.VTDS -> { listOf(AccountType.VTDS) }
-            docType == AresConstants.JV && accMode != null -> { jvList }
+            docType == AresConstants.JV -> { jvList }
             docType == AresConstants.INVOICE && accMode == null -> { listOf(AccountType.SINV, AccountType.PINV) }
             docType == AresConstants.TDS && accMode == null -> { listOf(AccountType.VTDS, AccountType.CTDS) }
+            docType == AresConstants.CREDIT_NOTE && accMode == null -> { listOf(AccountType.PCN, AccountType.SCN) }
             docType == null && accMode == AccMode.AR -> {
                 listOf(AccountType.SINV, AccountType.REC, AccountType.SCN, AccountType.SDN, AccountType.CTDS, AccountType.SREIMB, AccountType.SREIMBCN) + jvList
             }
             docType == null && accMode == AccMode.AP -> {
                 listOf(AccountType.PINV, AccountType.PCN, AccountType.PDN, AccountType.PAY, AccountType.VTDS, AccountType.PREIMB) + jvList
             }
-            docType == null && accMode == null -> { listOf(AccountType.SINV, AccountType.PINV) }
+            docType == null && accMode == null -> { listOf(AccountType.SINV, AccountType.PINV, AccountType.SCN, AccountType.PCN) }
             else -> { emptyList() }
         }
     }
@@ -1284,10 +1290,29 @@ open class SettlementServiceImpl : SettlementService {
     private suspend fun deleteSettlement(documentNo: String, settlementType: SettlementType, deletedBy: UUID, deletedByUserType: String?): String {
         val documentNo = Hashids.decode(documentNo)[0]
 
-        if (settlementType in listOf(SettlementType.PAY, SettlementType.VTDS)) {
-            val paymentId = if (settlementType == SettlementType.PAY) paymentRepo.findByPaymentNumAndPaymentCode(documentNo, PaymentCode.PAY) else documentNo
-            if (invoicePaymentMappingRepo.findByPaymentIdFromPaymentInvoiceMapping(paymentId) != 0L) {
-                throw AresException(AresError.ERR_1515, "")
+        when (settlementType) {
+            SettlementType.VTDS -> {
+                val sourceDocument = journalVoucherRepository.findById(documentNo)
+                if (sourceDocument != null) {
+                    if (sourceDocument.status == JVStatus.POSTED) {
+                        throw AresException(AresError.ERR_1552, "")
+                    }
+                }
+            }
+            SettlementType.CTDS -> {
+                val sourceDoc = paymentRepository.findByPaymentNumAndPaymentCode(documentNo, PaymentCode.valueOf(settlementType.name))
+
+                if (sourceDoc != null) {
+                    if (sourceDoc.paymentDocumentStatus in listOf(PaymentDocumentStatus.POSTED, PaymentDocumentStatus.FINAL_POSTED)) {
+                        throw AresException(AresError.ERR_1552, "")
+                    }
+                }
+            }
+            SettlementType.PAY -> {
+                val paymentId = paymentRepo.findByPaymentNumAndPaymentCode(documentNo, PaymentCode.PAY)?.id
+                if (invoicePaymentMappingRepo.findByPaymentIdFromPaymentInvoiceMapping(paymentId) != 0L) {
+                    throw AresException(AresError.ERR_1515, "")
+                }
             }
         }
 
@@ -1308,6 +1333,10 @@ open class SettlementServiceImpl : SettlementService {
         }
 
         val fetchedDoc = settlementRepository.findBySourceIdAndSourceType(documentNo, sourceType)
+        if (fetchedDoc.any { it!!.settlementStatus == SettlementStatus.POSTED }) {
+            throw AresException(AresError.ERR_1544, "")
+        }
+
         val paymentTdsDoc = fetchedDoc.find { it?.destinationId == documentNo }
         val debitDoc = fetchedDoc.filter { it?.destinationId != documentNo }.groupBy { it?.destinationId }
         val sourceCurr = fetchedDoc.sumOf { it?.amount ?: BigDecimal.ZERO }
@@ -1550,6 +1579,7 @@ open class SettlementServiceImpl : SettlementService {
                 }
                 if (payment.tds!!.compareTo(BigDecimal.ZERO) != 0 &&
                     payment.settledTds.compareTo(BigDecimal.ZERO) == 0 &&
+                    payment.accountType in (listOf(SettlementType.PINV, SettlementType.SINV)) &&
                     performDbOperation
                 ) {
                     createTdsRecord(
