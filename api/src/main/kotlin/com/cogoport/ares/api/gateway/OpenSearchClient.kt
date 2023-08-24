@@ -551,8 +551,9 @@ class OpenSearchClient {
             }.build()
         )
 
-        if (callPriority)
+        if (callPriority) {
             sortList.add(SortOptions.Builder().field { f -> f.field("totalOutstanding.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }.build())
+        }
 
         val searchFilterFields: MutableList<String> = mutableListOf("businessName", "registrationNumber.keyword", "tradePartySerialId.keyword", "sageId.keyword", "organizationSerialId.keyword")
         val response = Client.search({ t ->
