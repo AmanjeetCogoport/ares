@@ -430,7 +430,7 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
     WHERE 
         acc_mode::VARCHAR = :accMode
         AND deleted_at IS NULL
-        AND acc_type::VARCHAR IN (:accTypes)
+        AND acc_type::VARCHAR IN (:accTypes) and acc_type::VARCHAR != 'NEWPR'
         AND document_status IN ('FINAL')
         AND (COALESCE(:orgIds) is null OR aau.organization_id in (:orgIds))
     GROUP BY 
