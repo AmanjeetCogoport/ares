@@ -125,5 +125,11 @@ data class LedgerSummary(
     @JsonProperty("registration_number")
     val registrationNumber: String?,
     @JsonProperty("bpr")
-    val bpr: String?
+    val bpr: String?,
+    @JsonProperty("closing_invoice_balance2022")
+    val closingInvoiceBalance2022: BigDecimal?,
+    @JsonProperty("closing_on_account_balance2022")
+    val closingOnAccountBalance2022: BigDecimal?,
+    @JsonProperty("closing_outstanding2022")
+    val closingOutstanding2022: BigDecimal?
 )
