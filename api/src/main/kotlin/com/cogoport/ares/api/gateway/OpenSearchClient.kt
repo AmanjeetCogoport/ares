@@ -14,6 +14,7 @@ import io.micronaut.tracing.annotation.NewSpan
 import org.opensearch.client.json.JsonData
 import org.opensearch.client.opensearch._types.FieldValue
 import org.opensearch.client.opensearch._types.Script
+import org.opensearch.client.opensearch._types.SortOptions
 import org.opensearch.client.opensearch._types.SortOrder
 import org.opensearch.client.opensearch._types.query_dsl.Operator
 import org.opensearch.client.opensearch._types.query_dsl.Query
@@ -531,7 +532,30 @@ class OpenSearchClient {
             "callPriority" -> callPriority = true
         }
 
-        val searchFilterFields: MutableList<String> = mutableListOf("businessName", "registrationNumber.keyword")
+        val sortList = mutableListOf(
+            SortOptions.Builder().field { f ->
+                when {
+                    callPriority -> f.field("totalCallPriorityScore").order(SortOrder.valueOf(request.sortType.toString()))
+                    totalOutstanding -> f.field("totalOutstanding.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString()))
+                    onAccountPayment -> f.field("onAccount.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString()))
+                    creditNote -> f.field("creditNote.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString()))
+                    notDue -> f.field("openInvoiceAgeingBucket.notDue.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString()))
+                    thirty -> f.field("openInvoiceAgeingBucket.thirty.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString()))
+                    fortyFive -> f.field("openInvoiceAgeingBucket.fortyFive.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString()))
+                    sixty -> f.field("openInvoiceAgeingBucket.sixty.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString()))
+                    ninety -> f.field("openInvoiceAgeingBucket.ninety.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString()))
+                    oneEighty -> f.field("openInvoiceAgeingBucket.oneEighty.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString()))
+                    oneEightyPlus -> f.field("openInvoiceAgeingBucket.oneEightyPlus.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString()))
+                }
+                f
+            }.build()
+        )
+
+        if (callPriority) {
+            sortList.add(SortOptions.Builder().field { f -> f.field("totalOutstanding.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }.build())
+        }
+
+        val searchFilterFields: MutableList<String> = mutableListOf("businessName", "registrationNumber.keyword", "tradePartySerialId.keyword", "sageId.keyword", "organizationSerialId.keyword")
         val response = Client.search({ t ->
             t.index(index)
                 .query { q ->
@@ -664,22 +688,7 @@ class OpenSearchClient {
                     }
                     q
                 }
-                .sort { t ->
-                    when {
-                        callPriority -> t.field { f -> f.field("totalCallPriorityScore").order(SortOrder.valueOf(request.sortType.toString())) }
-                        totalOutstanding -> t.field { f -> f.field("totalOutstanding.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                        onAccountPayment -> t.field { f -> f.field("onAccount.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                        creditNote -> t.field { f -> f.field("creditNote.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                        notDue -> t.field { f -> f.field("openInvoiceAgeingBucket.notDue.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                        thirty -> t.field { f -> f.field("openInvoiceAgeingBucket.thirty.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                        fortyFive -> t.field { f -> f.field("openInvoiceAgeingBucket.fortyFive.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                        sixty -> t.field { f -> f.field("openInvoiceAgeingBucket.sixty.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                        ninety -> t.field { f -> f.field("openInvoiceAgeingBucket.ninety.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                        oneEighty -> t.field { f -> f.field("openInvoiceAgeingBucket.oneEighty.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                        oneEightyPlus -> t.field { f -> f.field("openInvoiceAgeingBucket.oneEightyPlus.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString())) }
-                    }
-                    t
-                }
+                .sort(sortList)
                 .from(offset).size(request.limit)
         }, CustomerOutstandingDocumentResponse::class.java)
 
