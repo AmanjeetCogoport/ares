@@ -32,5 +32,4 @@ interface PaymentMigration {
     suspend fun migrateAdminJV(journalVoucherRecord: JVParentDetails)
 
     suspend fun mismatchAmount(id: Long)
-
 }

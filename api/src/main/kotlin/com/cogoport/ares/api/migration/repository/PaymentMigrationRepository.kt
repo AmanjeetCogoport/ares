@@ -175,6 +175,5 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
             WHERE document_no = :documentNo and document_value = :documentValue and acc_mode ='AP' and acc_type = 'PAY'
         """
     )
-    suspend fun updateMismatchLspPaymentsCheck(amount: BigDecimal, ledAmount: BigDecimal, documentNo: Long?, documentValue:String? ): Long
-
+    suspend fun updateMismatchLspPaymentsCheck(amount: BigDecimal, ledAmount: BigDecimal, documentNo: Long?, documentValue: String?): Long
 }

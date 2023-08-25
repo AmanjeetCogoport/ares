@@ -297,5 +297,4 @@ class AresMessageConsumer {
     fun migratePaymentAmount(id: String) = runBlocking {
         paymentMigration.mismatchAmount(id.toLong())
     }
-
 }

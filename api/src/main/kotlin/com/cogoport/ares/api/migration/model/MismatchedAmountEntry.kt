@@ -7,9 +7,9 @@ import java.math.BigDecimal
 @MappedEntity
 @Introspected
 data class MismatchedAmountEntry(
-        val id: Long?,
-        val amount: BigDecimal = BigDecimal.ZERO,
-        val ledAmount: BigDecimal = BigDecimal.ZERO,
-        val documentNo: Long?,
-        val documentValue: String?,
+    val id: Long?,
+    val amount: BigDecimal = BigDecimal.ZERO,
+    val ledAmount: BigDecimal = BigDecimal.ZERO,
+    val documentNo: Long?,
+    val documentValue: String?,
 )

@@ -248,14 +248,9 @@ class MigratePaymentsController {
     }
 
     @Put("/payment-mismatch-amount")
-suspend fun mismatchAmount(@Body ids: List<Long>){
-        ids.forEach{
-           aresMessagePublisher.emitMigratePaymentAmount(it.toString())
+    suspend fun mismatchAmount(@Body ids: List<Long>) {
+        ids.forEach {
+            aresMessagePublisher.emitMigratePaymentAmount(it.toString())
         }
-
-
-
     }
 }
-
-
