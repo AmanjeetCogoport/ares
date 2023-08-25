@@ -1,7 +1,6 @@
 package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
-import com.cogoport.ares.api.common.client.CogoBackLowLevelClient
 import com.cogoport.ares.api.common.config.OpenSearchConfig
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
@@ -99,9 +98,6 @@ class OutStandingServiceImpl : OutStandingService {
 
     @Inject
     lateinit var unifiedDBNewRepository: UnifiedDBNewRepository
-
-    @Inject
-    lateinit var cogoBackLowLevelClient: CogoBackLowLevelClient
 
     private fun validateInput(request: OutstandingListRequest) {
         try {
@@ -1051,7 +1047,7 @@ class OutStandingServiceImpl : OutStandingService {
         val invoiceAccType = listOf(AccountType.PINV.name, AccountType.PCN.name)
         val onAccountAccountType = listOf(AccountType.PAY.name, AccountType.VTDS.name, AccountType.OPDIV.name, AccountType.MISC.name, AccountType.BANK.name, AccountType.CONTR.name, AccountType.INTER.name, AccountType.MTC.name, AccountType.MTCCV.name)
         val creditNoteAccType = listOf(AccountType.PCN.name)
-        val outstandingData = accountUtilizationRepo.getLedgerSummaryForAp(accTypesForAp, AccMode.AP.name, invoiceAccType, onAccountAccountType, creditNoteAccType)
+        val outstandingData = unifiedDBNewRepository.getLedgerSummaryForAp(accTypesForAp, AccMode.AP.name, invoiceAccType, onAccountAccountType, creditNoteAccType)
         logger().info("Creating Data of size ${outstandingData?.size}")
         if (!outstandingData.isNullOrEmpty()) {
             ledgerSummaryRepo.saveAll(outstandingData)

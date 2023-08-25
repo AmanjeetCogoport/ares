@@ -121,5 +121,9 @@ data class LedgerSummary(
     @JsonProperty("total_invoices_count")
     val totalInvoicesCount: Long,
     @JsonProperty("created_at")
-    val createdAt: Date?
+    val createdAt: Date?,
+    @JsonProperty("registration_number")
+    val registrationNumber: String?,
+    @JsonProperty("bpr")
+    val bpr: String?
 )

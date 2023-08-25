@@ -3,6 +3,7 @@ package com.cogoport.ares.api.payment.repository
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.models.ARLedgerJobDetailsResponse
 import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.api.payment.entity.LedgerSummary
 import com.cogoport.ares.model.common.TradePartyOutstandingRes
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.response.CreditDebitBalance
@@ -97,4 +98,345 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
         """
     )
     suspend fun getTradePartyOutstanding(orgIds: List<UUID>, entityCodes: List<Int>): List<TradePartyOutstandingRes>?
+    @NewSpan
+    @Query(
+        """
+            select 
+            null as id,
+            aau.organization_id,
+            entity_code,
+            led_currency,
+            max(organization_name) as organization_name,
+            acc_mode,
+            COALESCE(sum(
+                CASE WHEN (acc_type::varchar in (:invoiceAccType)
+                    and(due_date >= now()::date) AND aau.created_at >= '2023-07-28') THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END), 0) AS invoice_not_due_amount,
+            COALESCE(sum(
+                CASE WHEN acc_type::varchar in(:invoiceAccType)
+                    and (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 AND aau.created_at >= '2023-07-28' THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END), 0) AS invoice_today_amount,        
+            COALESCE(sum(
+                CASE WHEN acc_type::varchar in (:invoiceAccType) AND aau.created_at >= '2023-07-28'
+                    and(now()::date - due_date)  BETWEEN 1 AND 30 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END), 0) AS invoice_thirty_amount,
+            COALESCE(sum(
+                CASE WHEN acc_type::varchar in (:invoiceAccType) AND aau.created_at >= '2023-07-28'
+                    and(now()::date - due_date) BETWEEN 31 AND 60 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END), 0) AS invoice_sixty_amount,
+            COALESCE(sum(
+                CASE WHEN acc_type::varchar in (:invoiceAccType) AND aau.created_at >= '2023-07-28'
+                    and(now()::date - due_date) BETWEEN 61 AND 90 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END), 0) AS invoice_ninety_amount,
+            COALESCE(sum(
+                CASE WHEN acc_type::varchar in(:invoiceAccType) AND aau.created_at >= '2023-07-28'
+                    and(now()::date - due_date) BETWEEN 91 AND 180 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END), 0) AS invoice_one_eighty_amount,
+            COALESCE(sum(
+                CASE WHEN acc_type::varchar in(:invoiceAccType) AND aau.created_at >= '2023-07-28'
+                    and(now()::date - due_date) BETWEEN 181 AND 365  THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END), 0) AS invoice_three_sixty_five_amount,
+            COALESCE(sum(
+                CASE WHEN acc_type::varchar in(:invoiceAccType) AND aau.created_at >= '2023-07-28'
+                    and(now()::date - due_date) > 365 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END), 0) AS invoice_three_sixty_five_plus_amount,
+            sum(
+                CASE WHEN due_date >= now()::date AND acc_type::varchar in (:invoiceAccType) AND aau.created_at >= '2023-07-28' AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS invoice_not_due_count,
+            sum(
+                CASE WHEN (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 AND acc_type::varchar in (:invoiceAccType) AND aau.created_at >= '2023-07-28' AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS invoice_today_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 1 AND 30 AND acc_type::varchar in (:invoiceAccType) AND aau.created_at >= '2023-07-28' AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS invoice_thirty_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 31 AND 60 AND acc_type::varchar in (:invoiceAccType) AND aau.created_at >= '2023-07-28'  AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS invoice_sixty_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 61 AND 90 AND acc_type::varchar in (:invoiceAccType) AND aau.created_at >= '2023-07-28' AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS invoice_ninety_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 91 AND 180 AND acc_type::varchar in(:invoiceAccType) AND aau.created_at >= '2023-07-28' AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS invoice_one_eighty_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 181 AND 365 AND acc_type::varchar in (:invoiceAccType) AND aau.created_at >= '2023-07-28' AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS invoice_three_sixty_five_count,
+            sum(
+                CASE WHEN (now()::date - due_date) > 365 AND acc_type::varchar in(:invoiceAccType) AND aau.created_at >= '2023-07-28' AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS invoice_three_sixty_five_plus_count,
+            sum(
+                CASE WHEN (acc_type::varchar in (:creditNoteAccType)) AND aau.created_at >= '2023-07-28' AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS credit_note_count,
+            COALESCE(sum(
+                CASE WHEN (acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-07-28'
+                    and(due_date >= now()::date)) THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END), 0) AS on_account_not_due_amount,
+            COALESCE(sum(
+                CASE WHEN acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-07-28'
+                    and (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END), 0) AS on_account_today_amount,        
+            COALESCE(sum(
+                CASE WHEN acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-07-28'
+                    and(now()::date - due_date) BETWEEN 1 AND 30 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END), 0) AS on_account_thirty_amount,
+            COALESCE(sum(
+                CASE WHEN acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-07-28'
+                    and(now()::date - due_date) BETWEEN 31 AND 60 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END), 0) AS on_account_sixty_amount,
+            COALESCE(sum(
+                CASE WHEN acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-07-28'
+                    and(now()::date - due_date) BETWEEN 61 AND 90 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END), 0) AS on_account_ninety_amount,
+            COALESCE(sum(
+                CASE WHEN acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-07-28'
+                    and(now()::date - due_date) BETWEEN 91 AND 180 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END), 0) AS on_account_one_eighty_amount,
+            COALESCE(sum(
+                CASE WHEN acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-07-28'
+                    and(now()::date - due_date) BETWEEN 181 AND 365  THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END), 0) AS on_account_three_sixty_five_amount,
+            COALESCE(sum(
+                CASE WHEN acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-07-28'
+                    and(now()::date - due_date) > 365 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END), 0) AS on_account_three_sixty_five_plus_amount,
+            sum(
+                CASE WHEN due_date >= now()::date AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-07-28'  AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS on_account_not_due_count,
+            sum(
+                CASE WHEN (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-07-28' AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS on_account_today_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 1 AND 30 AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-07-28' AND  (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS on_account_thirty_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 31 AND 60 AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-07-28' AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS on_account_sixty_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 61 AND 90 AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-07-28' AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS on_account_ninety_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 91 AND 180 AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-07-28' AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS on_account_one_eighty_count,
+            sum(
+                CASE WHEN (now()::date - due_date) BETWEEN 181 AND 365 AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-07-28' AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS on_account_three_sixty_five_count,
+            sum(
+                CASE WHEN (now()::date - due_date) > 365 AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-07-28'  AND (amount_loc - pay_loc) > 0 THEN
+                    1
+                ELSE
+                    0
+                END) AS on_account_three_sixty_five_plus_count,
+            COALESCE(sum(
+                CASE WHEN (due_date >= now()::date AND aau.created_at >= '2023-07-28') THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END), 0) AS not_due_outstanding,
+            COALESCE(sum(
+                CASE WHEN (now()::date - due_date) >= 0 AND aau.created_at >= '2023-07-28' AND (now()::date - due_date) < 1 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END), 0) AS today_outstanding,        
+            COALESCE(sum(
+                CASE WHEN aau.created_at >= '2023-07-28' AND (now()::date - due_date) BETWEEN 1 AND 30 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END), 0) AS thirty_outstanding,
+            COALESCE(sum(
+                CASE WHEN  aau.created_at >= '2023-07-28' AND (now()::date - due_date) BETWEEN 31 AND 60 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END), 0) AS sixty_outstanding,
+            COALESCE(sum(
+                CASE WHEN aau.created_at >= '2023-07-28' AND (now()::date - due_date) BETWEEN 61 AND 90 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END), 0) AS ninety_outstanding,
+            COALESCE(sum(
+                CASE WHEN aau.created_at >= '2023-07-28' AND (now()::date - due_date) BETWEEN 91 AND 180 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END), 0) AS one_eighty_outstanding,
+            COALESCE(sum(
+                CASE WHEN aau.created_at >= '2023-07-28' AND (now()::date - due_date) BETWEEN 181 AND 365  THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END), 0) AS three_sixty_five_outstanding,
+            COALESCE(sum(
+                CASE WHEN aau.created_at >= '2023-07-28' AND (now()::date - due_date) > 365 THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END), 0) AS three_sixty_five_plus_outstanding,
+            COALESCE(sum(
+            CASE WHEN aau.created_at >= '2023-07-28' AND acc_type::varchar in (:invoiceAccType) THEN
+                sign_flag * (amount_loc - pay_loc)
+            ELSE
+                0
+            END), 0) AS total_open_invoice_amount,
+            COALESCE(sum(
+                CASE WHEN aau.created_at >= '2023-07-28' AND acc_type::varchar in (:creditNoteAccType) THEN
+                    sign_flag * (amount_loc - pay_loc)
+                ELSE
+                    0
+                END), 0) AS total_credit_note_amount,
+            COALESCE(sum(
+            CASE WHEN aau.created_at >= '2023-07-28' AND acc_type::varchar in (:onAccountAccountType) THEN
+                sign_flag * (amount_loc - pay_loc)
+            ELSE
+                0
+            END), 0) AS total_open_on_account_amount,
+        COALESCE(sum(CASE WHEN aau.created_at >= '2023-07-28' then sign_flag * (amount_loc - pay_loc) else 0 end), 0) AS total_outstanding,
+        COALESCE(SUM(
+            CASE WHEN (acc_type::VARCHAR IN (:invoiceAccType) or acc_type::VARCHAR IN (:creditNoteAccType) AND aau.created_at >= '2023-07-28' ) THEN
+              sign_flag * amount_loc
+            ELSE
+              0
+            END
+          ), 0) AS total_invoice_amount,
+          COALESCE(SUM(
+            CASE WHEN acc_type::VARCHAR IN (:onAccountAccountType) AND aau.created_at >= '2023-07-28' THEN
+              sign_flag * amount_loc
+            ELSE
+              0
+            END
+          ), 0) AS total_on_account_amount,
+          SUM(
+            CASE WHEN acc_type::VARCHAR IN (:onAccountAccountType) AND aau.created_at >= '2023-07-28' THEN
+              1
+            ELSE
+              0
+            END
+          ) AS total_on_account_count,
+          SUM(
+            CASE WHEN (acc_type::VARCHAR IN (:invoiceAccType) or acc_type::VARCHAR IN (:creditNoteAccType)) AND aau.created_at >= '2023-07-28' THEN
+              1
+            ELSE
+              0
+            END
+          ) AS total_invoices_count,
+        CURRENT_DATE AS created_at,
+        otpd.registration_number,
+        soim.sage_organization_id as bpr
+    from ares.account_utilizations aau 
+    left join organization_trade_party_details otpd on otpd.id = aau.organization_id and otpd.status = 'active'
+    left join sage_organization_id_mappings soim on soim.trade_party_detail_serial_id::varchar = otpd.serial_id::varchar and soim.status = 'active' and account_type = 'service_provider'
+    WHERE 
+        acc_mode::VARCHAR = :accMode
+        AND deleted_at IS NULL
+        AND acc_type::VARCHAR IN (:accTypes)
+        AND document_status IN ('FINAL')
+    GROUP BY 
+        aau.organization_id, entity_code, led_currency, acc_mode, otpd.registration_number, soim.sage_organization_id
+        """
+    )
+    suspend fun getLedgerSummaryForAp(
+        accTypes: List<String>,
+        accMode: String,
+        invoiceAccType: List<String>,
+        onAccountAccountType: List<String>,
+        creditNoteAccType: List<String>
+    ): List<LedgerSummary>?
 }
