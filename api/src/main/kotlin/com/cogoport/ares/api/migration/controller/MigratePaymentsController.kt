@@ -2,6 +2,7 @@ package com.cogoport.ares.api.migration.controller
 
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.migration.model.SettlementEntriesRequest
+import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigrationWrapper
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.PaymentStatusSyncMigrationReq
@@ -23,6 +24,8 @@ import javax.validation.Valid
 class MigratePaymentsController {
 
     @Inject lateinit var paymentMigration: PaymentMigrationWrapper
+
+    @Inject lateinit var paymentMigrationService: PaymentMigration
 
     @Inject lateinit var aresMessagePublisher: AresMessagePublisher
 
@@ -243,4 +246,16 @@ class MigratePaymentsController {
             "Request for journal voucher migration received, total number of jv to migrate is $size"
         )
     }
+
+    @Put("/payment-mismatch-amount")
+suspend fun mismatchAmount(@Body ids: List<Long>){
+        ids.forEach{
+           aresMessagePublisher.emitMigratePaymentAmount(it.toString())
+        }
+
+
+
+    }
 }
+
+

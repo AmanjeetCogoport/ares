@@ -23,21 +23,7 @@ import com.cogoport.ares.api.migration.entity.JvResponse
 import com.cogoport.ares.api.migration.entity.MigrationLogsSettlements
 import com.cogoport.ares.api.migration.entity.ParentJournalVoucherMigration
 import com.cogoport.ares.api.migration.entity.PaymentMigrationEntity
-import com.cogoport.ares.api.migration.model.GetOrgDetailsRequest
-import com.cogoport.ares.api.migration.model.GetOrgDetailsResponse
-import com.cogoport.ares.api.migration.model.JVLineItemNoBPR
-import com.cogoport.ares.api.migration.model.JVParentDetails
-import com.cogoport.ares.api.migration.model.JVRecordsScheduler
-import com.cogoport.ares.api.migration.model.JournalVoucherRecord
-import com.cogoport.ares.api.migration.model.NewPeriodRecord
-import com.cogoport.ares.api.migration.model.OnAccountApiCommonResponseMigration
-import com.cogoport.ares.api.migration.model.PaidUnpaidStatus
-import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
-import com.cogoport.ares.api.migration.model.PaymentMigrationModel
-import com.cogoport.ares.api.migration.model.PaymentRecord
-import com.cogoport.ares.api.migration.model.SerialIdDetailsRequest
-import com.cogoport.ares.api.migration.model.SerialIdsInput
-import com.cogoport.ares.api.migration.model.SettlementRecord
+import com.cogoport.ares.api.migration.model.*
 import com.cogoport.ares.api.migration.repository.AccountUtilizationRepositoryMigration
 import com.cogoport.ares.api.migration.repository.JournalVoucherRepoMigration
 import com.cogoport.ares.api.migration.repository.ParentJVRepoMigration
@@ -1198,5 +1184,10 @@ class PaymentMigrationImpl : PaymentMigration {
         jvRecords.forEach {
             this.migrateJournalVoucher(it, parentJVId)
         }
+    }
+
+    override suspend fun mismatchAmount(id: Long) {
+        val mismatchData = paymentMigrationRepository.getMismatchLspPaymentCheck(id)
+        paymentMigrationRepository.updateMismatchLspPaymentsCheck(mismatchData.amount, mismatchData.ledAmount, mismatchData.documentNo, mismatchData.documentValue)
     }
 }
