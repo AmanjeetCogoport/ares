@@ -65,10 +65,17 @@ services:
 jackson:
   date-format: yyyy-MM-dd HH:mm:ss
 
+#opensearch:
+#  host: ${OPENSEARCH_HOST:search.stage.cogoport.io}
+#  user: ${OPENSEARCH_USER:awsadmin}
+#  pass: ${OPENSEARCH_PASS:Password@123}
+
 opensearch:
-  host: ${OPENSEARCH_HOST:search.stage.cogoport.io}
-  user: ${OPENSEARCH_USER:awsadmin}
-  pass: ${OPENSEARCH_PASS:Password@123}
+  host: ${OPENSEARCH_HOST:localhost}
+  user: ${OPENSEARCH_USER:admin}
+  pass: ${OPENSEARCH_PASS:admin}
+  scheme: http
+  port: 9201
 
 sentry:
   enabled: ${SENTRY_ENABLED:false}
