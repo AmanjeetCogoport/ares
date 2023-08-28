@@ -117,7 +117,7 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
                     0
                 END), 0) AS invoice_not_due_amount,
             COALESCE(sum(
-                CASE WHEN acc_type::varchar in(:invoiceAccType)
+                CASE WHEN acc_type::varchar in (:invoiceAccType)
                     and (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 AND aau.created_at >= '2023-07-28' THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
@@ -447,38 +447,48 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
     @Query(
         """
             WITH x AS (
-            SELECT * FROM ares.ledger_summary where acc_mode = 'AP'
-            ) , y as (
-            select
-            otpd.id as organization_id, otpd.registration_number,
-            json_agg(DISTINCT trade_party_type) as trade_type,
-            o.serial_id as organization_serial_id,
-            json_agg(json_build_object(
-            'id', u.id,
-            'name', u.name,
-            'email', u.email,
-            'mobileCountryCode', u.mobile_country_code,
-            'mobile_number', u.mobile_number,
-            'stakeholder_type', os.stakeholder_type
-            ))::VARCHAR as agent,
-            opium.free_credit_days as credit_days,
-            o.company_type,
-            otpd.serial_id as trade_party_serial_id,
-            o.country_id
-            from organization_trade_party_details otpd
-            left join organization_trade_parties otp on otp.organization_trade_party_detail_id = otpd.id and otp.status = 'active'
-            left join organizations o on o.id = otp.organization_id and o.status = 'active' and o.account_type = 'service_provider' and otpd.registration_number = o.registration_number
-            left join organization_stakeholders os on os.organization_id = o.id
-            left join organization_payment_modes opium on opium.organization_id = o.id
-            left join users u on u.id = os.stakeholder_id
-            where otpd.status = 'active'
-            GROUP BY o.serial_id, o.company_type, otpd.id, otpd.registration_number, otpd.serial_id, opium.free_credit_days, o.country_id
-            ) select x.*,
-            y.trade_type::varchar,
-            y.organization_serial_id,
-            y.credit_days,
-            y.country_id,
-            y.agent, y.company_type, y.trade_party_serial_id from x left join y on x.organization_id = y.organization_id and x.registration_number = y.registration_number
+                SELECT *
+                FROM ares.ledger_summary
+                WHERE acc_mode = 'AP'
+            ), y AS (
+                SELECT
+                    otpd.id AS organization_id,
+                    otpd.registration_number,
+                    json_agg(DISTINCT trade_party_type) AS trade_type,
+                    o.serial_id AS organization_serial_id,
+                    json_agg(json_build_object(
+                        'id', u.id,
+                        'name', u.name,
+                        'email', u.email,
+                        'mobileCountryCode', u.mobile_country_code,
+                        'mobile_number', u.mobile_number,
+                        'stakeholder_type', os.stakeholder_type
+                    ))::VARCHAR AS agent,
+                    opium.free_credit_days AS credit_days,
+                    o.company_type,
+                    otpd.serial_id AS trade_party_serial_id,
+                    o.country_id,
+                    (SELECT country_code FROM locations WHERE country_id = o.country_id LIMIT 1) AS country_code
+                FROM organization_trade_party_details otpd
+                LEFT JOIN organization_trade_parties otp ON otp.organization_trade_party_detail_id = otpd.id AND otp.status = 'active'
+                LEFT JOIN organizations o ON o.id = otp.organization_id AND o.status = 'active' AND o.account_type = 'service_provider' AND otpd.registration_number = o.registration_number
+                LEFT JOIN organization_stakeholders os ON os.organization_id = o.id
+                LEFT JOIN organization_payment_modes opium ON opium.organization_id = o.id
+                LEFT JOIN users u ON u.id = os.stakeholder_id
+                WHERE otpd.status = 'active'
+                GROUP BY o.serial_id, o.company_type, otpd.id, otpd.registration_number, otpd.serial_id, opium.free_credit_days, o.country_id
+            )
+            SELECT x.*,
+                   y.trade_type::VARCHAR,
+                   y.organization_serial_id,
+                   y.credit_days,
+                   y.country_id,
+                   y.agent,
+                   y.company_type,
+                   y.trade_party_serial_id,
+                   y.country_code
+            FROM x
+            LEFT JOIN y ON x.organization_id = y.organization_id AND x.registration_number = y.registration_number
         """
     )
     suspend fun getSupplierDetailData(): List<SupplierLevelData>

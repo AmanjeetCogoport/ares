@@ -137,5 +137,7 @@ data class SupplierLevelData(
     @JsonProperty("credit_days")
     val creditDays: Long?,
     @JsonProperty("country_id")
-    val countryId: UUID?
+    val countryId: UUID?,
+    @JsonProperty("country_code")
+    val countryCode: String?
 )

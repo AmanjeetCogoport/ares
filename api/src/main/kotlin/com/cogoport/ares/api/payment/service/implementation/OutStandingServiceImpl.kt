@@ -1054,7 +1054,7 @@ class OutStandingServiceImpl : OutStandingService {
     override suspend fun createLedgerSummary() {
         ledgerSummaryRepo.deleteAll()
         val accTypesForAp = listOf(AccountType.PINV.name, AccountType.PCN.name, AccountType.PAY.name, AccountType.VTDS.name, AccountType.OPDIV.name, AccountType.MISC.name, AccountType.BANK.name, AccountType.CONTR.name, AccountType.INTER.name, AccountType.MTC.name, AccountType.MTCCV.name)
-        val invoiceAccType = listOf(AccountType.PINV.name, AccountType.PCN.name)
+        val invoiceAccType = listOf(AccountType.PINV.name, AccountType.PCN.name, AccountType.PREIMB.name)
         val onAccountAccountType = listOf(AccountType.PAY.name, AccountType.VTDS.name, AccountType.OPDIV.name, AccountType.MISC.name, AccountType.BANK.name, AccountType.CONTR.name, AccountType.INTER.name, AccountType.MTC.name, AccountType.MTCCV.name)
         val creditNoteAccType = listOf(AccountType.PCN.name)
         val outstandingData = unifiedDBNewRepository.getLedgerSummaryForAp(accTypesForAp, AccMode.AP.name, invoiceAccType, onAccountAccountType, creditNoteAccType)
@@ -1212,6 +1212,8 @@ class OutStandingServiceImpl : OutStandingService {
             val item = supplierOrgOutstandingMapper.convertToModel(it)
             item.agent = if (it.agent != null) objectMapper.readValue(it.agent.toString(), Array<SupplyAgentV2>::class.java).distinctBy { it.id }.toList() else null
             item.tradeType = if (it.tradeType != null) objectMapper.readValue(it.tradeType.toString(), Array<String>::class.java).distinct().toList() else null
+            item.totalOpenInvoiceCount = it.invoiceNotDueCount + it.invoiceTodayCount + it.invoiceThirtyCount + it.invoiceSixtyCount + it.invoiceNinetyCount + it.invoiceOneEightyCount + it.invoiceThreeSixtyFiveCount + it.invoiceThreeSixtyFivePlusCount
+            item.totalOpenOnAccountCount = it.onAccountNotDueCount + it.onAccountTodayCount + it.onAccountThirtyCount + it.onAccountSixtyCount + it.onAccountNinetyCount + it.onAccountOneEightyCount + it.onAccountThreeSixtyFiveCount + it.onAccountThreeSixtyFivePlusCount
             supplierOutstanding.add(item)
         }
 

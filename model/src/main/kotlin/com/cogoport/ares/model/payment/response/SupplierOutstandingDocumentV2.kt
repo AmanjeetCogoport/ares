@@ -220,5 +220,14 @@ data class SupplierOutstandingDocumentV2(
     val creditDays: Long?,
 
     @JsonProperty("countryId")
-    val countryId: UUID?
+    val countryId: UUID?,
+
+    @JsonProperty("totalOpenInvoiceCount")
+    var totalOpenInvoiceCount: Long?,
+
+    @JsonProperty("totalOpenOnAccountCount")
+    var totalOpenOnAccountCount: Long?,
+
+    @JsonProperty("countryCode")
+    var countryCode: String?
 )

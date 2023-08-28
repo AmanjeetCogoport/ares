@@ -11,6 +11,8 @@ interface SupplierOrgOutstandingMapper {
 
     @Mapping(target = "tradeType", expression = "java(null)")
     @Mapping(target = "agent", expression = "java(null)")
+    @Mapping(target = "totalOpenInvoiceCount", expression = "java(0l)")
+    @Mapping(target = "totalOpenOnAccountCount", expression = "java(0l)")
     fun convertToModel(orgOutstanding: SupplierLevelData): SupplierOutstandingDocumentV2
 
     fun convertToEntity(req: SupplierOutstandingDocumentV2): SupplierLevelData
