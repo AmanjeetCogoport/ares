@@ -207,7 +207,7 @@ class Scheduler(
         logger().info("Request for mtccv jv migration received, total number of parent jv to migrate is $size")
     }
 
-    @Scheduled(cron = "0 0 6,18 * * ?")
+    @Scheduled(cron = "0 0 6,18 * * *")
     fun createLedgerSummaryForAp() = runBlocking {
         val today = now()
         logger().info("Migrating organizations data for : $today")
@@ -221,7 +221,7 @@ class Scheduler(
         parentJVService.bulkPostingJvToSage()
     }
 
-    @Scheduled(cron = "0 30 6,18 * * ?")
+    @Scheduled(cron = "0 30 6,18 * * *")
     fun createSupplierDetail() = runBlocking {
         val today = now()
         logger().info("Creating supplier record : $today")

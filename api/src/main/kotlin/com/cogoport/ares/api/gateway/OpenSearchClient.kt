@@ -646,6 +646,22 @@ class OpenSearchClient {
                             }
                             b
                         }
+                        if (request.tradePartyDetailIds != null) {
+                            b.must { s ->
+                                s.terms { v ->
+                                    v.field("organizationId.keyword").terms(
+                                        TermsQueryField.of { a ->
+                                            a.value(
+                                                request.tradePartyDetailIds?.map {
+                                                    FieldValue.of(it.toString())
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            b
+                        }
                         if (request.creditControllerId != null) {
                             b.must { s ->
                                 s.terms { v ->
