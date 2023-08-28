@@ -7,6 +7,7 @@ import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.CustomerOrgOutstanding
 import com.cogoport.ares.api.payment.entity.CustomerOutstandingAgeing
+import com.cogoport.ares.api.payment.entity.EntityWiseOutstandingBucket
 import com.cogoport.ares.api.payment.mapper.OrgOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentRequest
@@ -1181,5 +1182,23 @@ class OutStandingServiceImpl : OutStandingService {
             }
         }
         customerData.totalCallPriorityScore = callPriorityScores.geTotalCallPriority()
+    }
+
+    override suspend fun getOverallCustomerOutstanding(entityCode: Int): HashMap<String, EntityWiseOutstandingBucket> {
+        val openInvoiceQueryResponse = accountUtilizationRepo.getEntityWiseOutstandingBucket(listOf(entityCode), listOf(AccountType.SINV, AccountType.SREIMB), listOf(AccMode.AR))
+        val creditNoteQueryResponse = accountUtilizationRepo.getEntityWiseOutstandingBucket(listOf(entityCode), listOf(AccountType.SCN, AccountType.SREIMBCN), listOf(AccMode.AR))
+
+        val onAccountTypeList = listOf(AccountType.REC, AccountType.CTDS, AccountType.BANK, AccountType.CONTR, AccountType.ROFF, AccountType.MTCCV, AccountType.MISC, AccountType.INTER, AccountType.OPDIV, AccountType.MTC)
+        val paymentAccountTypeList = listOf(AccountType.REC, AccountType.CTDS)
+        val jvAccountTypeList = listOf(AccountType.BANK, AccountType.CONTR, AccountType.ROFF, AccountType.MTCCV, AccountType.MISC, AccountType.INTER, AccountType.OPDIV, AccountType.MTC)
+
+        val onAccountRecQueryResponse = accountUtilizationRepo.getEntityWiseOnAccountBucket(listOf(entityCode), onAccountTypeList, listOf(AccMode.AR), paymentAccountTypeList, jvAccountTypeList)
+
+        val responseMap = HashMap<String, EntityWiseOutstandingBucket>()
+        responseMap["openInvoiceBucket"] = openInvoiceQueryResponse
+        responseMap["creditNoteBucket"] = creditNoteQueryResponse
+        responseMap["onAccountBucket"] = onAccountRecQueryResponse
+
+        return responseMap
     }
 }
