@@ -292,4 +292,9 @@ class AresMessageConsumer {
     fun migrateJournalVoucherAdmin(journalVoucherRecord: JVParentDetails) = runBlocking {
         paymentMigration.migrateAdminJV(journalVoucherRecord)
     }
+
+    @Queue("ares-migrate-payment-amount", prefetch = 1)
+    fun migratePaymentAmount(id: Long) = runBlocking {
+        paymentMigration.mismatchAmount(id)
+    }
 }
