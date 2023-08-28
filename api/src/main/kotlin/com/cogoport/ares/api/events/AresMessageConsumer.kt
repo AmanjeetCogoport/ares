@@ -294,7 +294,7 @@ class AresMessageConsumer {
     }
 
     @Queue("ares-migrate-payment-amount", prefetch = 1)
-    fun migratePaymentAmount(id: String) = runBlocking {
-        paymentMigration.mismatchAmount(id.toLong())
+    fun migratePaymentAmount(id: Long) = runBlocking {
+        paymentMigration.mismatchAmount(id)
     }
 }

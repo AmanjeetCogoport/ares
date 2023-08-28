@@ -117,5 +117,5 @@ interface AresMessagePublisher {
     suspend fun emitJournalVoucherMigrationAdmin(journalVoucherRecord: JVParentDetails)
 
     @Binding("ares.migrate.payment.amount")
-    suspend fun emitMigratePaymentAmount(id: String)
+    suspend fun emitMigratePaymentAmount(id: Long)
 }
