@@ -4,6 +4,7 @@ import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.models.ARLedgerJobDetailsResponse
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.LedgerSummary
+import com.cogoport.ares.api.payment.entity.SupplierLevelData
 import com.cogoport.ares.model.common.TradePartyOutstandingRes
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.response.CreditDebitBalance
@@ -428,6 +429,7 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
         AND deleted_at IS NULL
         AND acc_type::VARCHAR IN (:accTypes)
         AND document_status IN ('FINAL')
+        AND COALESCE(:orgIds) IS NULL OR aau.organization_id in (:orgIds)
     GROUP BY 
         aau.organization_id, entity_code, led_currency, acc_mode, otpd.registration_number, soim.sage_organization_id
         """
@@ -437,6 +439,47 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
         accMode: String,
         invoiceAccType: List<String>,
         onAccountAccountType: List<String>,
-        creditNoteAccType: List<String>
+        creditNoteAccType: List<String>,
+        orgIds: List<UUID>? = null
     ): List<LedgerSummary>?
+
+    @NewSpan
+    @Query(
+        """
+            WITH x AS (
+            SELECT * FROM ares.ledger_summary where acc_mode = 'AP'
+            ) , y as (
+            select
+            otpd.id as organization_id, otpd.registration_number,
+            json_agg(DISTINCT trade_party_type) as trade_type,
+            o.serial_id as organization_serial_id,
+            json_agg(json_build_object(
+            'id', u.id,
+            'name', u.name,
+            'email', u.email,
+            'mobileCountryCode', u.mobile_country_code,
+            'mobile_number', u.mobile_number,
+            'stakeholder_type', os.stakeholder_type
+            ))::VARCHAR as agent,
+            opium.free_credit_days as credit_days,
+            o.company_type,
+            otpd.serial_id as trade_party_serial_id,
+            o.country_id
+            from organization_trade_party_details otpd
+            left join organization_trade_parties otp on otp.organization_trade_party_detail_id = otpd.id and otp.status = 'active'
+            left join organizations o on o.id = otp.organization_id and o.status = 'active' and o.account_type = 'service_provider' and otpd.registration_number = o.registration_number
+            left join organization_stakeholders os on os.organization_id = o.id
+            left join organization_payment_modes opium on opium.organization_id = o.id
+            left join users u on u.id = os.stakeholder_id
+            where otpd.status = 'active'
+            GROUP BY o.serial_id, o.company_type, otpd.id, otpd.registration_number, otpd.serial_id, opium.free_credit_days, o.country_id
+            ) select x.*,
+            y.trade_type::varchar,
+            y.organization_serial_id,
+            y.credit_days,
+            y.country_id,
+            y.agent, y.company_type, y.trade_party_serial_id from x left join y on x.organization_id = y.organization_id and x.registration_number = y.registration_number
+        """
+    )
+    suspend fun getSupplierDetailData(): List<SupplierLevelData>
 }

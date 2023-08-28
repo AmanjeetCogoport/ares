@@ -22,12 +22,14 @@ import com.cogoport.ares.model.payment.request.CustomerOutstandingRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
+import com.cogoport.ares.model.payment.request.SupplierOutstandingRequestV2
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.AccPayablesOfOrgRes
 import com.cogoport.ares.model.payment.response.CustomerMonthlyPayment
 import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
 import com.cogoport.ares.model.payment.response.PayblesInfoRes
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
+import com.cogoport.ares.model.payment.response.SupplierOutstandingDocumentV2
 import com.cogoport.brahma.authentication.Auth
 import com.cogoport.brahma.authentication.AuthResponse
 import io.micronaut.http.HttpRequest
@@ -176,5 +178,18 @@ class OutstandingController {
     @Get("/ledger-summary")
     suspend fun createLedgerSummary() {
         return outStandingService.createLedgerSummary()
+    }
+
+    @Post("/supplier-v2")
+    suspend fun createSupplierDetailsV2(): Response<String> {
+        outStandingService.createSupplierDetailsV2()
+        return Response<String>().ok("created", HttpStatus.OK.name)
+    }
+
+    @Auth
+    @Get("/by-supplier-v2{?request*}")
+    suspend fun listSupplierDetailsV2(@Valid request: SupplierOutstandingRequestV2, user: AuthResponse?, httpRequest: HttpRequest<*>): ResponseList<SupplierOutstandingDocumentV2?> {
+        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
+        return Response<ResponseList<SupplierOutstandingDocumentV2?>>().ok(outStandingService.listSupplierDetailsV2(request))
     }
 }
