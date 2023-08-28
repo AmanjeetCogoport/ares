@@ -169,7 +169,7 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
         """
             UPDATE account_utilizations
             SET amount_curr = :amount,
-            amount_loc = :ledAmount,  
+            amount_loc = :ledAmount  
             WHERE document_no = :documentNo and document_value = :documentValue and acc_mode ='AP' and acc_type = 'PAY'
         """
     )
