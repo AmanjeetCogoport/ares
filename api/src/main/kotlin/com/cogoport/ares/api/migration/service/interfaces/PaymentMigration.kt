@@ -30,4 +30,6 @@ interface PaymentMigration {
     suspend fun migrateTDSJV(journalVoucherRecord: JVParentDetails)
 
     suspend fun migrateAdminJV(journalVoucherRecord: JVParentDetails)
+
+    suspend fun mismatchAmount(id: Long)
 }

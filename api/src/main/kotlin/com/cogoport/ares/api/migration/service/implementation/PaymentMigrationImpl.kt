@@ -1199,4 +1199,9 @@ class PaymentMigrationImpl : PaymentMigration {
             this.migrateJournalVoucher(it, parentJVId)
         }
     }
+
+    override suspend fun mismatchAmount(id: Long) {
+        val mismatchData = paymentMigrationRepository.getMismatchLspPaymentCheck(id)
+        paymentMigrationRepository.updateMismatchLspPaymentsCheck(mismatchData.amount, mismatchData.ledAmount, mismatchData.documentNo, mismatchData.documentValue)
+    }
 }
