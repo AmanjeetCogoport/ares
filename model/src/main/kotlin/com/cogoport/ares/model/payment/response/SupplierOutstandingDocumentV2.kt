@@ -217,7 +217,7 @@ data class SupplierOutstandingDocumentV2(
     val closingOnAccountAmountAtFirstApril: BigDecimal?,
 
     @JsonProperty("creditDays")
-    val creditDays: Long?,
+    var creditDays: Long?,
 
     @JsonProperty("countryId")
     val countryId: UUID?,
