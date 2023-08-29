@@ -17,6 +17,7 @@ import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.LedgerSummaryRepo
 import com.cogoport.ares.api.payment.repository.UnifiedDBNewRepository
+import com.cogoport.ares.api.payment.service.interfaces.DefaultedBusinessPartnersService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.api.utils.Util.Companion.divideNumbers
 import com.cogoport.ares.api.utils.Utilities
@@ -99,6 +100,9 @@ class OutStandingServiceImpl : OutStandingService {
 
     @Inject
     lateinit var unifiedDBNewRepository: UnifiedDBNewRepository
+
+    @Inject
+    lateinit var defaultedBusinessPartnersService: DefaultedBusinessPartnersService
 
     private fun validateInput(request: OutstandingListRequest) {
         try {
@@ -1185,14 +1189,15 @@ class OutStandingServiceImpl : OutStandingService {
     }
 
     override suspend fun getOverallCustomerOutstanding(entityCode: Int): HashMap<String, EntityWiseOutstandingBucket> {
-        val openInvoiceQueryResponse = accountUtilizationRepo.getEntityWiseOutstandingBucket(listOf(entityCode), listOf(AccountType.SINV, AccountType.SREIMB), listOf(AccMode.AR))
-        val creditNoteQueryResponse = accountUtilizationRepo.getEntityWiseOutstandingBucket(listOf(entityCode), listOf(AccountType.SCN, AccountType.SREIMBCN), listOf(AccMode.AR))
+        val defaultersOrgIds = defaultedBusinessPartnersService.listTradePartyDetailIds()
+        val openInvoiceQueryResponse = accountUtilizationRepo.getEntityWiseOutstandingBucket(listOf(entityCode), listOf(AccountType.SINV, AccountType.SREIMB), listOf(AccMode.AR), defaultersOrgIds)
+        val creditNoteQueryResponse = accountUtilizationRepo.getEntityWiseOutstandingBucket(listOf(entityCode), listOf(AccountType.SCN, AccountType.SREIMBCN), listOf(AccMode.AR), defaultersOrgIds)
 
-        val onAccountTypeList = listOf(AccountType.REC, AccountType.CTDS, AccountType.BANK, AccountType.CONTR, AccountType.ROFF, AccountType.MTCCV, AccountType.MISC, AccountType.INTER, AccountType.OPDIV, AccountType.MTC)
-        val paymentAccountTypeList = listOf(AccountType.REC, AccountType.CTDS)
-        val jvAccountTypeList = listOf(AccountType.BANK, AccountType.CONTR, AccountType.ROFF, AccountType.MTCCV, AccountType.MISC, AccountType.INTER, AccountType.OPDIV, AccountType.MTC)
+        val onAccountTypeList = AresConstants.onAccountAROutstandingAccountTypeList
+        val paymentAccountTypeList = AresConstants.paymentAROutstandingAccountTypeList
+        val jvAccountTypeList = AresConstants.jvAROutstandingAccountTypeList
 
-        val onAccountRecQueryResponse = accountUtilizationRepo.getEntityWiseOnAccountBucket(listOf(entityCode), onAccountTypeList, listOf(AccMode.AR), paymentAccountTypeList, jvAccountTypeList)
+        val onAccountRecQueryResponse = accountUtilizationRepo.getEntityWiseOnAccountBucket(listOf(entityCode), onAccountTypeList, listOf(AccMode.AR), paymentAccountTypeList, jvAccountTypeList, defaultersOrgIds)
 
         val totalOutstandingBucket = EntityWiseOutstandingBucket(
             entityCode = openInvoiceQueryResponse.entityCode,

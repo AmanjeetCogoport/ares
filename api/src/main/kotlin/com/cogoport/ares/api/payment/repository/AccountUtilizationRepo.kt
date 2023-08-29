@@ -1656,11 +1656,12 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 AND entity_code in (:entityCode)
                 AND acc_type::varchar IN (:accType)
                 AND deleted_at IS NULL
+                AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
             GROUP BY
                 entity_code, led_currency
             """
     )
-    suspend fun getEntityWiseOutstandingBucket(entityCode: List<Int>, accType: List<AccountType>, accMode: List<AccMode>): EntityWiseOutstandingBucket
+    suspend fun getEntityWiseOutstandingBucket(entityCode: List<Int>, accType: List<AccountType>, accMode: List<AccMode>, defaultersOrgIds: List<UUID>?): EntityWiseOutstandingBucket
 
     @NewSpan
     @Query(
@@ -1855,9 +1856,10 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 AND entity_code IN (:entityCode)
                 AND acc_type::varchar IN (:accType)
                 AND deleted_at IS NULL
+                AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
             GROUP BY
                 entity_code, led_currency
         """
     )
-    suspend fun getEntityWiseOnAccountBucket(entityCode: List<Int>, accType: List<AccountType>, accMode: List<AccMode>, paymentAccType: List<AccountType>, jvAccType: List<AccountType>): EntityWiseOutstandingBucket
+    suspend fun getEntityWiseOnAccountBucket(entityCode: List<Int>, accType: List<AccountType>, accMode: List<AccMode>, paymentAccType: List<AccountType>, jvAccType: List<AccountType>, defaultersOrgIds: List<UUID>?): EntityWiseOutstandingBucket
 }
