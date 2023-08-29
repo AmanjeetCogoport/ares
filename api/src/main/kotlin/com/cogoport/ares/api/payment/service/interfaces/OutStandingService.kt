@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.payment.service.interfaces
 
 import com.cogoport.ares.api.payment.entity.EntityLevelStats
+import com.cogoport.ares.api.payment.entity.EntityWiseOutstandingBucket
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentRequest
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.api.payment.model.response.TopServiceProviders
@@ -65,6 +66,8 @@ interface OutStandingService {
     suspend fun getTradePartyOutstanding(request: TradePartyOutstandingReq): List<TradePartyOutstandingRes>?
 
     suspend fun createLedgerSummary()
+
+    suspend fun getOverallCustomerOutstanding(entityCode: Int): HashMap<String, EntityWiseOutstandingBucket>
 
     suspend fun createSupplierDetailsV2()
 

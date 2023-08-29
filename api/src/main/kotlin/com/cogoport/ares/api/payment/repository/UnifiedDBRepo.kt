@@ -163,7 +163,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             group by aau.led_currency,aau.service_type, lj.job_details  ->> 'tradeType'
         """
     )
-    fun getOutstandingData(entityCode: Int?, defaultersOrgIds: List<UUID>? = null): List<OutstandingDocument>?
+    fun getOpenInvoiceData(entityCode: Int?, defaultersOrgIds: List<UUID>? = null): List<OutstandingDocument>?
 
     @NewSpan
     @Query(

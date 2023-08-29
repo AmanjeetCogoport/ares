@@ -584,7 +584,7 @@ class DashboardServiceImpl : DashboardService {
             "surface" to listOf("FTL_FREIGHT_IMPORT", "FTL_FREIGHT_EXPORT", "LTL_FREIGHT_IMPORT", "LTL_FREIGHT_EXPORT")
         )
 
-        val data = unifiedDBRepo.getOutstandingData(updatedEntityCode, defaultersOrgIds)
+        val data = unifiedDBRepo.getOpenInvoiceData(updatedEntityCode, defaultersOrgIds)
         val mapData = hashMapOf<String, ServiceLevelOutstanding> ()
 
         if (data.isNullOrEmpty()) {

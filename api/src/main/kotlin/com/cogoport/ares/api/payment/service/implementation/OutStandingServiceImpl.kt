@@ -8,6 +8,7 @@ import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.CustomerOrgOutstanding
 import com.cogoport.ares.api.payment.entity.CustomerOutstandingAgeing
 import com.cogoport.ares.api.payment.entity.EntityLevelStats
+import com.cogoport.ares.api.payment.entity.EntityWiseOutstandingBucket
 import com.cogoport.ares.api.payment.mapper.OrgOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
 import com.cogoport.ares.api.payment.mapper.SupplierOrgOutstandingMapper
@@ -18,6 +19,7 @@ import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.LedgerSummaryRepo
 import com.cogoport.ares.api.payment.repository.UnifiedDBNewRepository
+import com.cogoport.ares.api.payment.service.interfaces.DefaultedBusinessPartnersService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
 import com.cogoport.ares.api.utils.Util.Companion.divideNumbers
 import com.cogoport.ares.api.utils.Utilities
@@ -106,6 +108,9 @@ class OutStandingServiceImpl : OutStandingService {
 
     @Inject
     lateinit var unifiedDBNewRepository: UnifiedDBNewRepository
+
+    @Inject
+    lateinit var defaultedBusinessPartnersService: DefaultedBusinessPartnersService
 
     @Inject
     lateinit var supplierOrgOutstandingMapper: SupplierOrgOutstandingMapper
@@ -1192,6 +1197,41 @@ class OutStandingServiceImpl : OutStandingService {
             }
         }
         customerData.totalCallPriorityScore = callPriorityScores.geTotalCallPriority()
+    }
+
+    override suspend fun getOverallCustomerOutstanding(entityCode: Int): HashMap<String, EntityWiseOutstandingBucket> {
+        val defaultersOrgIds = defaultedBusinessPartnersService.listTradePartyDetailIds()
+        val openInvoiceQueryResponse = accountUtilizationRepo.getEntityWiseOutstandingBucket(listOf(entityCode), listOf(AccountType.SINV, AccountType.SREIMB), listOf(AccMode.AR), defaultersOrgIds)
+        val creditNoteQueryResponse = accountUtilizationRepo.getEntityWiseOutstandingBucket(listOf(entityCode), listOf(AccountType.SCN, AccountType.SREIMBCN), listOf(AccMode.AR), defaultersOrgIds)
+
+        val onAccountTypeList = AresConstants.onAccountAROutstandingAccountTypeList
+        val paymentAccountTypeList = AresConstants.paymentAROutstandingAccountTypeList
+        val jvAccountTypeList = AresConstants.jvAROutstandingAccountTypeList
+
+        val onAccountRecQueryResponse = accountUtilizationRepo.getEntityWiseOnAccountBucket(listOf(entityCode), onAccountTypeList, listOf(AccMode.AR), paymentAccountTypeList, jvAccountTypeList, defaultersOrgIds)
+
+        val totalOutstandingBucket = EntityWiseOutstandingBucket(
+            entityCode = openInvoiceQueryResponse.entityCode,
+            ledCurrency = openInvoiceQueryResponse.ledCurrency,
+            notDueLedAmount = openInvoiceQueryResponse.notDueLedAmount.plus(creditNoteQueryResponse.notDueLedAmount).plus(onAccountRecQueryResponse.notDueLedAmount),
+            thirtyLedAmount = openInvoiceQueryResponse.thirtyLedAmount.plus(creditNoteQueryResponse.thirtyLedAmount).plus(onAccountRecQueryResponse.thirtyLedAmount),
+            fortyFiveLedAmount = openInvoiceQueryResponse.fortyFiveLedAmount.plus(creditNoteQueryResponse.fortyFiveLedAmount).plus(onAccountRecQueryResponse.fortyFiveLedAmount),
+            sixtyLedAmount = openInvoiceQueryResponse.sixtyLedAmount.plus(creditNoteQueryResponse.sixtyLedAmount).plus(onAccountRecQueryResponse.sixtyLedAmount),
+            ninetyLedAmount = openInvoiceQueryResponse.ninetyLedAmount.plus(creditNoteQueryResponse.ninetyLedAmount).plus(onAccountRecQueryResponse.ninetyLedAmount),
+            oneEightyLedAmount = openInvoiceQueryResponse.oneEightyLedAmount.plus(creditNoteQueryResponse.oneEightyLedAmount).plus(onAccountRecQueryResponse.oneEightyLedAmount),
+            oneEightyPlusLedAmount = openInvoiceQueryResponse.oneEightyPlusLedAmount.plus(creditNoteQueryResponse.oneEightyPlusLedAmount).plus(onAccountRecQueryResponse.oneEightyPlusLedAmount),
+            threeSixtyFiveLedAmount = openInvoiceQueryResponse.threeSixtyFiveLedAmount.plus(creditNoteQueryResponse.threeSixtyFiveLedAmount).plus(onAccountRecQueryResponse.threeSixtyFiveLedAmount),
+            threeSixtyFivePlusLedAmount = openInvoiceQueryResponse.threeSixtyFivePlusLedAmount.plus(creditNoteQueryResponse.threeSixtyFivePlusLedAmount).plus(onAccountRecQueryResponse.threeSixtyFivePlusLedAmount),
+            totalLedAmount = openInvoiceQueryResponse.totalLedAmount.plus(creditNoteQueryResponse.totalLedAmount).plus(onAccountRecQueryResponse.totalLedAmount)
+        )
+
+        val responseMap = HashMap<String, EntityWiseOutstandingBucket>()
+        responseMap["openInvoiceBucket"] = openInvoiceQueryResponse
+        responseMap["creditNoteBucket"] = creditNoteQueryResponse
+        responseMap["onAccountBucket"] = onAccountRecQueryResponse
+        responseMap["totalOutstandingBucket"] = totalOutstandingBucket
+
+        return responseMap
     }
 
     override suspend fun createSupplierDetailsV2() {

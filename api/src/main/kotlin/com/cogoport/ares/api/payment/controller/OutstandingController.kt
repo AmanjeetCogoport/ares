@@ -2,6 +2,7 @@ package com.cogoport.ares.api.payment.controller
 
 import com.cogoport.ares.api.common.service.implementation.Scheduler
 import com.cogoport.ares.api.payment.entity.EntityLevelStats
+import com.cogoport.ares.api.payment.entity.EntityWiseOutstandingBucket
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentRequest
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
@@ -179,6 +180,17 @@ class OutstandingController {
     @Get("/ledger-summary")
     suspend fun createLedgerSummary() {
         return outStandingService.createLedgerSummary()
+    }
+
+    @Auth
+    @Get("/overall-customer-outstanding")
+    suspend fun getOverallCustomerOutstanding(
+        @QueryValue("entityCode") entityCode: Int? = 301,
+        user: AuthResponse?,
+        httpRequest: HttpRequest<*>
+    ): HashMap<String, EntityWiseOutstandingBucket>? {
+        val updatedEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: entityCode
+        return outStandingService.getOverallCustomerOutstanding(updatedEntityCode!!)
     }
 
     @Post("/supplier-v2")
