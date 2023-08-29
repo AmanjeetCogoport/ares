@@ -58,6 +58,7 @@ interface LedgerSummaryRepo : CoroutineCrudRepository<LedgerSummary, Long> {
             SUM(three_sixty_five_plus_outstanding) AS three_sixty_five_plus_outstanding,
             SUM(total_open_invoice_amount) AS total_open_invoice_amount,
             SUM(total_open_on_account_amount) AS total_open_on_account_amount,
+            SUM(total_outstanding) as total_outstanding,
             led_currency,
             entity_code
         FROM ledger_summary where (:entityCodes) is null or entity_code in (:entityCodes)

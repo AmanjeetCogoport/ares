@@ -48,6 +48,7 @@ data class EntityLevelStats(
     val threeSixtyFivePlusOutstanding: BigDecimal?,
     val totalOpenInvoiceAmount: BigDecimal?,
     val totalOpenOnAccountAmount: BigDecimal?,
+    val totalOutstanding: BigDecimal?,
     val ledCurrency: String?,
     val entityCode: Int?
 ) {
