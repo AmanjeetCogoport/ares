@@ -7,6 +7,7 @@ import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.CustomerOrgOutstanding
 import com.cogoport.ares.api.payment.entity.CustomerOutstandingAgeing
+import com.cogoport.ares.api.payment.entity.EntityLevelStats
 import com.cogoport.ares.api.payment.mapper.OrgOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
 import com.cogoport.ares.api.payment.mapper.SupplierOrgOutstandingMapper
@@ -1238,5 +1239,35 @@ class OutStandingServiceImpl : OutStandingService {
         responseList.pageNo = request.page!!
 
         return responseList
+    }
+
+    override suspend fun getEntityLevelStats(entityCode: Int): List<EntityLevelStats> {
+        val entityLevelStats = ledgerSummaryRepo.getEntityLevelStats(entityCodes = listOf(entityCode))
+
+        if (entityLevelStats.isNullOrEmpty()) {
+            return listOf()
+        }
+
+        entityLevelStats.map {
+            it.totalOpenInvoiceCount = (it.invoiceNotDueCount ?: 0) +
+                (it.invoiceTodayCount ?: 0) +
+                (it.invoiceThirtyCount ?: 0) +
+                (it.invoiceSixtyCount ?: 0) +
+                (it.invoiceNinetyCount ?: 0) +
+                (it.invoiceOneEightyCount ?: 0) +
+                (it.invoiceThreeSixtyFiveCount ?: 0) +
+                (it.invoiceThreeSixtyFivePlusCount ?: 0)
+
+            it.totalOpenOnAccountCount = (it.onAccountNotDueCount ?: 0) +
+                (it.onAccountTodayCount ?: 0) +
+                (it.onAccountThirtyCount ?: 0) +
+                (it.onAccountSixtyCount ?: 0) +
+                (it.onAccountNinetyCount ?: 0) +
+                (it.onAccountOneEightyCount ?: 0) +
+                (it.onAccountThreeSixtyFiveCount ?: 0) +
+                (it.onAccountThreeSixtyFivePlusCount ?: 0)
+        }
+
+        return entityLevelStats
     }
 }

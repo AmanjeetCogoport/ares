@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.payment.service.interfaces
 
+import com.cogoport.ares.api.payment.entity.EntityLevelStats
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentRequest
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.api.payment.model.response.TopServiceProviders
@@ -68,4 +69,6 @@ interface OutStandingService {
     suspend fun createSupplierDetailsV2()
 
     suspend fun listSupplierDetailsV2(request: SupplierOutstandingRequestV2): ResponseList<SupplierOutstandingDocumentV2?>
+
+    suspend fun getEntityLevelStats(entityCode: Int): List<EntityLevelStats>
 }

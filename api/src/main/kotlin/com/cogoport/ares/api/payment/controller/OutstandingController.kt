@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.payment.controller
 
 import com.cogoport.ares.api.common.service.implementation.Scheduler
+import com.cogoport.ares.api.payment.entity.EntityLevelStats
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentRequest
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
@@ -191,5 +192,12 @@ class OutstandingController {
     suspend fun listSupplierDetailsV2(@Valid request: SupplierOutstandingRequestV2, user: AuthResponse?, httpRequest: HttpRequest<*>): ResponseList<SupplierOutstandingDocumentV2?> {
         request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
         return Response<ResponseList<SupplierOutstandingDocumentV2?>>().ok(outStandingService.listSupplierDetailsV2(request))
+    }
+
+    @Auth
+    @Get("/entity-level-stats")
+    suspend fun getEntityLevelStats(@QueryValue("entityCode") entityCode: Int, user: AuthResponse?, httpRequest: HttpRequest<*>): List<EntityLevelStats> {
+        val updatedEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: entityCode
+        return outStandingService.getEntityLevelStats(updatedEntityCode)
     }
 }
