@@ -7,8 +7,10 @@ import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.CustomerOrgOutstanding
 import com.cogoport.ares.api.payment.entity.CustomerOutstandingAgeing
+import com.cogoport.ares.api.payment.entity.EntityLevelStats
 import com.cogoport.ares.api.payment.mapper.OrgOutstandingMapper
 import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
+import com.cogoport.ares.api.payment.mapper.SupplierOrgOutstandingMapper
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentRequest
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.api.payment.model.response.TopServiceProviders
@@ -41,6 +43,7 @@ import com.cogoport.ares.model.payment.request.CustomerOutstandingRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
+import com.cogoport.ares.model.payment.request.SupplierOutstandingRequestV2
 import com.cogoport.ares.model.payment.response.AccPayablesOfOrgRes
 import com.cogoport.ares.model.payment.response.BillOutStandingAgeingResponse
 import com.cogoport.ares.model.payment.response.CustomerInvoiceResponse
@@ -50,14 +53,19 @@ import com.cogoport.ares.model.payment.response.OutstandingAgeingResponse
 import com.cogoport.ares.model.payment.response.PayableStatsOpenSearchResponse
 import com.cogoport.ares.model.payment.response.PayblesInfoRes
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
+import com.cogoport.ares.model.payment.response.SupplierOutstandingDocumentV2
+import com.cogoport.ares.model.payment.response.SupplyAgentV2
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.brahma.opensearch.Client
 import com.cogoport.brahma.opensearch.Configuration
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.sentry.Sentry
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.opensearch.client.json.JsonData
 import org.opensearch.client.opensearch._types.FieldValue
+import org.opensearch.client.opensearch._types.query_dsl.MatchAllQuery
 import org.opensearch.client.opensearch.core.SearchResponse
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -98,6 +106,9 @@ class OutStandingServiceImpl : OutStandingService {
 
     @Inject
     lateinit var unifiedDBNewRepository: UnifiedDBNewRepository
+
+    @Inject
+    lateinit var supplierOrgOutstandingMapper: SupplierOrgOutstandingMapper
 
     private fun validateInput(request: OutstandingListRequest) {
         try {
@@ -1044,7 +1055,7 @@ class OutStandingServiceImpl : OutStandingService {
     override suspend fun createLedgerSummary() {
         ledgerSummaryRepo.deleteAll()
         val accTypesForAp = listOf(AccountType.PINV.name, AccountType.PCN.name, AccountType.PAY.name, AccountType.VTDS.name, AccountType.OPDIV.name, AccountType.MISC.name, AccountType.BANK.name, AccountType.CONTR.name, AccountType.INTER.name, AccountType.MTC.name, AccountType.MTCCV.name)
-        val invoiceAccType = listOf(AccountType.PINV.name, AccountType.PCN.name)
+        val invoiceAccType = listOf(AccountType.PINV.name, AccountType.PCN.name, AccountType.PREIMB.name)
         val onAccountAccountType = listOf(AccountType.PAY.name, AccountType.VTDS.name, AccountType.OPDIV.name, AccountType.MISC.name, AccountType.BANK.name, AccountType.CONTR.name, AccountType.INTER.name, AccountType.MTC.name, AccountType.MTCCV.name)
         val creditNoteAccType = listOf(AccountType.PCN.name)
         val outstandingData = unifiedDBNewRepository.getLedgerSummaryForAp(accTypesForAp, AccMode.AP.name, invoiceAccType, onAccountAccountType, creditNoteAccType)
@@ -1181,5 +1192,82 @@ class OutStandingServiceImpl : OutStandingService {
             }
         }
         customerData.totalCallPriorityScore = callPriorityScores.geTotalCallPriority()
+    }
+
+    override suspend fun createSupplierDetailsV2() {
+        val indexName = AresConstants.SUPPLIERS_OUTSTANDING_OVERALL_INDEX_V2
+        val supplierLevelData = unifiedDBNewRepository.getSupplierDetailData()
+
+        Client.deleteByQuery { s ->
+            s.index(indexName).query { q ->
+                q.matchAll { MatchAllQuery.Builder() }
+            }
+        }
+
+        val objectMapper = ObjectMapper()
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+
+        val supplierOutstanding = mutableListOf<SupplierOutstandingDocumentV2>()
+
+        supplierLevelData.map { it ->
+            val item = supplierOrgOutstandingMapper.convertToModel(it)
+            item.agent = if (it.agent != null) objectMapper.readValue(it.agent.toString(), Array<SupplyAgentV2>::class.java).distinctBy { it.id }.toList() else null
+            item.tradeType = if (it.tradeType != null) objectMapper.readValue(it.tradeType.toString(), Array<String>::class.java).distinct().toList() else null
+            item.totalOpenInvoiceCount = it.invoiceNotDueCount + it.invoiceTodayCount + it.invoiceThirtyCount + it.invoiceSixtyCount + it.invoiceNinetyCount + it.invoiceOneEightyCount + it.invoiceThreeSixtyFiveCount + it.invoiceThreeSixtyFivePlusCount
+            item.totalOpenOnAccountCount = it.onAccountNotDueCount + it.onAccountTodayCount + it.onAccountThirtyCount + it.onAccountSixtyCount + it.onAccountNinetyCount + it.onAccountOneEightyCount + it.onAccountThreeSixtyFiveCount + it.onAccountThreeSixtyFivePlusCount
+            supplierOutstanding.add(item)
+        }
+
+        supplierOutstanding.chunked(5000).forEach {
+            Client.bulkCreate(indexName, it)
+        }
+    }
+
+    override suspend fun listSupplierDetailsV2(request: SupplierOutstandingRequestV2): ResponseList<SupplierOutstandingDocumentV2?> {
+        val index: String = AresConstants.SUPPLIERS_OUTSTANDING_OVERALL_INDEX_V2
+
+        val response = OpenSearchClient().listSupplierOutstandingV2(request, index)
+        var list: List<SupplierOutstandingDocumentV2?> = listOf()
+        if (!response?.hits()?.hits().isNullOrEmpty()) {
+            list = response?.hits()?.hits()?.map { it.source() }!!
+        }
+        val responseList = ResponseList<SupplierOutstandingDocumentV2?>()
+
+        responseList.list = list
+        responseList.totalRecords = response?.hits()?.total()?.value() ?: 0
+        responseList.totalPages = if (responseList.totalRecords!! % request.pageLimit!! == 0.toLong()) (responseList.totalRecords!! / request.pageLimit!!) else (responseList.totalRecords!! / request.pageLimit!!) + 1.toLong()
+        responseList.pageNo = request.page!!
+
+        return responseList
+    }
+
+    override suspend fun getEntityLevelStats(entityCode: Int): List<EntityLevelStats> {
+        val entityLevelStats = ledgerSummaryRepo.getEntityLevelStats(entityCodes = listOf(entityCode))
+
+        if (entityLevelStats.isNullOrEmpty()) {
+            return listOf()
+        }
+
+        entityLevelStats.map {
+            it.totalOpenInvoiceCount = (it.invoiceNotDueCount ?: 0) +
+                (it.invoiceTodayCount ?: 0) +
+                (it.invoiceThirtyCount ?: 0) +
+                (it.invoiceSixtyCount ?: 0) +
+                (it.invoiceNinetyCount ?: 0) +
+                (it.invoiceOneEightyCount ?: 0) +
+                (it.invoiceThreeSixtyFiveCount ?: 0) +
+                (it.invoiceThreeSixtyFivePlusCount ?: 0)
+
+            it.totalOpenOnAccountCount = (it.onAccountNotDueCount ?: 0) +
+                (it.onAccountTodayCount ?: 0) +
+                (it.onAccountThirtyCount ?: 0) +
+                (it.onAccountSixtyCount ?: 0) +
+                (it.onAccountNinetyCount ?: 0) +
+                (it.onAccountOneEightyCount ?: 0) +
+                (it.onAccountThreeSixtyFiveCount ?: 0) +
+                (it.onAccountThreeSixtyFivePlusCount ?: 0)
+        }
+
+        return entityLevelStats
     }
 }
