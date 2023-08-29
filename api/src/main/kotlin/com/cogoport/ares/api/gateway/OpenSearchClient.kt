@@ -802,7 +802,7 @@ class OpenSearchClient {
                         if (request.creditControllerId != null) {
                             b.must { s ->
                                 s.terms { v ->
-                                    v.field("creditController.id.keyword").terms(
+                                    v.field("agent.id.keyword").terms(
                                         TermsQueryField.of { a ->
                                             a.value(
                                                 request.creditControllerId?.map {
@@ -818,25 +818,6 @@ class OpenSearchClient {
                             }
                             b
                         }
-                        if (request.kamIds != null) {
-                            b.must { s ->
-                                s.terms { v ->
-                                    v.field("agent.id.keyword").terms(
-                                        TermsQueryField.of { a ->
-                                            a.value(
-                                                request.kamIds?.map {
-                                                    FieldValue.of(it.toString())
-                                                }
-                                            )
-                                        }
-                                    )
-                                }
-                            }
-                            b.must { s ->
-                                s.match { it.field("agent.stakeholderType.keyword").query(FieldValue.of("ckam")) }
-                            }
-                            b
-                        }
                         if (request.companyType != null) {
                             b.must { t ->
                                 t.match { v ->
@@ -849,22 +830,6 @@ class OpenSearchClient {
                             b.must { t ->
                                 t.match { v ->
                                     v.field("entityCode").query(FieldValue.of(request.entityCode.toString()))
-                                }
-                            }
-                            b
-                        }
-                        if (request.countryId != null) {
-                            b.must { s ->
-                                s.terms { v ->
-                                    v.field("countryId").terms(
-                                        TermsQueryField.of { a ->
-                                            a.value(
-                                                request.countryId?.map {
-                                                    FieldValue.of(it.toString())
-                                                }
-                                            )
-                                        }
-                                    )
                                 }
                             }
                             b
