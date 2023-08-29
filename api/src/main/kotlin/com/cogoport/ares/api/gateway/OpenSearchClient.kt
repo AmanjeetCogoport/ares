@@ -6,9 +6,11 @@ import com.cogoport.ares.model.payment.request.CustomerOutstandingRequest
 import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.request.OrganizationReceivablesRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
+import com.cogoport.ares.model.payment.request.SupplierOutstandingRequestV2
 import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
+import com.cogoport.ares.model.payment.response.SupplierOutstandingDocumentV2
 import com.cogoport.brahma.opensearch.Client
 import io.micronaut.tracing.annotation.NewSpan
 import org.opensearch.client.json.JsonData
@@ -707,6 +709,138 @@ class OpenSearchClient {
                 .sort(sortList)
                 .from(offset).size(request.limit)
         }, CustomerOutstandingDocumentResponse::class.java)
+
+        return response
+    }
+
+    @NewSpan
+    fun listSupplierOutstandingV2(request: SupplierOutstandingRequestV2, index: String): SearchResponse<SupplierOutstandingDocumentV2>? {
+        val offset = 0.coerceAtLeast(((request.page!! - 1) * request.pageLimit!!))
+        var totalOutstandingAmount = false
+        var openOnAccountAmount = false
+        var openCreditNoteAmount = false
+        var openInvoiceAmount = false
+        var notDue = false
+        var today = false
+        var thirty = false
+        var sixty = false
+        var ninety = false
+        var oneEighty = false
+        var threeSixtyFive = false
+        var threeSixtyFivePlus = false
+
+        when (request.sortBy) {
+            "notDueOutstanding" -> notDue = true
+            "todayOutstanding" -> today = true
+            "thirtyOutstanding" -> thirty = true
+            "sixtyOutstanding" -> sixty = true
+            "ninetyOutstanding" -> ninety = true
+            "oneEightyOutstanding" -> oneEighty = true
+            "threeSixtyFiveOutstanding" -> threeSixtyFive = true
+            "threeSixtyFivePlusOutstanding" -> threeSixtyFivePlus = true
+            "totalOutstandingAmount" -> totalOutstandingAmount = true
+            "openOnAccountAmount" -> openOnAccountAmount = true
+            "openCreditNoteAmount" -> openCreditNoteAmount = true
+            "openInvoiceAmount" -> openInvoiceAmount = true
+        }
+
+        val sortList = mutableListOf(
+            SortOptions.Builder().field { f ->
+                when {
+                    totalOutstandingAmount -> f.field("totalOutstanding").order(SortOrder.valueOf(request.sortType.toString()))
+                    openOnAccountAmount -> f.field("totalOpenOnAccountAmount").order(SortOrder.valueOf(request.sortType.toString()))
+                    openCreditNoteAmount -> f.field("totalCreditNoteAmount").order(SortOrder.valueOf(request.sortType.toString()))
+                    openInvoiceAmount -> f.field("totalOpenInvoiceAmount").order(SortOrder.valueOf(request.sortType.toString()))
+                    notDue -> f.field("notDueOutstanding").order(SortOrder.valueOf(request.sortType.toString()))
+                    today -> f.field("todayOutstanding").order(SortOrder.valueOf(request.sortType.toString()))
+                    thirty -> f.field("thirtyOutstanding").order(SortOrder.valueOf(request.sortType.toString()))
+                    sixty -> f.field("sixtyOutstanding").order(SortOrder.valueOf(request.sortType.toString()))
+                    ninety -> f.field("ninetyOutstanding").order(SortOrder.valueOf(request.sortType.toString()))
+                    oneEighty -> f.field("oneEightyOutstanding").order(SortOrder.valueOf(request.sortType.toString()))
+                    threeSixtyFive -> f.field("threeSixtyFiveOutstanding").order(SortOrder.valueOf(request.sortType.toString()))
+                    threeSixtyFivePlus -> f.field("threeSixtyFivePlusOutstanding").order(SortOrder.valueOf(request.sortType.toString()))
+                }
+                f
+            }.build()
+        )
+
+        val searchFilterFields: MutableList<String> = mutableListOf("organizationName", "registrationNumber.keyword", "bpr", "tradePartySerialId", "organizationSerialId")
+        val response = Client.search({ t ->
+            t.index(index)
+                .query { q ->
+                    q.bool { b ->
+                        if (request.q != null) {
+                            b.must { s ->
+                                s.queryString { qs ->
+                                    qs.fields(searchFilterFields).query("*${request.q}*")
+                                        .lenient(true)
+                                        .allowLeadingWildcard(true)
+                                        .defaultOperator(Operator.And)
+                                }
+                            }
+                            b
+                        }
+                        if (request.supplyAgentId != null) {
+                            b.must { s ->
+                                s.terms { v ->
+                                    v.field("agent.id.keyword").terms(
+                                        TermsQueryField.of { a ->
+                                            a.value(
+                                                request.supplyAgentId?.map {
+                                                    FieldValue.of(it.toString())
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            b.must { s ->
+                                s.match { it.field("agent.stakeholderType.keyword").query(FieldValue.of("supply_agent")) }
+                            }
+                            b
+                        }
+                        if (request.creditControllerId != null) {
+                            b.must { s ->
+                                s.terms { v ->
+                                    v.field("agent.id.keyword").terms(
+                                        TermsQueryField.of { a ->
+                                            a.value(
+                                                request.creditControllerId?.map {
+                                                    FieldValue.of(it.toString())
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            b.must { s ->
+                                s.match { it.field("agent.stakeholderType.keyword").query(FieldValue.of("credit_controller")) }
+                            }
+                            b
+                        }
+                        if (request.companyType != null) {
+                            b.must { t ->
+                                t.match { v ->
+                                    v.field("companyType").query(FieldValue.of(request.companyType))
+                                }
+                            }
+                            b
+                        }
+                        if (request.entityCode != null) {
+                            b.must { t ->
+                                t.match { v ->
+                                    v.field("entityCode").query(FieldValue.of(request.entityCode.toString()))
+                                }
+                            }
+                            b
+                        }
+                        b
+                    }
+                    q
+                }
+                .sort(sortList)
+                .from(offset).size(request.pageLimit)
+        }, SupplierOutstandingDocumentV2::class.java)
 
         return response
     }
