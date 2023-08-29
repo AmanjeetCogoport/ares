@@ -183,7 +183,8 @@ class OutstandingController {
     @Get("/overall-customer-outstanding")
     suspend fun getOverallCustomerOutstanding(
         @QueryValue("entityCode") entityCode: Int? = 301,
-        user: AuthResponse?
+        user: AuthResponse?,
+        httpRequest: HttpRequest<*>
     ): HashMap<String, EntityWiseOutstandingBucket>? {
         val updatedEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: entityCode
         return outStandingService.getOverallCustomerOutstanding(updatedEntityCode!!)
