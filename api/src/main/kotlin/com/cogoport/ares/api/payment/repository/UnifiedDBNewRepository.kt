@@ -4,6 +4,7 @@ import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.models.ARLedgerJobDetailsResponse
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.LedgerSummary
+import com.cogoport.ares.api.payment.entity.SupplierLevelData
 import com.cogoport.ares.model.common.TradePartyOutstandingRes
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.response.CreditDebitBalance
@@ -116,7 +117,7 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
                     0
                 END), 0) AS invoice_not_due_amount,
             COALESCE(sum(
-                CASE WHEN acc_type::varchar in(:invoiceAccType)
+                CASE WHEN acc_type::varchar in (:invoiceAccType)
                     and (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 AND aau.created_at >= '2023-04-01' THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
@@ -432,7 +433,6 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
         AND deleted_at IS NULL
         AND acc_type::VARCHAR IN (:accTypes) and acc_type::VARCHAR != 'NEWPR'
         AND document_status IN ('FINAL')
-        AND (COALESCE(:orgIds) is null OR aau.organization_id in (:orgIds))
     GROUP BY 
         aau.organization_id, entity_code, led_currency, acc_mode, otpd.registration_number, soim.sage_organization_id, cb.closing_balance_debit_2022, cb.closing_balance_credit_2022
         """
@@ -442,7 +442,56 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
         accMode: String,
         invoiceAccType: List<String>,
         onAccountAccountType: List<String>,
-        creditNoteAccType: List<String>,
-        orgIds: List<UUID>? = null
+        creditNoteAccType: List<String>
     ): List<LedgerSummary>?
+
+    @NewSpan
+    @Query(
+        """
+            WITH x AS (
+                SELECT *
+                FROM ares.ledger_summary
+                WHERE acc_mode = 'AP'
+            ), y AS (
+                SELECT
+                    otpd.id AS organization_id,
+                    otpd.registration_number,
+                    json_agg(DISTINCT trade_party_type) AS trade_type,
+                    o.serial_id AS organization_serial_id,
+                    json_agg(json_build_object(
+                        'id', u.id,
+                        'name', u.name,
+                        'email', u.email,
+                        'mobileCountryCode', u.mobile_country_code,
+                        'mobile_number', u.mobile_number,
+                        'stakeholder_type', os.stakeholder_type
+                    ))::VARCHAR AS agent,
+                    opium.free_credit_days AS credit_days,
+                    o.company_type,
+                    otpd.serial_id AS trade_party_serial_id,
+                    o.country_id,
+                    (SELECT country_code FROM locations WHERE country_id = o.country_id LIMIT 1) AS country_code
+                FROM organization_trade_party_details otpd
+                LEFT JOIN organization_trade_parties otp ON otp.organization_trade_party_detail_id = otpd.id AND otp.status = 'active'
+                LEFT JOIN organizations o ON o.id = otp.organization_id AND o.status = 'active' AND o.account_type = 'service_provider' AND otpd.registration_number = o.registration_number
+                LEFT JOIN organization_stakeholders os ON os.organization_id = o.id
+                LEFT JOIN organization_payment_modes opium ON opium.organization_id = o.id
+                LEFT JOIN users u ON u.id = os.stakeholder_id
+                WHERE otpd.status = 'active'
+                GROUP BY o.serial_id, o.company_type, otpd.id, otpd.registration_number, otpd.serial_id, opium.free_credit_days, o.country_id
+            )
+            SELECT x.*,
+                   y.trade_type::VARCHAR,
+                   y.organization_serial_id,
+                   y.credit_days,
+                   y.country_id,
+                   y.agent,
+                   y.company_type,
+                   y.trade_party_serial_id,
+                   y.country_code
+            FROM x
+            LEFT JOIN y ON x.organization_id = y.organization_id AND x.registration_number = y.registration_number
+        """
+    )
+    suspend fun getSupplierDetailData(): List<SupplierLevelData>
 }
