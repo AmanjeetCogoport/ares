@@ -818,6 +818,22 @@ class OpenSearchClient {
                             }
                             b
                         }
+                        if (request.orgIds != null) {
+                            b.must { s ->
+                                s.terms { v ->
+                                    v.field("organizationId.keyword").terms(
+                                        TermsQueryField.of { a ->
+                                            a.value(
+                                                request.orgIds?.map {
+                                                    FieldValue.of(it.toString())
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            b
+                        }
                         if (request.companyType != null) {
                             b.must { t ->
                                 t.match { v ->
