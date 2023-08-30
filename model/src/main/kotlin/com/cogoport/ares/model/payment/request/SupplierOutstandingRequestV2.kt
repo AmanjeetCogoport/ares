@@ -15,5 +15,8 @@ data class SupplierOutstandingRequestV2(
     var sortType: String? = "Desc",
     var page: Int? = 1,
     var pageLimit: Int? = 10,
-    var performedBy: UUID? = null
+    var performedBy: UUID? = null,
+    var tradePartySerialId: String? = null,
+    var organizationSerialId: String? = null,
+    var countryId: List<UUID>? = null
 )
