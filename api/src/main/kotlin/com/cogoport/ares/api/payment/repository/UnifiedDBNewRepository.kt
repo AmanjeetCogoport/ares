@@ -472,11 +472,11 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
                     o.country_id,
                     (SELECT country_code FROM locations WHERE country_id = o.country_id LIMIT 1) AS country_code
                 FROM organization_trade_party_details otpd
-                LEFT JOIN organization_trade_parties otp ON otp.organization_trade_party_detail_id = otpd.id AND otp.status = 'active'
-                LEFT JOIN organizations o ON o.id = otp.organization_id AND o.status = 'active' AND o.account_type = 'service_provider' AND otpd.registration_number = o.registration_number
-                LEFT JOIN organization_stakeholders os ON os.organization_id = o.id
-                LEFT JOIN organization_payment_modes opium ON opium.organization_id = o.id
-                LEFT JOIN users u ON u.id = os.stakeholder_id
+                INNER JOIN organization_trade_parties otp ON otp.organization_trade_party_detail_id = otpd.id AND otp.status = 'active'
+                INNER JOIN organizations o ON o.id = otp.organization_id AND o.status = 'active' AND o.account_type = 'service_provider' AND otpd.registration_number = o.registration_number
+                INNER JOIN organization_stakeholders os ON os.organization_id = o.id
+                INNER JOIN organization_payment_modes opium ON opium.organization_id = o.id
+                INNER JOIN users u ON u.id = os.stakeholder_id
                 WHERE otpd.status = 'active'
                 GROUP BY o.serial_id, o.company_type, otpd.id, otpd.registration_number, otpd.serial_id, opium.free_credit_days, o.country_id
             )
