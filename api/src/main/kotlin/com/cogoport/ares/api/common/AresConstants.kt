@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.common
 
+import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.ServiceType
 import java.sql.Timestamp
 import java.time.Instant
@@ -24,6 +25,7 @@ object AresConstants {
     val COGO_ENTITIES = listOf(101, 201, 301, 401, 501)
     const val SUPPLIERS_OUTSTANDING_OVERALL_INDEX = "supplier_outstanding_overall"
     const val CUSTOMERS_OUTSTANDING_OVERALL_INDEX = "customer_outstanding_overall"
+    const val SUPPLIERS_OUTSTANDING_OVERALL_INDEX_V2 = "supplier_outstanding"
     const val PAYABLES_STATS_INDEX = "payables_stats"
     const val KEY_DELIMITER = "_"
 
@@ -306,4 +308,8 @@ object AresConstants {
     const val SERVICE_PROVIDER = "service_provider"
 
     val PERCENTILES = listOf(96.0, 90.0, 80.0, 70.0, 40.0)
+
+    val onAccountAROutstandingAccountTypeList = listOf(AccountType.REC, AccountType.CTDS, AccountType.BANK, AccountType.CONTR, AccountType.ROFF, AccountType.MTCCV, AccountType.MISC, AccountType.INTER, AccountType.OPDIV, AccountType.MTC)
+    val paymentAROutstandingAccountTypeList = listOf(AccountType.REC, AccountType.CTDS)
+    val jvAROutstandingAccountTypeList = listOf(AccountType.BANK, AccountType.CONTR, AccountType.ROFF, AccountType.MTCCV, AccountType.MISC, AccountType.INTER, AccountType.OPDIV, AccountType.MTC)
 }
