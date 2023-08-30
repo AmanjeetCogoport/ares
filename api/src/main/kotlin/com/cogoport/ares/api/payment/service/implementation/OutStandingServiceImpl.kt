@@ -1253,7 +1253,7 @@ class OutStandingServiceImpl : OutStandingService {
             val item = supplierOrgOutstandingMapper.convertToModel(it)
             item.agent = if (it.agent != null) objectMapper.readValue(it.agent.toString(), Array<SupplyAgentV2>::class.java).distinctBy { it.id }.toList() else null
             item.tradeType = if (it.tradeType != null) objectMapper.readValue(it.tradeType.toString(), Array<String>::class.java).distinct().toList() else null
-            item.creditDays = if (it.tradeType != null) it.creditDays else 0
+            item.creditDays = it.creditDays ?: 0
             item.totalOpenInvoiceCount = it.invoiceNotDueCount + it.invoiceTodayCount + it.invoiceThirtyCount + it.invoiceSixtyCount + it.invoiceNinetyCount + it.invoiceOneEightyCount + it.invoiceThreeSixtyFiveCount + it.invoiceThreeSixtyFivePlusCount
             item.totalOpenOnAccountCount = it.onAccountNotDueCount + it.onAccountTodayCount + it.onAccountThirtyCount + it.onAccountSixtyCount + it.onAccountNinetyCount + it.onAccountOneEightyCount + it.onAccountThreeSixtyFiveCount + it.onAccountThreeSixtyFivePlusCount
             supplierOutstanding.add(item)
