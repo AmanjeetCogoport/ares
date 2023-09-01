@@ -139,7 +139,5 @@ data class SupplierLevelData(
     @JsonProperty("country_id")
     val countryId: UUID?,
     @JsonProperty("country_code")
-    val countryCode: String?,
-    @JsonProperty("self_organization_id")
-    val selfOrganizationId: UUID?
+    val countryCode: String?
 )
