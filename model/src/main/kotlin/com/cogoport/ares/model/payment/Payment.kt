@@ -151,5 +151,11 @@ data class Payment(
     var sageRefNumber: String? = null,
 
     @JsonProperty("preMigratedDeleted")
-    var preMigratedDeleted: Boolean? = false
+    var preMigratedDeleted: Boolean? = false,
+
+    @JsonProperty("advanceDocumentIf")
+    var advanceDocumentId: String? = null,
+
+    @JsonProperty("paymentDocUrl")
+    var paymentDocUrl: String? = null
 )

@@ -5,6 +5,7 @@ import com.cogoport.ares.api.common.Validations
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.client.CogoBackLowLevelClient
 import com.cogoport.ares.api.common.client.RailsClient
+import com.cogoport.ares.api.common.enums.IncidentStatus
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.common.models.BankDetails
@@ -104,6 +105,14 @@ import com.cogoport.brahma.sage.SageException
 import com.cogoport.brahma.sage.model.request.PaymentLineItem
 import com.cogoport.brahma.sage.model.request.PaymentRequest
 import com.cogoport.brahma.sage.model.request.SageResponse
+import com.cogoport.hades.client.HadesClient
+import com.cogoport.hades.model.incident.IncidentData
+// import com.cogoport.hades.model.incident.enums.IncidentSubType
+import com.cogoport.hades.model.incident.enums.IncidentType
+import com.cogoport.hades.model.incident.enums.Source
+import com.cogoport.hades.model.incident.request.AdvanceSecurityDepositRefund
+import com.cogoport.hades.model.incident.request.CreateIncidentRequest
+import com.cogoport.kuber.client.KuberClient
 import com.cogoport.plutus.model.invoice.GetUserRequest
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
@@ -206,6 +215,12 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Inject
     lateinit var unifiedDBNewRepository: UnifiedDBNewRepository
+
+    @Inject
+    lateinit var hadesClient: HadesClient
+
+    @Inject
+    lateinit var kuberClient: KuberClient
 
     @Value("\${server.base-url}") // application-prod.yml path
     private lateinit var baseUrl: String
@@ -421,6 +436,49 @@ open class OnAccountServiceImpl : OnAccountService {
         } catch (ex: Exception) {
             logger().error(ex.stackTraceToString())
             Sentry.captureException(ex)
+        }
+        if (receivableRequest.advanceDocumentId != null) {
+            hadesClient.createIncident(
+                CreateIncidentRequest(
+                    type = IncidentType.ADVANCE_SECURITY_DEPOSIT_REFUND,
+                    description = null,
+                    data = IncidentData(
+                        advanceSecurityDepositRefund = AdvanceSecurityDepositRefund(
+                            paymentId = savedPayment.id!!,
+                            advanceDocumentId = receivableRequest.advanceDocumentId!!,
+                            utrNumber = receivableRequest.utr,
+                            currency = receivableRequest.currency,
+                            totalAmount = receivableRequest.amount,
+                            remark = receivableRequest.remarks,
+                            shipmentId = null,
+                            supplierName = null,
+                            uploadProof = null,
+                            sid = null,
+                            paymentDocUrl = receivableRequest.paymentDocUrl,
+                            accMode = savedPayment.accMode,
+                            paymentCode = savedPayment.paymentCode,
+                            entityType = savedPayment.entityCode,
+                            ledCurrency = savedPayment.ledCurrency,
+                            ledAmount = savedPayment.ledAmount,
+                            payMode = savedPayment.payMode,
+                            exchangeRate = savedPayment.exchangeRate,
+                            bankId = savedPayment.bankId!!,
+                            organizationId = savedPayment.organizationId,
+                            paymentNum = savedPayment.paymentNum,
+                            paymentNumValue = savedPayment.paymentNumValue,
+                            refAccountNo = savedPayment.refAccountNo,
+                            serviceType = receivableRequest.serviceType,
+                            taggedOrganizationId = savedPayment.taggedOrganizationId,
+                            tradePartyMappingId = savedPayment.tradePartyMappingId
+                        )
+                    ),
+                    source = Source.SHIPMENT,
+                    createdBy = UUID.fromString(receivableRequest.createdBy),
+                    entityId = UUID.fromString(AresConstants.ENTITY_ID[receivableRequest.entityType])
+//                    incidentSubType = IncidentSubType.ADVANCE_SECURITY_DEPOSIT
+                )
+            )
+//            kuberClient.updatePaymentId(receivableRequest.advanceDocumentId!!, savedPayment.id!!)
         }
         return savedPayment.id!!
     }
@@ -1943,5 +2001,23 @@ open class OnAccountServiceImpl : OnAccountService {
             )
         )
         return completeLedgerList + closingLedgerList
+    }
+
+    override suspend fun updateCSDPayments(payment: Payment, status: String, advanceDocumentId: Long, updatedBy: UUID) {
+        when (status) {
+            IncidentStatus.APPROVED.dbValue -> {
+                updatePaymentEntry(payment)
+//                kuberClient.updatePaymentId(receivableRequest.advanceDocumentId!!, null, true)
+            }
+            IncidentStatus.REJECTED.dbValue -> {
+                deletePaymentEntry(
+                    DeletePaymentRequest(
+                        paymentId = payment.id!!,
+                        accMode = AccMode.AP
+                    )
+                )
+//                kuberClient.updatePaymentId(receivableRequest.advanceDocumentId!!, null, false)
+            }
+        }
     }
 }

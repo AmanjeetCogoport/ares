@@ -306,4 +306,6 @@ object AresConstants {
     const val SERVICE_PROVIDER = "service_provider"
 
     val PERCENTILES = listOf(96.0, 90.0, 80.0, 70.0, 40.0)
+
+    const val SHIPMENT = "SHIPMENT"
 }
