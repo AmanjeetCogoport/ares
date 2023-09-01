@@ -221,104 +221,104 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
                 END) AS credit_note_count,
             COALESCE(sum(
                 CASE WHEN (acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01'
-                    and(transaction_date >= now()::date)) THEN
+                    and(due_date >= now()::date)) THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END), 0) AS on_account_not_due_amount,
             COALESCE(sum(
                 CASE WHEN acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01'
-                    and (now()::date - transaction_date) >= 0 AND (now()::date - due_date) < 1 THEN
+                    and (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END), 0) AS on_account_today_amount,        
             COALESCE(sum(
                 CASE WHEN acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01'
-                    and(now()::date - transaction_date) BETWEEN 1 AND 30 THEN
+                    and(now()::date - due_date) BETWEEN 1 AND 30 THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END), 0) AS on_account_thirty_amount,
             COALESCE(sum(
                 CASE WHEN acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01'
-                    and(now()::date - transaction_date) BETWEEN 31 AND 60 THEN
+                    and(now()::date - due_date) BETWEEN 31 AND 60 THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END), 0) AS on_account_sixty_amount,
             COALESCE(sum(
                 CASE WHEN acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01'
-                    and(now()::date - transaction_date) BETWEEN 61 AND 90 THEN
+                    and(now()::date - due_date) BETWEEN 61 AND 90 THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END), 0) AS on_account_ninety_amount,
             COALESCE(sum(
                 CASE WHEN acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01'
-                    and(now()::date - transaction_date) BETWEEN 91 AND 180 THEN
+                    and(now()::date - due_date) BETWEEN 91 AND 180 THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END), 0) AS on_account_one_eighty_amount,
             COALESCE(sum(
                 CASE WHEN acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01'
-                    and(now()::date - transaction_date) BETWEEN 181 AND 365  THEN
+                    and(now()::date - due_date) BETWEEN 181 AND 365  THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END), 0) AS on_account_three_sixty_five_amount,
             COALESCE(sum(
                 CASE WHEN acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01'
-                    and(now()::date - transaction_date) > 365 THEN
+                    and(now()::date - due_date) > 365 THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END), 0) AS on_account_three_sixty_five_plus_amount,
             sum(
-                CASE WHEN transaction_date >= now()::date AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01'  AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN due_date >= now()::date AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01'  AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS on_account_not_due_count,
             sum(
-                CASE WHEN (now()::date - transaction_date) >= 0 AND (now()::date - due_date) < 1 AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01' AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN (now()::date - due_date) >= 0 AND (now()::date - due_date) < 1 AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01' AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS on_account_today_count,
             sum(
-                CASE WHEN (now()::date - transaction_date) BETWEEN 1 AND 30 AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01' AND  (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN (now()::date - due_date) BETWEEN 1 AND 30 AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01' AND  (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS on_account_thirty_count,
             sum(
-                CASE WHEN (now()::date - transaction_date) BETWEEN 31 AND 60 AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01' AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN (now()::date - due_date) BETWEEN 31 AND 60 AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01' AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS on_account_sixty_count,
             sum(
-                CASE WHEN (now()::date - transaction_date) BETWEEN 61 AND 90 AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01' AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN (now()::date - due_date) BETWEEN 61 AND 90 AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01' AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS on_account_ninety_count,
             sum(
-                CASE WHEN (now()::date - transaction_date) BETWEEN 91 AND 180 AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01' AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN (now()::date - due_date) BETWEEN 91 AND 180 AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01' AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS on_account_one_eighty_count,
             sum(
-                CASE WHEN (now()::date - transaction_date) BETWEEN 181 AND 365 AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01' AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN (now()::date - due_date) BETWEEN 181 AND 365 AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01' AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS on_account_three_sixty_five_count,
             sum(
-                CASE WHEN (now()::date - transaction_date) > 365 AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01'  AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN (now()::date - due_date) > 365 AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01'  AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
@@ -458,7 +458,6 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
                     otpd.registration_number,
                     json_agg(DISTINCT trade_party_type) AS trade_type,
                     o.serial_id AS organization_serial_id,
-                    o.id as self_organization_id,
                     json_agg(json_build_object(
                         'id', u.id,
                         'name', u.name,
@@ -479,7 +478,7 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
                 INNER JOIN organization_payment_modes opium ON opium.organization_id = o.id
                 INNER JOIN users u ON u.id = os.stakeholder_id
                 WHERE otpd.status = 'active'
-                GROUP BY o.serial_id, o.company_type, otpd.id, otpd.registration_number, otpd.serial_id, opium.free_credit_days, o.country_id, o.id
+                GROUP BY o.serial_id, o.company_type, otpd.id, otpd.registration_number, otpd.serial_id, opium.free_credit_days, o.country_id
             )
             SELECT x.*,
                    y.trade_type::VARCHAR,
@@ -489,8 +488,7 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
                    y.agent,
                    y.company_type,
                    y.trade_party_serial_id,
-                   y.country_code,
-                   y.self_organization_id
+                   y.country_code
             FROM x
             LEFT JOIN y ON x.organization_id = y.organization_id AND x.registration_number = y.registration_number
         """
