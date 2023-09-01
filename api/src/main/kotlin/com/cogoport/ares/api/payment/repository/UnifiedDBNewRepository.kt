@@ -467,7 +467,7 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
                         'mobile_number', u.mobile_number,
                         'stakeholder_type', os.stakeholder_type
                     ))::VARCHAR AS agent,
-                    opium.free_credit_days AS credit_days,
+                    COALESCE((SELECT free_credit_days FROM organization_payment_modes WHERE organization_id = o.id AND organization_trade_party_id = otpd.id limit 1), 0) AS credit_days,
                     o.company_type,
                     otpd.serial_id AS trade_party_serial_id,
                     o.country_id,
@@ -476,10 +476,9 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
                 INNER JOIN organization_trade_parties otp ON otp.organization_trade_party_detail_id = otpd.id AND otp.status = 'active'
                 INNER JOIN organizations o ON o.id = otp.organization_id AND o.status = 'active' AND o.account_type = 'service_provider' AND otpd.registration_number = o.registration_number
                 INNER JOIN organization_stakeholders os ON os.organization_id = o.id
-                INNER JOIN organization_payment_modes opium ON opium.organization_id = o.id
                 INNER JOIN users u ON u.id = os.stakeholder_id
                 WHERE otpd.status = 'active'
-                GROUP BY o.serial_id, o.company_type, otpd.id, otpd.registration_number, otpd.serial_id, opium.free_credit_days, o.country_id, o.id
+                GROUP BY o.serial_id, o.company_type, otpd.id, otpd.registration_number, otpd.serial_id, o.country_id, o.id
             )
             SELECT x.*,
                    y.trade_type::VARCHAR,
