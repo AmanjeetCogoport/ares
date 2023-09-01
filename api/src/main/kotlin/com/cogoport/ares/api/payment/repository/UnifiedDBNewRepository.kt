@@ -458,6 +458,7 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
                     otpd.registration_number,
                     json_agg(DISTINCT trade_party_type) AS trade_type,
                     o.serial_id AS organization_serial_id,
+                    o.id as self_organization_id,
                     json_agg(json_build_object(
                         'id', u.id,
                         'name', u.name,
@@ -478,7 +479,7 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
                 INNER JOIN organization_payment_modes opium ON opium.organization_id = o.id
                 INNER JOIN users u ON u.id = os.stakeholder_id
                 WHERE otpd.status = 'active'
-                GROUP BY o.serial_id, o.company_type, otpd.id, otpd.registration_number, otpd.serial_id, opium.free_credit_days, o.country_id
+                GROUP BY o.serial_id, o.company_type, otpd.id, otpd.registration_number, otpd.serial_id, opium.free_credit_days, o.country_id, o.id
             )
             SELECT x.*,
                    y.trade_type::VARCHAR,
@@ -488,7 +489,8 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
                    y.agent,
                    y.company_type,
                    y.trade_party_serial_id,
-                   y.country_code
+                   y.country_code,
+                   y.self_organization_id
             FROM x
             LEFT JOIN y ON x.organization_id = y.organization_id AND x.registration_number = y.registration_number
         """
