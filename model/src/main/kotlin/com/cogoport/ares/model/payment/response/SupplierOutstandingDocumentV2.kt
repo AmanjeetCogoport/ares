@@ -229,5 +229,8 @@ data class SupplierOutstandingDocumentV2(
     var totalOpenOnAccountCount: Long?,
 
     @JsonProperty("countryCode")
-    var countryCode: String?
+    var countryCode: String?,
+
+    @JsonProperty("selfOrganizationId")
+    var selfOrganizationId: UUID?
 )
