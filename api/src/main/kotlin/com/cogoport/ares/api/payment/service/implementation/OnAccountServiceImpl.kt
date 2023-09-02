@@ -1991,7 +1991,7 @@ open class OnAccountServiceImpl : OnAccountService {
     override suspend fun updateCSDPayments(paymentId: Long, status: String, updatedBy: UUID) {
         when (status) {
             IncidentStatus.APPROVED.dbValue -> {
-                val payment = paymentRepository.findByPaymentId(182949)
+                val payment = paymentRepository.findByPaymentId(paymentId)
                 val paymentModel = paymentConverter.convertToModel(payment)
                 paymentModel.updatedBy = updatedBy.toString()
                 paymentModel.paymentDocumentStatus = PaymentDocumentStatus.APPROVED
