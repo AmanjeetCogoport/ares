@@ -170,5 +170,5 @@ interface AresClient {
     suspend fun getCustomerMonthlyPayment(@Valid request: CustomerMonthlyPaymentRequest): CustomerMonthlyPayment
 
     @Post("/payments/accounts/update-csd-payment")
-    suspend fun updateCSDPayments(payment: Payment, status: String, advanceDocumentId: Long, updatedBy: UUID)
+    suspend fun updateCSDPayments(paymentId: Long, status: String, updatedBy: UUID)
 }

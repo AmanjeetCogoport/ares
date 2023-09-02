@@ -145,8 +145,8 @@ class OnAccountController {
         return onAccountService.deletingApPayments(paymentNumValues)
     }
 
-    @Post("update-csd-payments")
-    suspend fun updateCSDPayments(payment: Payment, status: String, advanceDocumentId: Long, updatedBy: UUID) {
-        return onAccountService.updateCSDPayments(payment, status, advanceDocumentId, updatedBy)
+    @Post("/update-csd-payment")
+    suspend fun updateCSDPayments(paymentId: Long, status: String, updatedBy: UUID) {
+        return onAccountService.updateCSDPayments(paymentId, status, updatedBy)
     }
 }

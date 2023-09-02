@@ -107,7 +107,7 @@ import com.cogoport.brahma.sage.model.request.PaymentRequest
 import com.cogoport.brahma.sage.model.request.SageResponse
 import com.cogoport.hades.client.HadesClient
 import com.cogoport.hades.model.incident.IncidentData
-// import com.cogoport.hades.model.incident.enums.IncidentSubType
+import com.cogoport.hades.model.incident.enums.IncidentSubTypeEnum
 import com.cogoport.hades.model.incident.enums.IncidentType
 import com.cogoport.hades.model.incident.enums.Source
 import com.cogoport.hades.model.incident.request.AdvanceSecurityDepositRefund
@@ -454,31 +454,16 @@ open class OnAccountServiceImpl : OnAccountService {
                             supplierName = null,
                             uploadProof = null,
                             sid = null,
-                            paymentDocUrl = receivableRequest.paymentDocUrl,
-                            accMode = savedPayment.accMode,
-                            paymentCode = savedPayment.paymentCode,
-                            entityType = savedPayment.entityCode,
-                            ledCurrency = savedPayment.ledCurrency,
-                            ledAmount = savedPayment.ledAmount,
-                            payMode = savedPayment.payMode,
-                            exchangeRate = savedPayment.exchangeRate,
-                            bankId = savedPayment.bankId!!,
-                            organizationId = savedPayment.organizationId,
-                            paymentNum = savedPayment.paymentNum,
-                            paymentNumValue = savedPayment.paymentNumValue,
-                            refAccountNo = savedPayment.refAccountNo,
-                            serviceType = receivableRequest.serviceType,
-                            taggedOrganizationId = savedPayment.taggedOrganizationId,
-                            tradePartyMappingId = savedPayment.tradePartyMappingId
+                            paymentDocUrl = receivableRequest.paymentDocUrl
                         )
                     ),
                     source = Source.SHIPMENT,
                     createdBy = UUID.fromString(receivableRequest.createdBy),
-                    entityId = UUID.fromString(AresConstants.ENTITY_ID[receivableRequest.entityType])
-//                    incidentSubType = IncidentSubType.ADVANCE_SECURITY_DEPOSIT
+                    entityId = UUID.fromString(AresConstants.ENTITY_ID[receivableRequest.entityType]),
+                    incidentSubType = IncidentSubTypeEnum.ADVANCE_SECURITY_DEPOSIT_REFUND
                 )
             )
-//            kuberClient.updatePaymentId(receivableRequest.advanceDocumentId!!, savedPayment.id!!)
+            kuberClient.addPaymentId(receivableRequest.advanceDocumentId!!, savedPayment.id!!)
         }
         return savedPayment.id!!
     }
@@ -2003,16 +1988,20 @@ open class OnAccountServiceImpl : OnAccountService {
         return completeLedgerList + closingLedgerList
     }
 
-    override suspend fun updateCSDPayments(payment: Payment, status: String, advanceDocumentId: Long, updatedBy: UUID) {
+    override suspend fun updateCSDPayments(paymentId: Long, status: String, updatedBy: UUID) {
         when (status) {
             IncidentStatus.APPROVED.dbValue -> {
-                updatePaymentEntry(payment)
+                val payment = paymentRepository.findByPaymentId(182949)
+                val paymentModel = paymentConverter.convertToModel(payment)
+                paymentModel.updatedBy = updatedBy.toString()
+                paymentModel.paymentDocumentStatus = PaymentDocumentStatus.APPROVED
+                updatePaymentEntry(paymentModel)
 //                kuberClient.updatePaymentId(receivableRequest.advanceDocumentId!!, null, true)
             }
             IncidentStatus.REJECTED.dbValue -> {
                 deletePaymentEntry(
                     DeletePaymentRequest(
-                        paymentId = payment.id!!,
+                        paymentId = paymentId,
                         accMode = AccMode.AP
                     )
                 )

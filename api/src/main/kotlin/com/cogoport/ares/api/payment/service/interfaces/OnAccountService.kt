@@ -49,5 +49,5 @@ interface OnAccountService {
     suspend fun deletingApPayments(paymentNumValues: List<String>)
     suspend fun getARLedgerOrganizationAndEntityWise(req: ARLedgerRequest): List<ARLedgerResponse>
 
-    suspend fun updateCSDPayments(payment: Payment, status: String, advanceDocumentId: Long, updatedBy: UUID)
+    suspend fun updateCSDPayments(paymentId: Long, status: String, updatedBy: UUID)
 }
