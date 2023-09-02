@@ -3,6 +3,7 @@ package com.cogoport.ares.api.payment.service.interfaces
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.model.PushAccountUtilizationRequest
 import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
+import com.cogoport.ares.model.payment.AdvancePaymentRefund
 import com.cogoport.ares.model.payment.OrgStatsResponse
 import com.cogoport.ares.model.payment.OrgStatsResponseForCoeFinance
 import com.cogoport.ares.model.payment.Payment
@@ -50,4 +51,6 @@ interface OnAccountService {
     suspend fun getARLedgerOrganizationAndEntityWise(req: ARLedgerRequest): List<ARLedgerResponse>
 
     suspend fun updateCSDPayments(paymentId: Long, status: String, updatedBy: UUID)
+
+    suspend fun createAdvancePaymentRefundEntry(request: AdvancePaymentRefund): OnAccountApiCommonResponse
 }

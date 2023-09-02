@@ -7,6 +7,7 @@ import com.cogoport.ares.api.utils.Util
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
 import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.payment.AdvancePaymentRefund
 import com.cogoport.ares.model.payment.OrgStatsResponse
 import com.cogoport.ares.model.payment.OrgStatsResponseForCoeFinance
 import com.cogoport.ares.model.payment.Payment
@@ -148,5 +149,10 @@ class OnAccountController {
     @Post("/update-csd-payment")
     suspend fun updateCSDPayments(paymentId: Long, status: String, updatedBy: UUID) {
         return onAccountService.updateCSDPayments(paymentId, status, updatedBy)
+    }
+
+    @Post
+    suspend fun createAdvancePaymentRefund(@Valid @Body request: AdvancePaymentRefund): OnAccountApiCommonResponse {
+        return Response<OnAccountApiCommonResponse>().ok(onAccountService.createAdvancePaymentRefundEntry(request))
     }
 }

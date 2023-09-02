@@ -9,6 +9,7 @@ import com.cogoport.ares.api.common.enums.IncidentStatus
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.common.models.BankDetails
+import com.cogoport.ares.api.common.models.ExchangeRequest
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.events.KuberMessagePublisher
 import com.cogoport.ares.api.events.OpenSearchEvent
@@ -48,22 +49,7 @@ import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.CreateCommunicationRequest
 import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
-import com.cogoport.ares.model.payment.AccMode
-import com.cogoport.ares.model.payment.AccountType
-import com.cogoport.ares.model.payment.DocType
-import com.cogoport.ares.model.payment.DocumentSearchType
-import com.cogoport.ares.model.payment.DocumentStatus
-import com.cogoport.ares.model.payment.MappingIdDetailRequest
-import com.cogoport.ares.model.payment.OrgStatsResponse
-import com.cogoport.ares.model.payment.OrgStatsResponseForCoeFinance
-import com.cogoport.ares.model.payment.PayMode
-import com.cogoport.ares.model.payment.Payment
-import com.cogoport.ares.model.payment.PaymentCode
-import com.cogoport.ares.model.payment.PaymentDocumentStatus
-import com.cogoport.ares.model.payment.ServiceType
-import com.cogoport.ares.model.payment.TradePartyDetailRequest
-import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
-import com.cogoport.ares.model.payment.ValidateTradePartyRequest
+import com.cogoport.ares.model.payment.*
 import com.cogoport.ares.model.payment.enum.CogoBankAccount
 import com.cogoport.ares.model.payment.enum.PaymentSageGLCodes
 import com.cogoport.ares.model.payment.request.ARLedgerRequest
@@ -113,6 +99,7 @@ import com.cogoport.hades.model.incident.enums.Source
 import com.cogoport.hades.model.incident.request.AdvanceSecurityDepositRefund
 import com.cogoport.hades.model.incident.request.CreateIncidentRequest
 import com.cogoport.kuber.client.KuberClient
+import com.cogoport.kuber.model.bills.request.LedgerExchangeRateRequest
 import com.cogoport.plutus.model.invoice.GetUserRequest
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
@@ -1996,7 +1983,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 paymentModel.updatedBy = updatedBy.toString()
                 paymentModel.paymentDocumentStatus = PaymentDocumentStatus.APPROVED
                 updatePaymentEntry(paymentModel)
-//                kuberClient.updatePaymentId(receivableRequest.advanceDocumentId!!, null, true)
+
             }
             IncidentStatus.REJECTED.dbValue -> {
                 deletePaymentEntry(
@@ -2005,8 +1992,67 @@ open class OnAccountServiceImpl : OnAccountService {
                         accMode = AccMode.AP
                     )
                 )
-//                kuberClient.updatePaymentId(receivableRequest.advanceDocumentId!!, null, false)
             }
         }
+    }
+
+    override suspend fun createAdvancePaymentRefundEntry(request: AdvancePaymentRefund): OnAccountApiCommonResponse {
+        val entityId = AresConstants.ENTITY_ID[request.entityType]
+        val req = LedgerExchangeRateRequest (
+            cogoEntityId = UUID.fromString(entityId),
+            fromCurrency = request.currency!!
+        )
+
+        val res = authClient.getLedgerExchangeRate(req)
+        request.exchangeRate = res.ledgerExchangeRate
+
+        val paymentRequest = Payment(
+            id = request.id,
+            entityType = request.entityType,
+            fileId = request.fileId,
+            orgSerialId = request.orgSerialId,
+            sageOrganizationId = request.sageOrganizationId,
+            organizationId = request.organizationId,
+            taggedOrganizationId = request.taggedOrganizationId,
+            tradePartyMappingId = request.tradePartyMappingId,
+            organizationName = request.organizationName,
+            accCode = request.accCode,
+            accMode = request.accMode,
+            signFlag = request.signFlag,
+            currency = request.currency,
+            amount = request.amount,
+            ledCurrency = request.ledCurrency,
+            ledAmount = request.ledAmount,
+            payMode = request.payMode,
+            remarks = request.remarks,
+            utr = request.utr,
+            refPaymentId = request.refPaymentId,
+            refAccountNo = request.refAccountNo,
+            transactionDate = request.transactionDate,
+            createdAt = request.createdAt,
+            createdBy = request.createdBy,
+            updatedBy = request.updatedBy,
+            updatedAt = request.updatedAt,
+            bankAccountNumber = request.bankAccountNumber,
+            zone = request.zone,
+            serviceType = request.serviceType,
+            paymentCode = request.paymentCode,
+            paymentDate = request.paymentDate,
+            uploadedBy = request.uploadedBy,
+            bankName = request.bankName,
+            exchangeRate = request.exchangeRate,
+            paymentNum = request.paymentNum,
+            paymentNumValue = request.paymentNumValue,
+            bankId = request.bankId,
+            performedByUserType = request.performedByUserType,
+            tradePartyDocument = request.tradePartyDocument,
+            docType = request.docType,
+            sageRefNumber = request.sageRefNumber,
+            preMigratedDeleted = request.preMigratedDeleted,
+            advanceDocumentId = request.advanceDocumentId,
+            paymentDocUrl = request.paymentDocUrl
+        )
+
+        return createPaymentEntry(paymentRequest)
     }
 }
