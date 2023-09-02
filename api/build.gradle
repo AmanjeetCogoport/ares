@@ -96,13 +96,11 @@ dependencies {
     implementation("com.cogoport.plutus:plutus-client:1.2.7")
     //Hades Client & Model
     implementation("com.cogoport.hades:hades-client:1.0.22")
-//    implementation("com.cogoport.hades:hades-model:1.0.29")
-    implementation files("libs/hades-model-1.0.30.jar")
+    implementation("com.cogoport.hades:hades-model:1.0.30")
 
     //Kuber Client
     implementation("com.cogoport.kuber:kuber-model:1.1.42")
-//    implementation("com.cogoport.kuber:kuber-client:1.1.18")
-    implementation files("libs/kuber-client-1.1.19.jar")
+    implementation("com.cogoport.kuber:kuber-client:1.1.19")
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.3")
     implementation("software.amazon.msk:aws-msk-iam-auth:1.1.4")
