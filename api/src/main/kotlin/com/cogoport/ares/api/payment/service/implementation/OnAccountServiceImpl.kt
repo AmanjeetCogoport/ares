@@ -9,7 +9,6 @@ import com.cogoport.ares.api.common.enums.IncidentStatus
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.common.models.BankDetails
-import com.cogoport.ares.api.common.models.ExchangeRequest
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.events.KuberMessagePublisher
 import com.cogoport.ares.api.events.OpenSearchEvent
@@ -49,7 +48,23 @@ import com.cogoport.ares.common.models.Messages
 import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.CreateCommunicationRequest
 import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
-import com.cogoport.ares.model.payment.*
+import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.payment.AdvancePaymentRefund
+import com.cogoport.ares.model.payment.DocType
+import com.cogoport.ares.model.payment.DocumentSearchType
+import com.cogoport.ares.model.payment.DocumentStatus
+import com.cogoport.ares.model.payment.MappingIdDetailRequest
+import com.cogoport.ares.model.payment.OrgStatsResponse
+import com.cogoport.ares.model.payment.OrgStatsResponseForCoeFinance
+import com.cogoport.ares.model.payment.PayMode
+import com.cogoport.ares.model.payment.Payment
+import com.cogoport.ares.model.payment.PaymentCode
+import com.cogoport.ares.model.payment.PaymentDocumentStatus
+import com.cogoport.ares.model.payment.ServiceType
+import com.cogoport.ares.model.payment.TradePartyDetailRequest
+import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
+import com.cogoport.ares.model.payment.ValidateTradePartyRequest
 import com.cogoport.ares.model.payment.enum.CogoBankAccount
 import com.cogoport.ares.model.payment.enum.PaymentSageGLCodes
 import com.cogoport.ares.model.payment.request.ARLedgerRequest
@@ -1983,7 +1998,6 @@ open class OnAccountServiceImpl : OnAccountService {
                 paymentModel.updatedBy = updatedBy.toString()
                 paymentModel.paymentDocumentStatus = PaymentDocumentStatus.APPROVED
                 updatePaymentEntry(paymentModel)
-
             }
             IncidentStatus.REJECTED.dbValue -> {
                 deletePaymentEntry(
@@ -1998,7 +2012,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
     override suspend fun createAdvancePaymentRefundEntry(request: AdvancePaymentRefund): OnAccountApiCommonResponse {
         val entityId = AresConstants.ENTITY_ID[request.entityType]
-        val req = LedgerExchangeRateRequest (
+        val req = LedgerExchangeRateRequest(
             cogoEntityId = UUID.fromString(entityId),
             fromCurrency = request.currency!!
         )
