@@ -151,7 +151,7 @@ class OnAccountController {
         return onAccountService.updateCSDPayments(paymentId, status, updatedBy)
     }
 
-    @Post
+    @Post("/create-csd-refund-payment")
     suspend fun createAdvancePaymentRefund(@Valid @Body request: AdvancePaymentRefund): OnAccountApiCommonResponse {
         return Response<OnAccountApiCommonResponse>().ok(onAccountService.createAdvancePaymentRefundEntry(request))
     }
