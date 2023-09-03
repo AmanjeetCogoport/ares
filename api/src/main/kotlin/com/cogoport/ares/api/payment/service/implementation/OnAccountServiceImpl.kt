@@ -482,7 +482,7 @@ open class OnAccountServiceImpl : OnAccountService {
                         savedPayment.id,
                         "Payment",
                         "500",
-                        receivableRequest.advanceDocumentId!!.toString() + " "  + savedPayment.id.toString(),
+                        receivableRequest.advanceDocumentId!!.toString() + " " + savedPayment.id.toString(),
                         ex.toString(),
                         false
                     )
