@@ -427,21 +427,11 @@ open class OnAccountServiceImpl : OnAccountService {
                 performedByUserType = receivableRequest.performedByUserType
             )
         )
-        try {
-            Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
-            if (accUtilRes.accMode == AccMode.AP) {
-                aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))
-            }
-            if (accUtilRes.accMode == AccMode.AR) {
-                aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))
-            }
-        } catch (ex: Exception) {
-            logger().error(ex.stackTraceToString())
-            Sentry.captureException(ex)
-        }
+        var hadesRequest: CreateIncidentRequest? = null
+
         if (receivableRequest.advanceDocumentId != null) {
-            hadesClient.createIncident(
-                CreateIncidentRequest(
+            try {
+                hadesRequest = CreateIncidentRequest(
                     type = IncidentType.ADVANCE_SECURITY_DEPOSIT_REFUND,
                     description = null,
                     data = IncidentData(
@@ -464,8 +454,52 @@ open class OnAccountServiceImpl : OnAccountService {
                     entityId = UUID.fromString(AresConstants.ENTITY_ID[receivableRequest.entityType]),
                     incidentSubType = IncidentSubTypeEnum.ADVANCE_SECURITY_DEPOSIT_REFUND
                 )
-            )
-            kuberClient.addPaymentId(receivableRequest.advanceDocumentId!!, savedPayment.id!!)
+                hadesClient.createIncident(hadesRequest)
+            } catch (ex: Exception) {
+                thirdPartyApiAuditService.createAudit(
+                    ThirdPartyApiAudit(
+                        null,
+                        "CreateIncident",
+                        "Hades - Incident",
+                        savedPayment.id,
+                        "Payment",
+                        "500",
+                        hadesRequest.toString(),
+                        ex.toString(),
+                        false
+                    )
+                )
+            }
+
+            try {
+                kuberClient.addPaymentId(receivableRequest.advanceDocumentId!!, savedPayment.id!!)
+            } catch (ex: Exception) {
+                thirdPartyApiAuditService.createAudit(
+                    ThirdPartyApiAudit(
+                        null,
+                        "AddPaymentId",
+                        "Kuber - AdvancePayment",
+                        savedPayment.id,
+                        "Payment",
+                        "500",
+                        receivableRequest.advanceDocumentId!!.toString() + " "  + savedPayment.id.toString(),
+                        ex.toString(),
+                        false
+                    )
+                )
+            }
+        }
+        try {
+            Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
+            if (accUtilRes.accMode == AccMode.AP) {
+                aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))
+            }
+            if (accUtilRes.accMode == AccMode.AR) {
+                aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))
+            }
+        } catch (ex: Exception) {
+            logger().error(ex.stackTraceToString())
+            Sentry.captureException(ex)
         }
         return savedPayment.id!!
     }
