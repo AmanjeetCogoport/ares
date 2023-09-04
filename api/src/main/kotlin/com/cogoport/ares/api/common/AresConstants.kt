@@ -312,6 +312,4 @@ object AresConstants {
     val onAccountAROutstandingAccountTypeList = listOf(AccountType.REC, AccountType.CTDS, AccountType.BANK, AccountType.CONTR, AccountType.ROFF, AccountType.MTCCV, AccountType.MISC, AccountType.INTER, AccountType.OPDIV, AccountType.MTC)
     val paymentAROutstandingAccountTypeList = listOf(AccountType.REC, AccountType.CTDS)
     val jvAROutstandingAccountTypeList = listOf(AccountType.BANK, AccountType.CONTR, AccountType.ROFF, AccountType.MTCCV, AccountType.MISC, AccountType.INTER, AccountType.OPDIV, AccountType.MTC)
-
-    const val SHIPMENT = "SHIPMENT"
 }
