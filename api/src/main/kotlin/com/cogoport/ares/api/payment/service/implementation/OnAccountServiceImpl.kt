@@ -108,6 +108,7 @@ import com.cogoport.brahma.sage.model.request.PaymentRequest
 import com.cogoport.brahma.sage.model.request.SageResponse
 import com.cogoport.hades.client.HadesClient
 import com.cogoport.hades.model.incident.IncidentData
+import com.cogoport.hades.model.incident.Organization
 import com.cogoport.hades.model.incident.enums.IncidentSubTypeEnum
 import com.cogoport.hades.model.incident.enums.IncidentType
 import com.cogoport.hades.model.incident.enums.Source
@@ -367,7 +368,11 @@ open class OnAccountServiceImpl : OnAccountService {
                             sid = null,
                             paymentDocUrl = receivableRequest.paymentDocUrl
                         ),
-
+                        organization = Organization(
+                            id = receivableRequest.organizationId,
+                            businessName = receivableRequest.organizationName,
+                            tradePartyName = receivableRequest.organizationName
+                        )
                     ),
                     source = Source.SHIPMENT,
                     createdBy = UUID.fromString(receivableRequest.createdBy),
