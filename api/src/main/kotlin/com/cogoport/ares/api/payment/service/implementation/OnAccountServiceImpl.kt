@@ -320,29 +320,64 @@ open class OnAccountServiceImpl : OnAccountService {
         }
 
         setPaymentAmounts(receivableRequest)
-        val paymentId = createNonSuspensePaymentEntry(receivableRequest)
+        var paymentId: Long
+        if (receivableRequest.advanceDocumentId != null) {
+            paymentId = createNonSuspensePaymentEntryCSDWrapper(receivableRequest)
+        } else {
+            paymentId = createNonSuspensePaymentEntry(receivableRequest)
+        }
 
         return OnAccountApiCommonResponse(id = paymentId, message = Messages.PAYMENT_CREATED, isSuccess = true)
     }
 
-    private suspend fun createNonSuspensePaymentEntry(receivableRequest: Payment): Long {
+    private suspend fun createNonSuspensePaymentEntryCSDWrapper(receivableRequest: Payment): Long {
 
-        if (receivableRequest.advanceDocumentId != null) {
-            val entityId = AresConstants.ENTITY_ID[receivableRequest.entityType]
-            val req = LedgerExchangeRateRequest(
-                cogoEntityId = UUID.fromString(entityId),
-                fromCurrency = receivableRequest.currency!!
-            )
+        val entityId = AresConstants.ENTITY_ID[receivableRequest.entityType]
+        val req = LedgerExchangeRateRequest(
+            cogoEntityId = UUID.fromString(entityId),
+            fromCurrency = receivableRequest.currency!!
+        )
 
-            val res = authClient.getLedgerExchangeRate(req)
+        val res = authClient.getLedgerExchangeRate(req)
 
-            if (res.ledgerExchangeRate == null) {
-                throw Exception("Unable to fetch Exchange Rate")
-            }
-
-            receivableRequest.exchangeRate = res.ledgerExchangeRate
+        if (res.ledgerExchangeRate == null) {
+            throw AresException(AresError.ERR_1505, receivableRequest.currency!!)
         }
 
+        receivableRequest.exchangeRate = res.ledgerExchangeRate
+
+        val savedPaymentId = createNonSuspensePaymentEntry(receivableRequest)
+        if (receivableRequest.advanceDocumentId != null) {
+            hadesClient.createIncident(
+                CreateIncidentRequest(
+                    type = IncidentType.ADVANCE_SECURITY_DEPOSIT_REFUND,
+                    description = null,
+                    data = IncidentData(
+                        advanceSecurityDepositRefund = AdvanceSecurityDepositRefund(
+                            paymentId = savedPaymentId,
+                            advanceDocumentId = receivableRequest.advanceDocumentId!!,
+                            utrNumber = receivableRequest.utr,
+                            currency = receivableRequest.currency,
+                            totalAmount = receivableRequest.amount,
+                            remark = receivableRequest.remarks,
+                            shipmentId = null,
+                            supplierName = null,
+                            uploadProof = null,
+                            sid = null,
+                            paymentDocUrl = receivableRequest.paymentDocUrl
+                        )
+                    ),
+                    source = Source.SHIPMENT,
+                    createdBy = UUID.fromString(receivableRequest.createdBy),
+                    entityId = UUID.fromString(AresConstants.ENTITY_ID[receivableRequest.entityType]),
+                    incidentSubType = IncidentSubTypeEnum.ADVANCE_SECURITY_DEPOSIT_REFUND
+                )
+            )
+        }
+        return savedPaymentId
+    }
+
+    private suspend fun createNonSuspensePaymentEntry(receivableRequest: Payment): Long {
         if (receivableRequest.accMode == null) receivableRequest.accMode = AccMode.AR
 
         if (receivableRequest.docType != DocType.TDS && receivableRequest.bankAccountNumber.isNullOrBlank()) {
@@ -443,35 +478,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 performedByUserType = receivableRequest.performedByUserType
             )
         )
-        var hadesRequest: CreateIncidentRequest? = null
 
-        if (receivableRequest.advanceDocumentId != null) {
-            hadesClient.createIncident(
-                CreateIncidentRequest(
-                    type = IncidentType.ADVANCE_SECURITY_DEPOSIT_REFUND,
-                    description = null,
-                    data = IncidentData(
-                        advanceSecurityDepositRefund = AdvanceSecurityDepositRefund(
-                            paymentId = savedPayment.id!!,
-                            advanceDocumentId = receivableRequest.advanceDocumentId!!,
-                            utrNumber = receivableRequest.utr,
-                            currency = receivableRequest.currency,
-                            totalAmount = receivableRequest.amount,
-                            remark = receivableRequest.remarks,
-                            shipmentId = null,
-                            supplierName = null,
-                            uploadProof = null,
-                            sid = null,
-                            paymentDocUrl = receivableRequest.paymentDocUrl
-                        )
-                    ),
-                    source = Source.SHIPMENT,
-                    createdBy = UUID.fromString(receivableRequest.createdBy),
-                    entityId = UUID.fromString(AresConstants.ENTITY_ID[receivableRequest.entityType]),
-                    incidentSubType = IncidentSubTypeEnum.ADVANCE_SECURITY_DEPOSIT_REFUND
-                )
-            )
-        }
         try {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             if (accUtilRes.accMode == AccMode.AP) {
