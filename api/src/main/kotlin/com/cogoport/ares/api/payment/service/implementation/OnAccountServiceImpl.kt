@@ -63,6 +63,7 @@ import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.TradePartyDetailRequest
 import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
+import com.cogoport.ares.model.payment.UpdateCSDPaymentRequest
 import com.cogoport.ares.model.payment.ValidateTradePartyRequest
 import com.cogoport.ares.model.payment.enum.CogoBankAccount
 import com.cogoport.ares.model.payment.enum.PaymentSageGLCodes
@@ -365,7 +366,8 @@ open class OnAccountServiceImpl : OnAccountService {
                             uploadProof = null,
                             sid = null,
                             paymentDocUrl = receivableRequest.paymentDocUrl
-                        )
+                        ),
+
                     ),
                     source = Source.SHIPMENT,
                     createdBy = UUID.fromString(receivableRequest.createdBy),
@@ -2014,19 +2016,19 @@ open class OnAccountServiceImpl : OnAccountService {
         return completeLedgerList + closingLedgerList
     }
 
-    override suspend fun updateCSDPayments(paymentId: Long, status: String, updatedBy: UUID) {
-        when (status) {
+    override suspend fun updateCSDPayments(request: UpdateCSDPaymentRequest) {
+        when (request.status) {
             IncidentStatus.APPROVED.dbValue -> {
-                val payment = paymentRepository.findByPaymentId(paymentId)
+                val payment = paymentRepository.findByPaymentId(request.paymentId)
                 val paymentModel = paymentConverter.convertToModel(payment)
-                paymentModel.updatedBy = updatedBy.toString()
+                paymentModel.updatedBy = request.updatedBy.toString()
                 paymentModel.paymentDocumentStatus = PaymentDocumentStatus.APPROVED
                 updatePaymentEntry(paymentModel)
             }
             IncidentStatus.REJECTED.dbValue -> {
                 deletePaymentEntry(
                     DeletePaymentRequest(
-                        paymentId = paymentId,
+                        paymentId = request.paymentId,
                         accMode = AccMode.AP
                     )
                 )
