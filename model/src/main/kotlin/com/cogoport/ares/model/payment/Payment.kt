@@ -153,7 +153,7 @@ data class Payment(
     @JsonProperty("preMigratedDeleted")
     var preMigratedDeleted: Boolean? = false,
 
-    @JsonProperty("advanceDocumentIf")
+    @JsonProperty("advanceDocumentId")
     var advanceDocumentId: String? = null,
 
     @JsonProperty("paymentDocUrl")
