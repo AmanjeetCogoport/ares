@@ -19,6 +19,8 @@ import com.cogoport.ares.model.payment.request.CogoEntitiesRequest
 import com.cogoport.ares.model.payment.request.CogoOrganizationRequest
 import com.cogoport.ares.model.payment.response.PlatformOrganizationResponse
 import com.cogoport.ares.model.sage.SageOrganizationAccountTypeRequest
+import com.cogoport.kuber.model.bills.request.LedgerExchangeRateRequest
+import com.cogoport.kuber.model.bills.response.LedgerExchangeRateResponse
 import com.cogoport.plutus.model.invoice.GetUserRequest
 import com.cogoport.plutus.model.invoice.GetUserResponse
 import com.cogoport.plutus.model.invoice.SageOrganizationRequest
@@ -96,4 +98,7 @@ interface AuthClient {
 
     @Get("/get_sage_organization_details{?request*}")
     suspend fun getSageOrganizationAccountType(@Valid request: SageOrganizationAccountTypeRequest): SageOrganizationResponse
+
+    @Get("/get_ledger_exchange_rate{?request*}")
+    suspend fun getLedgerExchangeRate(request: LedgerExchangeRateRequest): LedgerExchangeRateResponse
 }
