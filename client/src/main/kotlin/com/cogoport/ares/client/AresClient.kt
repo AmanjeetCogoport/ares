@@ -10,6 +10,7 @@ import com.cogoport.ares.model.payment.KamPaymentRequest
 import com.cogoport.ares.model.payment.OrgPayableRequest
 import com.cogoport.ares.model.payment.OutstandingList
 import com.cogoport.ares.model.payment.Payment
+import com.cogoport.ares.model.payment.UpdateCSDPaymentRequest
 import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
 import com.cogoport.ares.model.payment.request.CustomerMonthlyPaymentRequest
@@ -168,4 +169,7 @@ interface AresClient {
 
     @Get("/payments/outstanding/customer-monthly-payment{?request*}")
     suspend fun getCustomerMonthlyPayment(@Valid request: CustomerMonthlyPaymentRequest): CustomerMonthlyPayment
+
+    @Post("/payments/accounts/update-csd-payment")
+    suspend fun updateCSDPayments(@Valid @Body request: UpdateCSDPaymentRequest)
 }

@@ -6,6 +6,7 @@ import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
 import com.cogoport.ares.model.payment.OrgStatsResponse
 import com.cogoport.ares.model.payment.OrgStatsResponseForCoeFinance
 import com.cogoport.ares.model.payment.Payment
+import com.cogoport.ares.model.payment.UpdateCSDPaymentRequest
 import com.cogoport.ares.model.payment.request.ARLedgerRequest
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
 import com.cogoport.ares.model.payment.request.BulkUploadRequest
@@ -48,4 +49,6 @@ interface OnAccountService {
 
     suspend fun deletingApPayments(paymentNumValues: List<String>)
     suspend fun getARLedgerOrganizationAndEntityWise(req: ARLedgerRequest): List<ARLedgerResponse>
+
+    suspend fun updateCSDPayments(request: UpdateCSDPaymentRequest)
 }
