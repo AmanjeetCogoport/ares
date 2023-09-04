@@ -50,7 +50,6 @@ import com.cogoport.ares.model.common.CreateCommunicationRequest
 import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
-import com.cogoport.ares.model.payment.AdvancePaymentRefund
 import com.cogoport.ares.model.payment.DocType
 import com.cogoport.ares.model.payment.DocumentSearchType
 import com.cogoport.ares.model.payment.DocumentStatus
@@ -327,6 +326,23 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     private suspend fun createNonSuspensePaymentEntry(receivableRequest: Payment): Long {
+
+        if (receivableRequest.advanceDocumentId != null) {
+            val entityId = AresConstants.ENTITY_ID[receivableRequest.entityType]
+            val req = LedgerExchangeRateRequest(
+                cogoEntityId = UUID.fromString(entityId),
+                fromCurrency = receivableRequest.currency!!
+            )
+
+            val res = authClient.getLedgerExchangeRate(req)
+
+            if (res.ledgerExchangeRate == null) {
+                throw Exception("Unable to fetch Exchange Rate")
+            }
+
+            receivableRequest.exchangeRate = res.ledgerExchangeRate
+        }
+
         if (receivableRequest.accMode == null) receivableRequest.accMode = AccMode.AR
 
         if (receivableRequest.docType != DocType.TDS && receivableRequest.bankAccountNumber.isNullOrBlank()) {
@@ -430,8 +446,8 @@ open class OnAccountServiceImpl : OnAccountService {
         var hadesRequest: CreateIncidentRequest? = null
 
         if (receivableRequest.advanceDocumentId != null) {
-            try {
-                hadesRequest = CreateIncidentRequest(
+            hadesClient.createIncident(
+                CreateIncidentRequest(
                     type = IncidentType.ADVANCE_SECURITY_DEPOSIT_REFUND,
                     description = null,
                     data = IncidentData(
@@ -454,40 +470,7 @@ open class OnAccountServiceImpl : OnAccountService {
                     entityId = UUID.fromString(AresConstants.ENTITY_ID[receivableRequest.entityType]),
                     incidentSubType = IncidentSubTypeEnum.ADVANCE_SECURITY_DEPOSIT_REFUND
                 )
-                hadesClient.createIncident(hadesRequest)
-            } catch (ex: Exception) {
-                thirdPartyApiAuditService.createAudit(
-                    ThirdPartyApiAudit(
-                        null,
-                        "CreateIncident",
-                        "Hades - Incident",
-                        savedPayment.id,
-                        "Payment",
-                        "500",
-                        hadesRequest.toString(),
-                        ex.toString(),
-                        false
-                    )
-                )
-            }
-
-            try {
-                kuberClient.addPaymentId(receivableRequest.advanceDocumentId!!, savedPayment.id!!)
-            } catch (ex: Exception) {
-                thirdPartyApiAuditService.createAudit(
-                    ThirdPartyApiAudit(
-                        null,
-                        "AddPaymentId",
-                        "Kuber - AdvancePayment",
-                        savedPayment.id,
-                        "Payment",
-                        "500",
-                        receivableRequest.advanceDocumentId!!.toString() + " " + savedPayment.id.toString(),
-                        ex.toString(),
-                        false
-                    )
-                )
-            }
+            )
         }
         try {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
@@ -2042,65 +2025,5 @@ open class OnAccountServiceImpl : OnAccountService {
                 )
             }
         }
-    }
-
-    override suspend fun createAdvancePaymentRefundEntry(request: AdvancePaymentRefund): OnAccountApiCommonResponse {
-        val entityId = AresConstants.ENTITY_ID[request.entityType]
-        val req = LedgerExchangeRateRequest(
-            cogoEntityId = UUID.fromString(entityId),
-            fromCurrency = request.currency!!
-        )
-
-        val res = authClient.getLedgerExchangeRate(req)
-        request.exchangeRate = res.ledgerExchangeRate
-
-        val paymentRequest = Payment(
-            id = request.id,
-            entityType = request.entityType,
-            fileId = request.fileId,
-            orgSerialId = request.orgSerialId,
-            sageOrganizationId = request.sageOrganizationId,
-            organizationId = request.organizationId,
-            taggedOrganizationId = request.taggedOrganizationId,
-            tradePartyMappingId = request.tradePartyMappingId,
-            organizationName = request.organizationName,
-            accCode = request.accCode,
-            accMode = request.accMode,
-            signFlag = request.signFlag,
-            currency = request.currency,
-            amount = request.amount,
-            ledCurrency = request.ledCurrency,
-            ledAmount = request.ledAmount,
-            payMode = request.payMode,
-            remarks = request.remarks,
-            utr = request.utr,
-            refPaymentId = request.refPaymentId,
-            refAccountNo = request.refAccountNo,
-            transactionDate = request.transactionDate,
-            createdAt = request.createdAt,
-            createdBy = request.createdBy,
-            updatedBy = request.updatedBy,
-            updatedAt = request.updatedAt,
-            bankAccountNumber = request.bankAccountNumber,
-            zone = request.zone,
-            serviceType = request.serviceType,
-            paymentCode = request.paymentCode,
-            paymentDate = request.paymentDate,
-            uploadedBy = request.uploadedBy,
-            bankName = request.bankName,
-            exchangeRate = request.exchangeRate,
-            paymentNum = request.paymentNum,
-            paymentNumValue = request.paymentNumValue,
-            bankId = request.bankId,
-            performedByUserType = request.performedByUserType,
-            tradePartyDocument = request.tradePartyDocument,
-            docType = request.docType,
-            sageRefNumber = request.sageRefNumber,
-            preMigratedDeleted = request.preMigratedDeleted,
-            advanceDocumentId = request.advanceDocumentId,
-            paymentDocUrl = request.paymentDocUrl
-        )
-
-        return createPaymentEntry(paymentRequest)
     }
 }
