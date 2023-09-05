@@ -96,7 +96,7 @@ dependencies {
     implementation("com.cogoport.plutus:plutus-client:1.2.7")
     //Hades Client & Model
     implementation("com.cogoport.hades:hades-client:1.0.22")
-    implementation("com.cogoport.hades:hades-model:1.0.30")
+    implementation(files("libs/hades-model-1.0.30.jar"))
 
     //Kuber Client
     implementation("com.cogoport.kuber:kuber-model:1.1.42")

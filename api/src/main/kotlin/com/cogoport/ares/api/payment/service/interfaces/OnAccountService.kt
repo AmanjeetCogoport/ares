@@ -53,7 +53,6 @@ interface OnAccountService {
     suspend fun getARLedgerOrganizationAndEntityWise(req: ARLedgerRequest): List<ARLedgerResponse>
 
     suspend fun updateCSDPayments(request: UpdateCSDPaymentRequest)
-    suspend fun getARLedgerOrganizationAndEntityWise(req: LedgerSummaryRequest): List<ARLedgerResponse>
 
     suspend fun saasInvoiceHook(req: SaasUTRUploadRequest): SaasInvoiceHookResponse
 }
