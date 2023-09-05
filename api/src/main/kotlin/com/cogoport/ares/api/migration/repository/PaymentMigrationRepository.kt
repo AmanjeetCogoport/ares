@@ -2,6 +2,7 @@ package com.cogoport.ares.api.migration.repository
 
 import com.cogoport.ares.api.migration.entity.JvResponse
 import com.cogoport.ares.api.migration.entity.PaymentMigrationEntity
+import com.cogoport.ares.api.migration.model.MismatchedAmountEntry
 import com.cogoport.ares.api.migration.model.PaymentDetails
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
@@ -148,4 +149,29 @@ interface PaymentMigrationRepository : CoroutineCrudRepository<PaymentMigrationE
         """
     )
     suspend fun paymentDetailsByPaymentNum(paymentNum: List<String>): List<PaymentDetails>
+
+    @NewSpan
+    @Query(
+        """
+            select p.id, p.amount, p.led_amount, au.document_no ,  au.document_value , au.amount_curr,  au.amount_loc
+            from payments as p  
+            inner join  account_utilizations as au on p.payment_num = au.document_no and p.payment_num_value = au.document_value
+            where p.amount != au.amount_curr and p.led_amount != au.amount_loc
+            and p.acc_mode ='AP' and  au.acc_mode ='AP' and au.acc_type = 'PAY'
+            and p.migrated = false and au.migrated = false and (p.deleted_at is null or au.deleted_at is null) and p.id = :id
+            order by p.transaction_date desc
+        """
+    )
+    suspend fun getMismatchLspPaymentCheck(id: Long): MismatchedAmountEntry
+
+    @NewSpan
+    @Query(
+        """
+            UPDATE account_utilizations
+            SET amount_curr = :amount,
+            amount_loc = :ledAmount  
+            WHERE document_no = :documentNo and document_value = :documentValue and acc_mode ='AP' and acc_type = 'PAY'
+        """
+    )
+    suspend fun updateMismatchLspPaymentsCheck(amount: BigDecimal, ledAmount: BigDecimal, documentNo: Long?, documentValue: String?): Long
 }

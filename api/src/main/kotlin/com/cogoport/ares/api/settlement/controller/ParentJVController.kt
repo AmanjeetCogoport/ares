@@ -109,4 +109,9 @@ class ParentJVController {
     suspend fun bulkPostingJvToSage() {
         return parentJVService.bulkPostingJvToSage()
     }
+
+    @Delete("/bulk-delete")
+    suspend fun bulkJvDeletion(@Body jvNumbers: List<String>) {
+        return parentJVService.bulkJvDeletion(jvNumbers)
+    }
 }

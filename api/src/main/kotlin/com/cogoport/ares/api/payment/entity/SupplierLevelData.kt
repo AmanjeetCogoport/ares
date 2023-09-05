@@ -2,16 +2,14 @@ package com.cogoport.ares.api.payment.entity
 
 import com.cogoport.ares.model.payment.AccMode
 import com.fasterxml.jackson.annotation.JsonProperty
-import io.micronaut.data.annotation.GeneratedValue
-import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
 import java.math.BigDecimal
 import java.util.Date
 import java.util.UUID
 
 @MappedEntity
-data class LedgerSummary(
-    @field:Id @GeneratedValue var id: Long? = null,
+data class SupplierLevelData(
+    var id: Long? = null,
     @JsonProperty("organization_id")
     val organizationId: UUID,
     @JsonProperty("entity_code")
@@ -126,10 +124,22 @@ data class LedgerSummary(
     val registrationNumber: String?,
     @JsonProperty("bpr")
     val bpr: String?,
-    @JsonProperty("closing_invoice_balance2022")
-    val closingInvoiceBalance2022: BigDecimal?,
-    @JsonProperty("closing_on_account_balance2022")
-    val closingOnAccountBalance2022: BigDecimal?,
-    @JsonProperty("closing_outstanding2022")
-    val closingOutstanding2022: BigDecimal?
+    @JsonProperty("trade_type")
+    var tradeType: Any?,
+    @JsonProperty("organization_serial_id")
+    val organizationSerialId: String?,
+    @JsonProperty("agent")
+    var agent: Any?,
+    @JsonProperty("company_type")
+    val companyType: String?,
+    @JsonProperty("trade_party_serial_id")
+    val tradePartySerialId: Long?,
+    @JsonProperty("credit_days")
+    val creditDays: Long?,
+    @JsonProperty("country_id")
+    val countryId: UUID?,
+    @JsonProperty("country_code")
+    val countryCode: String?,
+    @JsonProperty("self_organization_id")
+    val selfOrganizationId: UUID?
 )

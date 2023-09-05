@@ -13,7 +13,7 @@ import io.micronaut.http.annotation.QueryValue
 data class OutstandingListRequest(
     @QueryValue(AresModelConstants.ZONE) val zone: String? = null,
     @QueryValue(AresModelConstants.ROLE) val role: String? = null,
-    @QueryValue(AresModelConstants.QUERY) val query: String? = "",
+    @QueryValue(AresModelConstants.QUERY) val query: String? = null,
     @QueryValue(AresModelConstants.PAGE) val page: Int = 1,
     @QueryValue(AresModelConstants.PAGE_LIMIT) val pageLimit: Int = 10,
     @QueryValue(AresModelConstants.ORG_ID) val orgId: String? = null,
