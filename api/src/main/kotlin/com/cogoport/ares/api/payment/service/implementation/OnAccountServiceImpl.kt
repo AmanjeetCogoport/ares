@@ -5,6 +5,7 @@ import com.cogoport.ares.api.common.Validations
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.client.CogoBackLowLevelClient
 import com.cogoport.ares.api.common.client.RailsClient
+import com.cogoport.ares.api.common.enums.IncidentStatus
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.common.models.BankDetails
@@ -62,6 +63,7 @@ import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.TradePartyDetailRequest
 import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
+import com.cogoport.ares.model.payment.UpdateCSDPaymentRequest
 import com.cogoport.ares.model.payment.ValidateTradePartyRequest
 import com.cogoport.ares.model.payment.enum.CogoBankAccount
 import com.cogoport.ares.model.payment.enum.PaymentSageGLCodes
@@ -104,6 +106,15 @@ import com.cogoport.brahma.sage.SageException
 import com.cogoport.brahma.sage.model.request.PaymentLineItem
 import com.cogoport.brahma.sage.model.request.PaymentRequest
 import com.cogoport.brahma.sage.model.request.SageResponse
+import com.cogoport.hades.client.HadesClient
+import com.cogoport.hades.model.incident.IncidentData
+import com.cogoport.hades.model.incident.Organization
+import com.cogoport.hades.model.incident.enums.IncidentSubTypeEnum
+import com.cogoport.hades.model.incident.enums.IncidentType
+import com.cogoport.hades.model.incident.enums.Source
+import com.cogoport.hades.model.incident.request.AdvanceSecurityDepositRefund
+import com.cogoport.hades.model.incident.request.CreateIncidentRequest
+import com.cogoport.kuber.client.KuberClient
 import com.cogoport.plutus.model.invoice.GetUserRequest
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
@@ -207,6 +218,12 @@ open class OnAccountServiceImpl : OnAccountService {
     @Inject
     lateinit var unifiedDBNewRepository: UnifiedDBNewRepository
 
+    @Inject
+    lateinit var hadesClient: HadesClient
+
+    @Inject
+    lateinit var kuberClient: KuberClient
+
     @Value("\${server.base-url}") // application-prod.yml path
     private lateinit var baseUrl: String
 
@@ -304,9 +321,52 @@ open class OnAccountServiceImpl : OnAccountService {
         }
 
         setPaymentAmounts(receivableRequest)
-        val paymentId = createNonSuspensePaymentEntry(receivableRequest)
+        var paymentId: Long
+        if (receivableRequest.advanceDocumentId != null) {
+            paymentId = createNonSuspensePaymentEntryCSDWrapper(receivableRequest)
+        } else {
+            paymentId = createNonSuspensePaymentEntry(receivableRequest)
+        }
 
         return OnAccountApiCommonResponse(id = paymentId, message = Messages.PAYMENT_CREATED, isSuccess = true)
+    }
+
+    private suspend fun createNonSuspensePaymentEntryCSDWrapper(receivableRequest: Payment): Long {
+        val savedPaymentId = createNonSuspensePaymentEntry(receivableRequest)
+
+        if (receivableRequest.advanceDocumentId != null) {
+            hadesClient.createIncident(
+                CreateIncidentRequest(
+                    type = IncidentType.ADVANCE_SECURITY_DEPOSIT_REFUND,
+                    description = null,
+                    data = IncidentData(
+                        advanceSecurityDepositRefund = AdvanceSecurityDepositRefund(
+                            paymentId = savedPaymentId,
+                            advanceDocumentId = receivableRequest.advanceDocumentId!!,
+                            utrNumber = receivableRequest.utr,
+                            currency = receivableRequest.currency,
+                            totalAmount = receivableRequest.amount,
+                            remark = receivableRequest.remarks,
+                            shipmentId = null,
+                            supplierName = null,
+                            uploadProof = null,
+                            sid = null,
+                            paymentDocUrl = receivableRequest.paymentDocUrl
+                        ),
+                        organization = Organization(
+                            id = receivableRequest.organizationId,
+                            businessName = receivableRequest.organizationName,
+                            tradePartyName = receivableRequest.organizationName
+                        )
+                    ),
+                    source = Source.SHIPMENT,
+                    createdBy = UUID.fromString(receivableRequest.createdBy),
+                    entityId = UUID.fromString(AresConstants.ENTITY_ID[receivableRequest.entityType]),
+                    incidentSubType = IncidentSubTypeEnum.ADVANCE_SECURITY_DEPOSIT_REFUND
+                )
+            )
+        }
+        return savedPaymentId
     }
 
     private suspend fun createNonSuspensePaymentEntry(receivableRequest: Payment): Long {
@@ -410,6 +470,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 performedByUserType = receivableRequest.performedByUserType
             )
         )
+
         try {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             if (accUtilRes.accMode == AccMode.AP) {
@@ -1943,5 +2004,25 @@ open class OnAccountServiceImpl : OnAccountService {
             )
         )
         return completeLedgerList + closingLedgerList
+    }
+
+    override suspend fun updateCSDPayments(request: UpdateCSDPaymentRequest) {
+        when (request.status) {
+            IncidentStatus.APPROVED.dbValue -> {
+                val payment = paymentRepository.findByPaymentId(request.paymentId)
+                val paymentModel = paymentConverter.convertToModel(payment)
+                paymentModel.updatedBy = request.updatedBy.toString()
+                paymentModel.paymentDocumentStatus = PaymentDocumentStatus.APPROVED
+                updatePaymentEntry(paymentModel)
+            }
+            IncidentStatus.REJECTED.dbValue -> {
+                deletePaymentEntry(
+                    DeletePaymentRequest(
+                        paymentId = request.paymentId,
+                        accMode = AccMode.AP
+                    )
+                )
+            }
+        }
     }
 }
