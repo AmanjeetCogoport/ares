@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.common
 
+import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.ServiceType
 import java.sql.Timestamp
 import java.time.Instant
@@ -24,6 +25,7 @@ object AresConstants {
     val COGO_ENTITIES = listOf(101, 201, 301, 401, 501)
     const val SUPPLIERS_OUTSTANDING_OVERALL_INDEX = "supplier_outstanding_overall"
     const val CUSTOMERS_OUTSTANDING_OVERALL_INDEX = "customer_outstanding_overall"
+    const val SUPPLIERS_OUTSTANDING_OVERALL_INDEX_V2 = "supplier_outstanding"
     const val PAYABLES_STATS_INDEX = "payables_stats"
     const val KEY_DELIMITER = "_"
 
@@ -193,7 +195,9 @@ object AresConstants {
         "send-email",
         "sage-tds-jv-migration",
         "dunning-scheduler",
-        "send-dunning-payment-reminder"
+        "send-dunning-payment-reminder",
+        "sage-jv-migration-admin",
+        "migrate-payment-amount"
     )
 
     val RETRY_QUEUES = listOf(
@@ -228,7 +232,9 @@ object AresConstants {
         "partial-payment-mismatch",
         "bulk-update-payment-and-post-on-sage",
         "bulk-post-payment-from-sage",
-        "sage-tds-jv-migration"
+        "sage-tds-jv-migration",
+        "sage-jv-migration-admin",
+        "migrate-payment-amount"
     )
 
     const val performedByUserNameForMail = "Business Finance Tech Team"
@@ -297,4 +303,13 @@ object AresConstants {
     const val OPENING_BALANCE = "Opening Balance"
     const val CLOSING_BALANCE = "Closing Balance"
     const val DOCUMENT_DATE = "Document Date"
+
+    const val IMPORTER_EXPORTER = "importer_exporter"
+    const val SERVICE_PROVIDER = "service_provider"
+
+    val PERCENTILES = listOf(96.0, 90.0, 80.0, 70.0, 40.0)
+
+    val onAccountAROutstandingAccountTypeList = listOf(AccountType.REC, AccountType.CTDS, AccountType.BANK, AccountType.CONTR, AccountType.ROFF, AccountType.MTCCV, AccountType.MISC, AccountType.INTER, AccountType.OPDIV, AccountType.MTC)
+    val paymentAROutstandingAccountTypeList = listOf(AccountType.REC, AccountType.CTDS)
+    val jvAROutstandingAccountTypeList = listOf(AccountType.BANK, AccountType.CONTR, AccountType.ROFF, AccountType.MTCCV, AccountType.MISC, AccountType.INTER, AccountType.OPDIV, AccountType.MTC)
 }

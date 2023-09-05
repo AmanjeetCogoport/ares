@@ -13,6 +13,7 @@ import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.model.AuditRequest
+import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
@@ -123,6 +124,9 @@ open class ParentJVServiceImpl : ParentJVService {
     @Inject
     lateinit var util: Util
 
+    @Inject
+    lateinit var accountUtilizationRepo: AccountUtilizationRepo
+
     @Value("\${sage.databaseName}")
     var sageDatabase: String? = null
 
@@ -211,14 +215,18 @@ open class ParentJVServiceImpl : ParentJVService {
             entityCodes,
             jvListRequest.pageLimit,
             sortType,
-            sortBy
+            sortBy,
+            jvListRequest.startDate,
+            jvListRequest.endDate
         )
         val totalRecords =
             parentJVRepository.countDocument(
                 jvListRequest.status,
                 if (jvListRequest.category != null) jvListRequest.category!! else null,
                 query,
-                entityCodes
+                entityCodes,
+                jvListRequest.startDate,
+                jvListRequest.endDate
             )
 
         val jvList = mutableListOf<ParentJournalVoucherResponse>()
@@ -631,8 +639,8 @@ open class ParentJVServiceImpl : ParentJVService {
                             parentJVId,
                             "JOURNAL_VOUCHER",
                             "404",
-                            "NUM_0: ${parentJVDetails.jvNum}",
-                            "Jv not present on sage",
+                            result.requestString,
+                            result.response,
                             false
                         )
                     )
@@ -731,6 +739,7 @@ open class ParentJVServiceImpl : ParentJVService {
             AccMode.PREF -> JVSageControls.PREF.value
             AccMode.PC -> JVSageControls.PC.value
             AccMode.OTHER -> JVSageControls.OTHER.value
+            AccMode.VTDS -> JVSageControls.VTDS.value
             else -> {
                 throw AresException(AresError.ERR_1529, accMode.name)
             }
@@ -844,11 +853,12 @@ open class ParentJVServiceImpl : ParentJVService {
         payCurrTds: BigDecimal?,
         payLocTds: BigDecimal?
     ): Long? {
+        val jvNum = getJvNumber()
         var parentJournalVoucher = ParentJournalVoucher(
             id = null,
             status = JVStatus.APPROVED,
             category = "VTDS",
-            jvNum = accountUtilization?.documentValue,
+            jvNum = jvNum,
             // picking date of payments
             transactionDate = paymentTransactionDate,
             validityDate = accountUtilization?.transactionDate,
@@ -856,7 +866,7 @@ open class ParentJVServiceImpl : ParentJVService {
             ledCurrency = ledCurrency,
             entityCode = accountUtilization?.entityCode,
             exchangeRate = exchangeRate?.setScale(AresConstants.DECIMAL_NUMBER_UPTO, RoundingMode.HALF_DOWN),
-            description = utr,
+            description = "TDS AGAINST ${accountUtilization?.documentValue}",
             createdBy = createdBy,
             updatedBy = createdBy,
             jvCodeNum = "VTDS",
@@ -876,6 +886,39 @@ open class ParentJVServiceImpl : ParentJVService {
 
         parentJournalVoucher = parentJVRepository.save(parentJournalVoucher)
 
-        return journalVoucherService.createTdsJvLineItems(parentJournalVoucher, accountUtilization, lineItemProps, tdsAmount, tdsLedAmount, createdByUserType, payCurrTds, payLocTds)
+        return journalVoucherService.createTdsJvLineItems(parentJournalVoucher, accountUtilization, lineItemProps, tdsAmount, tdsLedAmount, createdByUserType, payCurrTds, payLocTds, utr)
+    }
+
+    override suspend fun bulkPostingJvToSage() {
+        val parentJvIds = parentJVRepository.getParentJournalVoucherIds()
+        logger().info("size of jv posting : ${parentJvIds?.size}")
+
+        if (!parentJvIds.isNullOrEmpty()) {
+            parentJvIds.map {
+                aresMessagePublisher.emitPostJvToSage(
+                    PostJVToSageRequest(
+                        parentJvId = Hashids.encode(it),
+                        performedBy = AresConstants.ARES_USER_ID
+                    )
+                )
+            }
+        }
+    }
+
+    override suspend fun bulkJvDeletion(jvNumbers: List<String>) {
+        val parentJvDetails = parentJVRepository.getParentJournalVoucherByJvNums(jvNumbers)
+
+        if (!parentJvDetails.isNullOrEmpty()) {
+            val filteredJvs = parentJvDetails.filter { it.isUtilized == false }
+            parentJVRepository.deleteAll(filteredJvs)
+
+            val jvData = journalVoucherRepository.findByJvNums(filteredJvs.map { it.jvNum!! })
+            if (!jvData.isNullOrEmpty()) {
+                val filteredJvDataWithAccMode = jvData.filter { it.accMode != AccMode.OTHER && it.accMode != null }
+                val accUtilData = accountUtilizationRepo.getAccountUtilizationsByDocumentNoAndDocumentValue(filteredJvDataWithAccMode.map { it.id!! }, jvData.map { it.category }, filteredJvDataWithAccMode.map { it.jvNum })
+                accountUtilizationRepo.deleteAll(accUtilData)
+                journalVoucherRepository.deleteAll(jvData)
+            }
+        }
     }
 }

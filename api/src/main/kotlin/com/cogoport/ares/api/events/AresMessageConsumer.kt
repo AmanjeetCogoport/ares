@@ -238,7 +238,7 @@ class AresMessageConsumer {
         onAccountService.postPaymentFromSage(arrayListOf(req.paymentId), req.performedBy)
     }
 
-    @Queue("ares-bulk-post-settlement-to-sage", prefetch = 1)
+    @Queue("ares-bulk-post-settlement-to-sage", prefetch = 1, autoAcknowledgment = true)
     fun bulkMatchingSettlementOnSage(req: PostSettlementRequest) = runBlocking {
         settlementService.matchingSettlementOnSage(req.settlementId, req.performedBy)
     }
@@ -286,5 +286,15 @@ class AresMessageConsumer {
             sendMailOfAllCommunicationToTradePartyReq,
             false
         )
+    }
+
+    @Queue("ares-sage-jv-migration-admin", prefetch = 1)
+    fun migrateJournalVoucherAdmin(journalVoucherRecord: JVParentDetails) = runBlocking {
+        paymentMigration.migrateAdminJV(journalVoucherRecord)
+    }
+
+    @Queue("ares-migrate-payment-amount", prefetch = 1)
+    fun migratePaymentAmount(id: Long) = runBlocking {
+        paymentMigration.mismatchAmount(id)
     }
 }

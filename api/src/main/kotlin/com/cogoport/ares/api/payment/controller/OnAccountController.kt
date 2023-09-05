@@ -11,6 +11,7 @@ import com.cogoport.ares.model.payment.OrgStatsResponse
 import com.cogoport.ares.model.payment.OrgStatsResponseForCoeFinance
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.PaymentDetailsInfo
+import com.cogoport.ares.model.payment.UpdateCSDPaymentRequest
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
 import com.cogoport.ares.model.payment.request.BulkUploadRequest
 import com.cogoport.ares.model.payment.request.DeletePaymentRequest
@@ -139,6 +140,11 @@ class OnAccountController {
     @Delete("/delete-payments")
     suspend fun deletingApPayments(@Body paymentNumValues: List<String>) {
         return onAccountService.deletingApPayments(paymentNumValues)
+    }
+
+    @Post("/update-csd-payment")
+    suspend fun updateCSDPayments(@Valid @Body request: UpdateCSDPaymentRequest) {
+        return onAccountService.updateCSDPayments(request)
     }
 
     @Post("/saas-invoice-hook")

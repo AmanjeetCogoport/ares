@@ -38,6 +38,7 @@ import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.enums.SettlementStatus
 import com.cogoport.plutus.client.PlutusClient
 import jakarta.inject.Inject
+import jakarta.inject.Singleton
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.sql.SQLException
@@ -48,7 +49,8 @@ import java.util.UUID
 import javax.transaction.Transactional
 import kotlin.math.ceil
 
-class CpSettlementServiceImpl : CpSettlementService {
+@Singleton
+open class CpSettlementServiceImpl : CpSettlementService {
 
     @Inject
     lateinit var documentConverter: DocumentMapper

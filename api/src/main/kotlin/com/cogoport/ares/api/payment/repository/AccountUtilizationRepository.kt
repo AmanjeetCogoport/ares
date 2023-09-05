@@ -14,10 +14,11 @@ import com.cogoport.ares.api.settlement.entity.HistoryDocument
 import com.cogoport.ares.api.settlement.entity.InvoiceDocument
 import com.cogoport.ares.model.balances.GetOpeningBalances
 import com.cogoport.ares.model.common.InvoiceBalanceResponse
+import com.cogoport.ares.model.common.MonthlyUtilizationCount
+import com.cogoport.ares.model.common.PaymentHistoryDetails
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
-import com.cogoport.ares.model.payment.response.ARLedgerResponse
 import com.cogoport.ares.model.payment.response.AccPayablesOfOrgRes
 import com.cogoport.ares.model.payment.response.AccountPayablesStats
 import com.cogoport.ares.model.payment.response.InvoiceListResponse
@@ -110,7 +111,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         sum(case when (now()::date - due_date) between 180 and 365 then 1 else 0 end) as threesixfive_count,
         sum(case when (now()::date - due_date) > 365 then 1 else 0 end) as threesixfiveplus_count
         from account_utilizations
-        where organization_name ilike :queryName and (:zone is null or zone_code = :zone) and acc_mode = 'AR'  and is_void = false
+        where (:queryName IS NULL OR organization_name ilike :queryName) and (:zone is null or zone_code = :zone) and acc_mode = 'AR'  and is_void = false
         and due_date is not null and document_status in ('FINAL', 'PROFORMA') and organization_id is not null 
         AND ((:orgId) is NULL OR organization_id in (:orgId::uuid)) and  acc_type = 'SINV' and deleted_at is null
         AND (CASE WHEN :flag = 'defaulters' THEN organization_id IN (:defaultersOrgIds)
@@ -253,7 +254,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         FROM
             account_utilizations
         WHERE
-            organization_name ILIKE :queryName
+            (:queryName IS NULL OR organization_name ILIKE :queryName)
             AND (:zone IS NULL OR zone_code = :zone)
             AND (:entityCode IS NULL OR entity_code = :entityCode)
             AND acc_mode = 'AP'
@@ -283,7 +284,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 FROM
                     account_utilizations
                 WHERE
-                    organization_name ILIKE :queryName
+                    (:queryName IS NULL OR organization_name ILIKE :queryName)
                     AND (:zone IS NULL OR zone_code = :zone)
                     AND acc_mode = 'AP'
                     AND due_date IS NOT NULL
@@ -487,7 +488,6 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     AND (:query is null OR document_value ilike :query)
                     AND s.deleted_at is null
                     AND au.deleted_at is null
-                    AND (:entityCode is null OR :entityCode = entity_code)
                 GROUP BY au.id
                 LIMIT :limit
                 OFFSET :offset
@@ -641,7 +641,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     AND document_status = 'FINAL'
                     AND organization_id in (:orgId)
                     AND (:accType is null OR acc_type::varchar = :accType)
-                    AND (:accMode is null OR acc_mode::varchar = :accMode)
+                    AND ((:accMode) is null OR acc_mode::varchar = :accMode)
                     AND (:startDate is null OR transaction_date >= :startDate::date)
                     AND (:endDate is null OR transaction_date <= :endDate::date)
                     AND document_value ilike :query
@@ -660,12 +660,13 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     AND organization_id in (:orgId)
                     AND (:startDate is null or transaction_date >= :startDate)
                     AND (:endDate is null or transaction_date <= :endDate)
-                    AND acc_type::varchar in (:accType)
-                    AND (:accMode is null OR acc_mode::varchar = :accMode)
+                    AND ((:accType) is null or acc_type::varchar in (:accType))
+                    AND ((:accMode) is null or acc_mode::varchar in (:accMode))
                     AND deleted_at is null  and is_void = false
+                    and acc_type != 'NEWPR'
         """
     )
-    suspend fun getAccountBalance(orgId: List<UUID>, entityCode: Int, startDate: Timestamp?, endDate: Timestamp?, accType: List<AccountType>, accMode: AccMode?): BigDecimal
+    suspend fun getAccountBalance(orgId: List<UUID>, entityCode: Int, startDate: Timestamp?, endDate: Timestamp?, accType: List<AccountType>?, accMode: List<String>?): BigDecimal
 
     @NewSpan
     @Query(
@@ -843,12 +844,12 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         (SELECT tagged_organization_id as organization_id,
         COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND document_status = 'PROFORMA' THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_proforma_amount,
         COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND document_status = 'PROFORMA' THEN 1 ELSE 0 END),0) as proforma_invoices_count,
-        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND due_date > now()::date AND  document_status in ('FINAL','PROFORMA') THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_due_amount,
-        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND (amount_loc - pay_loc <> 0) AND due_date > now()::date AND document_status in ('FINAL','PROFORMA') THEN 1 ELSE 0 END),0) as due_invoices_count,
-        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND due_date <= now()::date  AND document_status in ('FINAL','PROFORMA') THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_overdue_amount,
-        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND due_date <= now()::date AND (amount_loc- pay_loc <> 0) AND document_status in ('FINAL','PROFORMA') THEN 1 ELSE 0 END),0) as overdue_invoices_count,
-        COALESCE(sum(case when acc_type in ('SINV','SCN','SDN') AND document_status in ('FINAL','PROFORMA') THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_amount_receivables,
-        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND document_status in ('FINAL','PROFORMA') AND (amount_loc- pay_loc <> 0) AND document_status in ('FINAL','PROFORMA') THEN 1 ELSE 0 END),0) as receivables_invoices_count,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND due_date > now()::date AND  document_status = 'FINAL' THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_due_amount,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND (amount_loc - pay_loc <> 0) AND due_date > now()::date AND document_status = 'FINAL' THEN 1 ELSE 0 END),0) as due_invoices_count,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND due_date <= now()::date  AND document_status = 'FINAL' THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_overdue_amount,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND due_date <= now()::date AND (amount_loc- pay_loc <> 0) AND document_status = 'FINAL' THEN 1 ELSE 0 END),0) as overdue_invoices_count,
+        COALESCE(sum(case when acc_type in ('SINV','SCN','SDN') AND document_status = 'FINAL' THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_amount_receivables,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND document_status = 'FINAL' AND (amount_loc- pay_loc <> 0) AND document_status = 'FINAL' THEN 1 ELSE 0 END),0) as receivables_invoices_count,
         COALESCE(abs(sum(case when acc_type = 'REC' AND document_status = 'FINAL' THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END)),0) as on_account_payment,
         COALESCE(sum(case when (now()::date - due_date) between 0 AND 30 THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as due_by_thirty_days_amount,
         COALESCE(sum(case when (now()::date - due_date) between 31 AND 60  THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as due_by_sixty_days_amount,
@@ -897,12 +898,12 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         (SELECT tagged_organization_id as organization_id,
         COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND document_status = 'PROFORMA' THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_proforma_amount,
         COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND document_status = 'PROFORMA' THEN 1 ELSE 0 END),0) as proforma_invoices_count,
-        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND due_date > now()::date AND  document_status in ('FINAL','PROFORMA') THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_due_amount,
-        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND (amount_loc - pay_loc <> 0) AND due_date > now()::date AND document_status in ('FINAL','PROFORMA') THEN 1 ELSE 0 END),0) as due_invoices_count,
-        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND due_date <= now()::date  AND document_status in ('FINAL','PROFORMA') THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_overdue_amount,
-        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND due_date <= now()::date AND (amount_loc- pay_loc <> 0) AND document_status in ('FINAL','PROFORMA') THEN 1 ELSE 0 END),0) as overdue_invoices_count,
-        COALESCE(sum(case when acc_type in ('SINV','SCN','SDN') AND document_status in ('FINAL','PROFORMA') THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_amount_receivables,
-        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND document_status in ('FINAL','PROFORMA') AND (amount_loc- pay_loc <> 0) AND document_status in ('FINAL','PROFORMA') THEN 1 ELSE 0 END),0) as receivables_invoices_count,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND due_date > now()::date AND  document_status = 'FINAL' THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_due_amount,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND (amount_loc - pay_loc <> 0) AND due_date > now()::date AND document_status = 'FINAL' THEN 1 ELSE 0 END),0) as due_invoices_count,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND due_date <= now()::date  AND document_status = 'FINAL' THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_overdue_amount,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND due_date <= now()::date AND (amount_loc- pay_loc <> 0) AND document_status = 'FINAL' THEN 1 ELSE 0 END),0) as overdue_invoices_count,
+        COALESCE(sum(case when acc_type in ('SINV','SCN','SDN') AND document_status = 'FINAL' THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_amount_receivables,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND document_status = 'FINAL' AND (amount_loc- pay_loc <> 0) AND document_status = 'FINAL' THEN 1 ELSE 0 END),0) as receivables_invoices_count,
         COALESCE(abs(sum(case when acc_type = 'REC' AND document_status = 'FINAL' THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END)),0) as on_account_payment,
         COALESCE(sum(case when (now()::date - due_date) between 0 AND 30 THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as due_by_thirty_days_amount,
         COALESCE(sum(case when (now()::date - due_date) between 31 AND 60  THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as due_by_sixty_days_amount,
@@ -1217,41 +1218,95 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
     @NewSpan
     @Query(
-        """
-            SELECT au.transaction_date::varchar AS transaction_date,
-            au.document_no::varchar AS document_number,
-            au.document_value,
-            p.trans_ref_number AS transaction_ref_number,
-            au.led_currency AS ledger_currency,
-            CASE WHEN au.sign_flag < 0 THEN au.amount_loc ELSE 0 END AS credit,
-            CASE WHEN au.sign_flag > 0 THEN au.amount_loc ELSE 0 END AS debit,
-            au.sign_flag * au.amount_loc AS balance 
-            FROM account_utilizations au 
-            LEFT JOIN payments p ON p.payment_num = au.document_no
-            WHERE au.acc_mode = :accMode::ACCOUNT_MODE AND au.organization_id = :organizationId::UUID AND document_status = 'FINAL'
-            AND au.transaction_date >= :startDate::DATE AND au.transaction_date <= :endDate::DATE AND au.entity_code IN (:entityCodes)
-            AND au.deleted_at IS NULL AND au.acc_type != 'NEWPR'
-            ORDER BY transaction_date
+        """ 
+        SELECT tagged_organization_id as organization_id,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND document_status = 'PROFORMA' THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_proforma_amount,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND document_status = 'PROFORMA' THEN 1 ELSE 0 END),0) as proforma_invoices_count,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND due_date > now()::date AND  document_status = 'FINAL' THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_due_amount,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND (amount_loc - pay_loc <> 0) AND due_date > now()::date AND document_status = 'FINAL' THEN 1 ELSE 0 END),0) as due_invoices_count,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND due_date <= now()::date  AND document_status = 'FINAL' THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_overdue_amount,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND due_date <= now()::date AND (amount_loc- pay_loc <> 0) AND document_status = 'FINAL' THEN 1 ELSE 0 END),0) as overdue_invoices_count,
+        COALESCE(sum(case when acc_type in ('SINV','SCN','SDN') AND document_status = 'FINAL' THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END),0) as total_amount_receivables,
+        COALESCE(sum(case when acc_type in ('SINV','SDN','SCN') AND document_status = 'FINAL' AND (amount_loc- pay_loc <> 0) AND document_status = 'FINAL' THEN 1 ELSE 0 END),0) as receivables_invoices_count,
+        COALESCE(abs(sum(case when acc_type = 'REC' AND document_status = 'FINAL' THEN sign_flag*(amount_loc - pay_loc) ELSE 0 END)),0) as on_account_payment,
+        COALESCE(sum(case when (now()::date - due_date) between 0 AND 30 THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as due_by_thirty_days_amount,
+        COALESCE(sum(case when (now()::date - due_date) between 31 AND 60  THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as due_by_sixty_days_amount,
+        COALESCE(sum(case when (now()::date - due_date) between 61 AND 90 THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as due_by_ninety_days_amount,
+        COALESCE(sum(case when (now()::date - due_date) > 90 THEN sign_flag * (amount_loc - pay_loc) ELSE 0 END),0) as due_by_ninety_plus_days_amount,
+        COALESCE(sum(case when (now()::date - due_date) between 0 AND 30 AND (amount_loc - pay_loc <> 0) THEN 1 ELSE 0 END),0) as due_by_thirty_days_count,
+        COALESCE(sum(case when (now()::date - due_date) between 31 AND 60 AND (amount_loc - pay_loc <> 0) THEN 1 ELSE 0 END),0) as due_by_sixty_days_count,
+        COALESCE(sum(case when (now()::date - due_date) between 61 AND 90 AND (amount_loc - pay_loc <> 0) THEN 1 ELSE 0 END),0) as due_by_ninety_days_count,
+        COALESCE(sum(case when (now()::date - due_date) > 90 AND (amount_loc - pay_loc <> 0) THEN 1 ELSE 0 END),0) as due_by_ninety_plus_days_count
+        FROM account_utilizations
+        WHERE acc_mode = 'AR' AND due_date IS NOT NULL AND  amount_curr <> 0 AND tagged_organization_id IS NOT NULL 
+        AND (COALESCE(:bookingPartyIds) IS NULL OR tagged_organization_id::VARCHAR IN (:bookingPartyIds)) AND deleted_at is null  and is_void = false
+        GROUP BY tagged_organization_id
         """
     )
-    suspend fun getARLedger(accMode: AccMode, organizationId: String, entityCodes: List<Int>, startDate: Timestamp, endDate: Timestamp): List<ARLedgerResponse>
+    suspend fun getOverallStatsForMultipleCustomers(
+        bookingPartyIds: List<String>?
+    ): List<StatsForCustomerResponse?>
 
     @NewSpan
     @Query(
         """
-            SELECT NULL AS transaction_date,
-            NULL AS document_number,
-            :commonRow AS document_value,
-            NULL AS transaction_ref_number,
-            (array_agg(led_currency))[1] AS ledger_currency,
-            COALESCE(SUM(CASE WHEN au.sign_flag < 0 THEN (au.amount_loc - au.pay_loc)  ELSE 0 END), 0) AS credit,
-            COALESCE(SUM(CASE WHEN au.sign_flag > 0 THEN (au.amount_loc - au.pay_loc)  ELSE 0 END), 0) AS debit,
-            COALESCE(SUM(au.sign_flag * (au.amount_loc - au.pay_loc)), 0) AS balance
-            FROM account_utilizations au 
-            WHERE au.acc_mode = :accMode::ACCOUNT_MODE AND au.organization_id = :organizationId::UUID AND document_status = 'FINAL'
-            AND au.entity_code IN (:entityCodes) AND au.deleted_at IS NULL AND au.acc_type != 'NEWPR'
-            AND CASE WHEN :commonRow = 'OPENING BALANCE' THEN au.transaction_date < :date::DATE ELSE au.transaction_date <= :date::DATE END
+            SELECT
+                SUM(CASE WHEN transaction_date >= date_trunc('month', current_date - interval '1' month)
+                    and transaction_date < date_trunc('month', current_date) THEN 1 ELSE 0 END) as last_month,
+                SUM(CASE WHEN transaction_date >= date_trunc('month', current_date - interval '2' month)
+                    and transaction_date < date_trunc('month', current_date - interval '1' month) THEN 1 ELSE 0 END) as second_last_month,
+                SUM(CASE WHEN transaction_date >= date_trunc('month', current_date - interval '3' month)
+                    and transaction_date < date_trunc('month', current_date - interval '2' month) THEN 1 ELSE 0 END) as third_last_month,
+                SUM(CASE WHEN transaction_date >= date_trunc('month', current_date - interval '4' month)
+                    and transaction_date < date_trunc('month', current_date - interval '3' month) THEN 1 ELSE 0 END) as fourth_last_month,
+                SUM(CASE WHEN transaction_date >= date_trunc('month', current_date - interval '5' month)
+                    and transaction_date < date_trunc('month', current_date - interval '4' month) THEN 1 ELSE 0 END) as fifth_last_month,
+                SUM(CASE WHEN transaction_date >= date_trunc('month', current_date - interval '6' month)
+                    and transaction_date < date_trunc('month', current_date - interval '5' month) THEN 1 ELSE 0 END) as sixth_last_month
+            FROM account_utilizations
+            WHERE  (:accMode IS NULL OR acc_mode::VARCHAR = :accMode)
+            AND (COALESCE(:accTypes) IS NULL OR acc_type::VARCHAR IN (:accTypes))
+            AND document_status = 'FINAL'
+            AND (:organizationId IS NULL OR organization_id = :organizationId)
+            AND (:entityCodes IS NULL OR entity_code IN (:entityCodes))
         """
     )
-    suspend fun getOpeningAndClosingLedger(accMode: AccMode, organizationId: String, entityCodes: List<Int>, date: Timestamp?, commonRow: String): List<ARLedgerResponse>
+    suspend fun getMonthlyUtilizationCounts(accMode: AccMode?, accTypes: List<AccountType>?, organizationId: UUID?, entityCodes: List<Int>?): MonthlyUtilizationCount
+
+    @NewSpan
+    @Query(
+        """
+            WITH payment_history AS (
+                SELECT
+                    document_value, 
+                    (array_agg(ac.due_date::date - s.settlement_date::date order by s.created_at asc))[1] as days,
+                    (array_agg(CASE WHEN (ac.due_date::date - ac.transaction_date::date) = 0 THEN 'cash' ELSE 'credit' END))[1] as payment_mode
+                FROM
+                account_utilizations AS ac
+                INNER JOIN settlements AS s ON s.destination_id = ac.document_no
+                WHERE  (:accMode IS NULL OR ac.acc_mode::VARCHAR = :accMode)
+                AND (COALESCE(:accTypes) IS NULL OR ac.acc_type::VARCHAR IN (:accTypes))
+                AND (:organizationId IS NULL OR ac.organization_id = :organizationId)
+                AND (:entityCodes IS NULL OR ac.entity_code IN (:entityCodes))
+                AND (COALESCE(:destinationTypes) IS NULL OR s.destination_type::VARCHAR in (:destinationTypes))
+                AND s.deleted_at is null
+                AND ac.deleted_at is null
+                GROUP BY
+                ac.document_value
+            )
+            SELECT
+            SUM(
+                CASE WHEN ((payment_mode = 'credit') and (days < 0)) OR ((payment_mode = 'cash') and ((days + 3) < 0)) THEN 1 ELSE 0 END
+            ) AS delayed_payments,
+            COALESCE(COUNT(*), 0) AS total_payments
+            FROM payment_history
+        """
+    )
+    suspend fun getPaymentHistoryDetails(
+        accMode: AccMode?,
+        accTypes: List<AccountType>?,
+        organizationId: UUID?,
+        entityCodes: List<Int>?,
+        destinationTypes: List<SettlementType>?
+    ): PaymentHistoryDetails
 }

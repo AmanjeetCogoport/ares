@@ -5,6 +5,7 @@ import com.cogoport.ares.api.common.Validations
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.client.CogoBackLowLevelClient
 import com.cogoport.ares.api.common.client.RailsClient
+import com.cogoport.ares.api.common.enums.IncidentStatus
 import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.common.models.BankDetails
@@ -32,6 +33,7 @@ import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.AresDocumentRepository
 import com.cogoport.ares.api.payment.repository.PaymentFileRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
+import com.cogoport.ares.api.payment.repository.UnifiedDBNewRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
@@ -63,9 +65,11 @@ import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.TradePartyDetailRequest
 import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
+import com.cogoport.ares.model.payment.UpdateCSDPaymentRequest
 import com.cogoport.ares.model.payment.ValidateTradePartyRequest
 import com.cogoport.ares.model.payment.enum.CogoBankAccount
 import com.cogoport.ares.model.payment.enum.PaymentSageGLCodes
+import com.cogoport.ares.model.payment.request.ARLedgerRequest
 import com.cogoport.ares.model.payment.request.AccUtilizationRequest
 import com.cogoport.ares.model.payment.request.AccountCollectionRequest
 import com.cogoport.ares.model.payment.request.BulkUploadRequest
@@ -88,6 +92,7 @@ import com.cogoport.ares.model.payment.response.SaasInvoiceHookResponse
 import com.cogoport.ares.model.payment.response.UploadSummary
 import com.cogoport.ares.model.sage.SageCustomerRecord
 import com.cogoport.ares.model.sage.SageFailedResponse
+import com.cogoport.ares.model.sage.SageOrganizationAccountTypeRequest
 import com.cogoport.ares.model.settlement.PostPaymentToSage
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.enums.JVSageAccount
@@ -105,10 +110,18 @@ import com.cogoport.brahma.sage.SageException
 import com.cogoport.brahma.sage.model.request.PaymentLineItem
 import com.cogoport.brahma.sage.model.request.PaymentRequest
 import com.cogoport.brahma.sage.model.request.SageResponse
+import com.cogoport.hades.client.HadesClient
+import com.cogoport.hades.model.incident.IncidentData
+import com.cogoport.hades.model.incident.Organization
+import com.cogoport.hades.model.incident.enums.IncidentSubTypeEnum
+import com.cogoport.hades.model.incident.enums.IncidentType
+import com.cogoport.hades.model.incident.enums.Source
+import com.cogoport.hades.model.incident.request.AdvanceSecurityDepositRefund
+import com.cogoport.hades.model.incident.request.CreateIncidentRequest
+import com.cogoport.kuber.client.KuberClient
 import com.cogoport.hades.model.incident.request.SaasUTRUploadRequest
 import com.cogoport.plutus.client.PlutusClient
 import com.cogoport.plutus.model.invoice.GetUserRequest
-import com.cogoport.plutus.model.invoice.SageOrganizationRequest
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import io.micronaut.context.annotation.Value
@@ -217,6 +230,15 @@ open class OnAccountServiceImpl : OnAccountService {
     @Inject
     lateinit var unifiedDBRepo: UnifiedDBRepo
 
+    @Inject
+    lateinit var unifiedDBNewRepository: UnifiedDBNewRepository
+
+    @Inject
+    lateinit var hadesClient: HadesClient
+
+    @Inject
+    lateinit var kuberClient: KuberClient
+
     @Value("\${server.base-url}") // application-prod.yml path
     private lateinit var baseUrl: String
 
@@ -314,9 +336,52 @@ open class OnAccountServiceImpl : OnAccountService {
         }
 
         setPaymentAmounts(receivableRequest)
-        val paymentId = createNonSuspensePaymentEntry(receivableRequest)
+        var paymentId: Long
+        if (receivableRequest.advanceDocumentId != null) {
+            paymentId = createNonSuspensePaymentEntryCSDWrapper(receivableRequest)
+        } else {
+            paymentId = createNonSuspensePaymentEntry(receivableRequest)
+        }
 
         return OnAccountApiCommonResponse(id = paymentId, message = Messages.PAYMENT_CREATED, isSuccess = true)
+    }
+
+    private suspend fun createNonSuspensePaymentEntryCSDWrapper(receivableRequest: Payment): Long {
+        val savedPaymentId = createNonSuspensePaymentEntry(receivableRequest)
+
+        if (receivableRequest.advanceDocumentId != null) {
+            hadesClient.createIncident(
+                CreateIncidentRequest(
+                    type = IncidentType.ADVANCE_SECURITY_DEPOSIT_REFUND,
+                    description = null,
+                    data = IncidentData(
+                        advanceSecurityDepositRefund = AdvanceSecurityDepositRefund(
+                            paymentId = savedPaymentId,
+                            advanceDocumentId = receivableRequest.advanceDocumentId!!,
+                            utrNumber = receivableRequest.utr,
+                            currency = receivableRequest.currency,
+                            totalAmount = receivableRequest.amount,
+                            remark = receivableRequest.remarks,
+                            shipmentId = null,
+                            supplierName = null,
+                            uploadProof = null,
+                            sid = null,
+                            paymentDocUrl = receivableRequest.paymentDocUrl
+                        ),
+                        organization = Organization(
+                            id = receivableRequest.organizationId,
+                            businessName = receivableRequest.organizationName,
+                            tradePartyName = receivableRequest.organizationName
+                        )
+                    ),
+                    source = Source.SHIPMENT,
+                    createdBy = UUID.fromString(receivableRequest.createdBy),
+                    entityId = UUID.fromString(AresConstants.ENTITY_ID[receivableRequest.entityType]),
+                    incidentSubType = IncidentSubTypeEnum.ADVANCE_SECURITY_DEPOSIT_REFUND
+                )
+            )
+        }
+        return savedPaymentId
     }
 
     private suspend fun createNonSuspensePaymentEntry(receivableRequest: Payment): Long {
@@ -420,6 +485,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 performedByUserType = receivableRequest.performedByUserType
             )
         )
+
         try {
             Client.addDocument(AresConstants.ACCOUNT_UTILIZATION_INDEX, accUtilRes.id.toString(), accUtilRes)
             if (accUtilRes.accMode == AccMode.AP) {
@@ -1364,9 +1430,10 @@ open class OnAccountServiceImpl : OnAccountService {
             }
             val sageOrganizationFromSageId = if (paymentDetails.accMode == AccMode.AR) recordsForSageOrganization.recordSet?.get(0)?.sageOrganizationId else recordsForSageOrganization.recordSet?.get(0)?.sageSupplierId
 
-            val sageOrganization = authClient.getSageOrganization(
-                SageOrganizationRequest(
-                    paymentDetails.orgSerialId.toString()
+            val sageOrganization = authClient.getSageOrganizationAccountType(
+                SageOrganizationAccountTypeRequest(
+                    paymentDetails.orgSerialId.toString(),
+                    if (paymentDetails.accMode == AccMode.AR) AresConstants.IMPORTER_EXPORTER else AresConstants.SERVICE_PROVIDER
                 )
             )
 
@@ -1890,17 +1957,88 @@ open class OnAccountServiceImpl : OnAccountService {
         }
     }
 
-    override suspend fun getARLedgerOrganizationAndEntityWise(req: LedgerSummaryRequest): List<ARLedgerResponse> {
-        val ledgerSelectedDateWise = accountUtilizationRepository.getARLedger(
+    override suspend fun getARLedgerOrganizationAndEntityWise(req: ARLedgerRequest): List<ARLedgerResponse> {
+        val ledgerSelectedDateWise = unifiedDBNewRepository.getARLedger(
             AccMode.AR,
             req.orgId,
             req.entityCodes!!,
             req.startDate!!,
             req.endDate!!
         )
-        val previousLedger = accountUtilizationRepository.getOpeningAndClosingLedger(AccMode.AR, req.orgId, req.entityCodes!!, req.startDate!!, AresConstants.OPENING_BALANCE)
-        val currentLedger = accountUtilizationRepository.getOpeningAndClosingLedger(AccMode.AR, req.orgId, req.entityCodes!!, req.endDate, AresConstants.CLOSING_BALANCE)
-        return previousLedger + ledgerSelectedDateWise + currentLedger
+        var arLedgerResponse = accountUtilizationMapper.convertARLedgerJobDetailsResponseToARLedgerResponse(ledgerSelectedDateWise)
+        val openingLedger = unifiedDBNewRepository.getOpeningAndClosingLedger(AccMode.AR, req.orgId, req.entityCodes!!, req.startDate!!, AresConstants.OPENING_BALANCE)
+        var openingLedgerList: List<ARLedgerResponse> = listOf(
+            ARLedgerResponse(
+                transactionDate = "",
+                documentType = "",
+                documentNumber = AresConstants.OPENING_BALANCE,
+                currency = "",
+                amount = "",
+                debit = openingLedger.debit,
+                credit = openingLedger.credit,
+                debitBalance = if (openingLedger.debit > openingLedger.credit) openingLedger.debit.minus(openingLedger.credit) else BigDecimal.ZERO,
+                creditBalance = if (openingLedger.credit > openingLedger.debit) openingLedger.credit.minus(openingLedger.debit) else BigDecimal.ZERO,
+                transactionRefNumber = "",
+                shipmentDocumentNumber = "",
+                houseDocumentNumber = ""
+            )
+        )
+        val completeLedgerList = openingLedgerList + arLedgerResponse
+
+        for (index in 1..completeLedgerList.lastIndex) {
+            val balance = (completeLedgerList[index].debit - completeLedgerList[index].credit) + (completeLedgerList[index - 1].debitBalance - completeLedgerList[index - 1].creditBalance)
+            if (balance.compareTo(BigDecimal.ZERO) == 1) {
+                completeLedgerList[index].debitBalance = balance
+            } else {
+                completeLedgerList[index].creditBalance = -balance
+            }
+        }
+        var closingBalance = completeLedgerList[completeLedgerList.lastIndex].debitBalance - completeLedgerList[completeLedgerList.lastIndex].creditBalance
+        var closingLedgerList: List<ARLedgerResponse> = listOf(
+            ARLedgerResponse(
+                transactionDate = "",
+                documentType = "",
+                documentNumber = AresConstants.CLOSING_BALANCE,
+                currency = "",
+                amount = "",
+                debit = BigDecimal.ZERO,
+                credit = BigDecimal.ZERO,
+                debitBalance = if (closingBalance.compareTo(BigDecimal.ZERO) == 1) {
+                    closingBalance
+                } else {
+                    BigDecimal.ZERO
+                },
+                creditBalance = if (closingBalance.compareTo(BigDecimal.ZERO) != 1) {
+                    -closingBalance
+                } else {
+                    BigDecimal.ZERO
+                },
+                transactionRefNumber = "",
+                shipmentDocumentNumber = "",
+                houseDocumentNumber = ""
+            )
+        )
+        return completeLedgerList + closingLedgerList
+    }
+
+    override suspend fun updateCSDPayments(request: UpdateCSDPaymentRequest) {
+        when (request.status) {
+            IncidentStatus.APPROVED.dbValue -> {
+                val payment = paymentRepository.findByPaymentId(request.paymentId)
+                val paymentModel = paymentConverter.convertToModel(payment)
+                paymentModel.updatedBy = request.updatedBy.toString()
+                paymentModel.paymentDocumentStatus = PaymentDocumentStatus.APPROVED
+                updatePaymentEntry(paymentModel)
+            }
+            IncidentStatus.REJECTED.dbValue -> {
+                deletePaymentEntry(
+                    DeletePaymentRequest(
+                        paymentId = request.paymentId,
+                        accMode = AccMode.AP
+                    )
+                )
+            }
+        }
     }
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])

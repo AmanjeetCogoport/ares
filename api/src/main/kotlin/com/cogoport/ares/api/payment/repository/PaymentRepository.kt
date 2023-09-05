@@ -65,10 +65,10 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
     @NewSpan
     @Query(
         """
-            SELECT id FROM payments WHERE payment_num = :paymentNum and payment_code::varchar = :paymentCode and deleted_at is null  
+            SELECT * FROM payments WHERE payment_num = :paymentNum and payment_code::varchar = :paymentCode and deleted_at is null  
         """
     )
-    suspend fun findByPaymentNumAndPaymentCode(paymentNum: Long?, paymentCode: PaymentCode): Long
+    suspend fun findByPaymentNumAndPaymentCode(paymentNum: Long?, paymentCode: PaymentCode): Payment?
 
     @NewSpan
     @Query(
@@ -283,8 +283,12 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
                     payment_document_status = 'APPROVED'::payment_document_status
                 AND 
                     organization_id != '8c7e0382-4f6d-4a32-bb98-d0bf6522fdd8'
+                AND
+                    entity_code != 501
                 AND 
-                    date_trunc('day', transaction_date) = date_trunc('day', current_date - interval '1 days')
+                    transaction_date <= current_date - INTERVAL '3 days'
+                AND
+                    transaction_date >= '2023-07-25'
             """
     )
     suspend fun getPaymentIdsForApprovedPayments(): List<Long>?

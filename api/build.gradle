@@ -2,7 +2,7 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
     id("application-conventions")
-    id("org.sonarqube") version "3.3"
+    id "org.sonarqube" version "3.5.0.2730"
     id("jacoco")
 }
 
@@ -83,7 +83,8 @@ dependencies {
     implementation("com.cogoport.brahma.hashids:hashid:0.1.0")
     implementation("com.cogoport.brahma.sage:sage-client:1.5.7")
     implementation("com.cogoport.brahma.authentication:authentication:1.0.8")
-    implementation("com.cogoport.brahma.opensearch:client:0.1.4-beta")
+    implementation("com.cogoport.brahma.opensearch:client:1.0.3")
+    api("org.opensearch.client:opensearch-java:1.0.0")
     implementation("com.cogoport.brahma.rabbitmq:client:1.0.0-beta")
     implementation("org.json:json:20220320")
 
@@ -94,12 +95,12 @@ dependencies {
     implementation("com.cogoport.plutus:plutus-model:1.1.7")
     implementation("com.cogoport.plutus:plutus-client:1.2.7")
     //Hades Client & Model
-    implementation("com.cogoport.hades:hades-client:0.1.4.3")
-    implementation("com.cogoport.hades:hades-model:0.1.6-beta")
+    implementation("com.cogoport.hades:hades-client:1.0.22")
+    implementation("com.cogoport.hades:hades-model:1.0.30")
 
     //Kuber Client
-    implementation("com.cogoport.kuber:kuber-model:1.1.4")
-    implementation("com.cogoport.kuber:kuber-client:1.1.2")
+    implementation("com.cogoport.kuber:kuber-model:1.1.42")
+    implementation("com.cogoport.kuber:kuber-client:1.1.19")
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.3")
     implementation("software.amazon.msk:aws-msk-iam-auth:1.1.4")
@@ -165,17 +166,15 @@ tasks.named("optimizedDockerBuildNative") {
     images = ["ghcr.io/cogoport/ares:latest"]
 }
 
-sonarqube {
-
+sonar {
     properties {
         property("sonar.login",System.getenv("SONAR_TOKEN"))
         property("sonar.host.url",System.getenv("SONAR_HOST"))
+        property "sonar.projectKey", "Cogoport_ares_AYmcp7vE9R-C2BgXIp2P"
         property "sonar.language", "kotlin"
-        property("sonar.projectKey", "Ares")
         property("sonar.projectName", "Ares")
         property "sonar.log.level ", "DEBUG"
         property "sonar.junit.reportsPath", "build/reports/tests/test/index.html"
-        property("sonar.kotlin.detekt.reportPaths","build/reports/detekt/detekt.xml")
         property "sonar.coverage.jacoco.xmlReportPaths","build/reports/jacoco/test/jacocoTestReport.xml"
     }
 }
@@ -232,6 +231,9 @@ jacocoTestReport {
                     "**/constants/**",
                     "**/model/**",
                     "**/enum/**",
+                    "**/repository/*",
+                    "**/entity/*",
+                    "**/entity/**"
             ])
         }))
     }

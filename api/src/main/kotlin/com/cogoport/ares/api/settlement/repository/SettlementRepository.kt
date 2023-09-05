@@ -15,7 +15,6 @@ import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
-import java.sql.Timestamp
 import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
@@ -222,7 +221,7 @@ interface SettlementRepository : CoroutineCrudRepository<Settlement, Long> {
                 S.destination_id = :documentNo
                 And (p.acc_mode = 'AP' OR p.acc_mode IS NULL)
                 AND s.destination_type in ('PINV','PREIMB')
-                AND s.source_type not in ('VTDS') and s.is_void = false
+                AND s.is_void = false
                 order by s.created_at desc
            LIMIT 1
         """
@@ -299,7 +298,7 @@ ORDER BY
                 settlements s where 
                 s.source_id = :documentNo
                 AND s.destination_type in ('PINV','PREIMB')
-                AND s.source_type not in ('VTDS') and is_void = false
+                and is_void = false
                 order by s.created_at desc
            LIMIT 1
         """
@@ -323,6 +322,7 @@ ORDER BY
                 AND s.destination_type NOT in('VTDS')
                 and s.source_type NOT in ('VTDS')
                 and (p.payment_code = 'PAY'  OR s.source_type = 'PCN')
+                and au.deleted_at is null and s.deleted_at is null and p.deleted_at is null
             ORDER BY
                 s.created_at DESC
 
@@ -430,16 +430,21 @@ ORDER BY
     @NewSpan
     @Query(
         """
-            SELECT id  FROM settlements
-            WHERE settlement_status::varchar = 'CREATED'
-            AND deleted_at IS NULL
-            AND led_currency != 'VND'
-            AND source_type not in ('SECH', 'PAY', 'VTDS', 'PCN')
-            AND destination_type not in ('PINV', 'PREIMB')
-            AND created_at >= :date
+            SELECT s.id
+            FROM settlements s
+            INNER JOIN account_utilizations aau ON aau.document_no = s.destination_id
+            WHERE s.settlement_status::varchar in ('CREATED', 'POSTING_FAILED')
+              AND s.deleted_at IS NULL
+              AND s.led_currency != 'VND'
+              AND s.source_type NOT IN ('SECH', 'PECH')
+              AND CASE
+                    WHEN aau.acc_mode = 'AR' THEN s.created_at >= '2023-05-16'
+                    ELSE aau.created_at <=  current_date - INTERVAL '3 days' and aau.created_at >= '2023-07-28' and is_proforma = false
+                  END
+            ORDER BY s.created_at DESC
         """
     )
-    suspend fun getSettlementIdForCreatedStatus(date: Timestamp): List<Long>?
+    suspend fun getSettlementIdForCreatedStatus(): List<Long>?
 
     @NewSpan
     @Query(

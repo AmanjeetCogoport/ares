@@ -37,7 +37,7 @@ class OpenSearchServiceImpl : OpenSearchService {
         accountUtilizationRepository.generateOrgOutstanding(request.orgId, null, null).also {
             updateOrgOutstanding(null, request.orgName, request.orgId, it)
         }
-        accountUtilizationRepository.generateOrgOutstanding(request.orgId, request.zone, null).also {
+        accountUtilizationRepository.generateBillOrgOutstanding(request.orgId, request.zone, null).also {
             updateOrgOutstanding(request.zone, request.orgName, request.orgId, it)
         }
     }
