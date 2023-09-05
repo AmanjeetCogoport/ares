@@ -16,15 +16,11 @@ import com.cogoport.ares.model.payment.request.BulkUploadRequest
 import com.cogoport.ares.model.payment.request.DeletePaymentRequest
 import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.request.OnAccountTotalAmountRequest
-import com.cogoport.ares.model.payment.response.AccountCollectionResponse
-import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
-import com.cogoport.ares.model.payment.response.BulkPaymentResponse
-import com.cogoport.ares.model.payment.response.OnAccountApiCommonResponse
-import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
-import com.cogoport.ares.model.payment.response.UploadSummary
+import com.cogoport.ares.model.payment.response.*
 import com.cogoport.ares.model.sage.SageFailedResponse
 import com.cogoport.brahma.authentication.Auth
 import com.cogoport.brahma.authentication.AuthResponse
+import com.cogoport.hades.model.incident.request.SaasUTRUploadRequest
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
@@ -143,5 +139,10 @@ class OnAccountController {
     @Delete("/delete-payments")
     suspend fun deletingApPayments(@Body paymentNumValues: List<String>) {
         return onAccountService.deletingApPayments(paymentNumValues)
+    }
+
+    @Post("/saas-invoice-hook")
+    suspend fun saasInvoiceHook(req: SaasUTRUploadRequest): Response<SaasInvoiceHookResponse> {
+        return Response<SaasInvoiceHookResponse>().ok("success", onAccountService.saasInvoiceHook(req))
     }
 }

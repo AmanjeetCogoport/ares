@@ -11,6 +11,7 @@ import com.cogoport.ares.api.common.models.BankDetails
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.events.KuberMessagePublisher
 import com.cogoport.ares.api.events.OpenSearchEvent
+import com.cogoport.ares.api.events.PlutusMessagePublisher
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
@@ -37,6 +38,7 @@ import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.api.sage.service.implementation.SageServiceImpl
 import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
+import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditService
 import com.cogoport.ares.api.utils.ExcelUtils
 import com.cogoport.ares.api.utils.Util
@@ -82,6 +84,7 @@ import com.cogoport.ares.model.payment.response.OnAccountApiCommonResponse
 import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
 import com.cogoport.ares.model.payment.response.OnAccountWithUtrResponse
 import com.cogoport.ares.model.payment.response.PlatformOrganizationResponse
+import com.cogoport.ares.model.payment.response.SaasInvoiceHookResponse
 import com.cogoport.ares.model.payment.response.UploadSummary
 import com.cogoport.ares.model.sage.SageCustomerRecord
 import com.cogoport.ares.model.sage.SageFailedResponse
@@ -89,6 +92,7 @@ import com.cogoport.ares.model.settlement.PostPaymentToSage
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.enums.JVSageAccount
 import com.cogoport.ares.model.settlement.enums.JVSageControls
+import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import com.cogoport.brahma.excel.ExcelSheetBuilder
 import com.cogoport.brahma.excel.model.Color
 import com.cogoport.brahma.excel.model.FontStyle
@@ -101,6 +105,8 @@ import com.cogoport.brahma.sage.SageException
 import com.cogoport.brahma.sage.model.request.PaymentLineItem
 import com.cogoport.brahma.sage.model.request.PaymentRequest
 import com.cogoport.brahma.sage.model.request.SageResponse
+import com.cogoport.hades.model.incident.request.SaasUTRUploadRequest
+import com.cogoport.plutus.client.PlutusClient
 import com.cogoport.plutus.model.invoice.GetUserRequest
 import com.cogoport.plutus.model.invoice.SageOrganizationRequest
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -174,6 +180,9 @@ open class OnAccountServiceImpl : OnAccountService {
     lateinit var kuberMessagePublisher: KuberMessagePublisher
 
     @Inject
+    lateinit var plutusMessagePublisher: PlutusMessagePublisher
+
+    @Inject
     lateinit var auditService: AuditService
     @Inject
     lateinit var paymentFileRepository: PaymentFileRepository
@@ -192,6 +201,12 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Inject
     lateinit var sageServiceImpl: SageServiceImpl
+
+    @Inject
+    lateinit var plutusClient: PlutusClient
+
+    @Inject
+    lateinit var settlementService: SettlementService
 
     @Value("\${sage.databaseName}")
     var sageDatabase: String? = null
@@ -1886,5 +1901,51 @@ open class OnAccountServiceImpl : OnAccountService {
         val previousLedger = accountUtilizationRepository.getOpeningAndClosingLedger(AccMode.AR, req.orgId, req.entityCodes!!, req.startDate!!, AresConstants.OPENING_BALANCE)
         val currentLedger = accountUtilizationRepository.getOpeningAndClosingLedger(AccMode.AR, req.orgId, req.entityCodes!!, req.endDate, AresConstants.CLOSING_BALANCE)
         return previousLedger + ledgerSelectedDateWise + currentLedger
+    }
+
+    @Transactional(rollbackOn = [Exception::class, AresException::class])
+    override suspend fun saasInvoiceHook(req: SaasUTRUploadRequest): SaasInvoiceHookResponse {
+        val proformaRecord = accountUtilizationRepository.findRecordByDocumentValue(req.proformaNumber!!, AccountType.REC.toString(), AccMode.AR.toString())
+        val bankDetails = authClient.getCogoBank(CogoEntitiesRequest(req.entityCode.toString())).bankList.filter { it.entityCode == req.entityCode }[0].bankDetails?.filter { it.accountNumber == req.bankAccountNumber }?.get(0)
+        val accountUtilization = accountUtilizationRepository.getAccountUtilizationsByDocValue(req.proformaNumber!!, AccountType.REC)
+        // add remarks,
+        val paymentModel = Payment(
+            entityType = proformaRecord?.entityCode,
+            orgSerialId = proformaRecord?.orgSerialId,
+            organizationId = proformaRecord?.organizationId,
+            taggedOrganizationId = proformaRecord?.taggedOrganizationId,
+            tradePartyMappingId = proformaRecord?.tradePartyMappingId,
+            organizationName = proformaRecord?.organizationName,
+            accMode = proformaRecord?.accMode,
+            accCode = proformaRecord?.accCode,
+            signFlag = proformaRecord?.signFlag,
+            currency = req.currency,
+            amount = req.paidAmount,
+            ledCurrency = proformaRecord?.ledCurrency,
+            ledAmount = req.paidAmount,
+            utr = req.utrNumber,
+            bankAccountNumber = bankDetails?.accountNumber,
+            bankName = bankDetails?.beneficiaryName,
+            performedByUserType = req.performedByUserType,
+            bankId = bankDetails?.id!!,
+            paymentNum = null,
+            paymentNumValue = null,
+            refAccountNo = null,
+            serviceType = null
+        )
+        val paymentId = createNonSuspensePaymentEntry(paymentModel)
+        val checkDocuments = settlementService.settleWithSourceIdAndDestinationId(
+            AutoKnockOffRequest(
+                paymentIdAsSourceId = paymentId.toString(),
+                destinationId = accountUtilization.documentNo.toString(),
+                createdBy = req.performedBy!!
+            )
+        )
+
+        if (req.entityCode != 401) {
+            // create JV here
+        }
+
+        return SaasInvoiceHookResponse(id = paymentId)
     }
 }

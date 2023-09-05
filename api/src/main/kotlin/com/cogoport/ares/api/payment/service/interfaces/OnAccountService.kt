@@ -17,9 +17,11 @@ import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.response.BulkPaymentResponse
 import com.cogoport.ares.model.payment.response.OnAccountApiCommonResponse
 import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
+import com.cogoport.ares.model.payment.response.SaasInvoiceHookResponse
 import com.cogoport.ares.model.payment.response.UploadSummary
 import com.cogoport.ares.model.sage.SageFailedResponse
 import com.cogoport.ares.model.settlement.PostPaymentToSage
+import com.cogoport.hades.model.incident.request.SaasUTRUploadRequest
 import java.util.UUID
 
 interface OnAccountService {
@@ -47,4 +49,6 @@ interface OnAccountService {
 
     suspend fun deletingApPayments(paymentNumValues: List<String>)
     suspend fun getARLedgerOrganizationAndEntityWise(req: LedgerSummaryRequest): List<ARLedgerResponse>
+
+    suspend fun saasInvoiceHook(req: SaasUTRUploadRequest): SaasInvoiceHookResponse
 }
