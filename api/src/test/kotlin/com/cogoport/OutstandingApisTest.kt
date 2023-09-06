@@ -1,5 +1,6 @@
 package com.cogoport
 
+import com.cogoport.ares.api.common.AresConstants.ENTITY_ID
 import com.cogoport.ares.api.common.service.implementation.Scheduler
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
@@ -71,11 +72,9 @@ class OutstandingApisTest(
         Client.createIndex("supplier_outstanding_overall")
         Client.createIndex(indexName = "index_ares_sales_outstanding")
         Client.createIndex(indexName = "index_ares_invoice_outstanding")
-        Client.createIndex(indexName = "customer_outstanding_101")
-        Client.createIndex(indexName = "customer_outstanding_201")
-        Client.createIndex(indexName = "customer_outstanding_301")
-        Client.createIndex(indexName = "customer_outstanding_401")
-        Client.createIndex(indexName = "customer_outstanding_501")
+        ENTITY_ID.keys.map {
+            Client.createIndex(indexName = "customer_outstanding_$it")
+        }
     }
 
     @AfterEach
@@ -84,11 +83,10 @@ class OutstandingApisTest(
         Client.deleteIndex(indexName = "index_ares_sales_outstanding")
         Client.deleteIndex("supplier_outstanding_overall")
         Client.deleteIndex(indexName = "index_ares_invoice_outstanding")
-        Client.deleteIndex(indexName = "customer_outstanding_101")
-        Client.deleteIndex(indexName = "customer_outstanding_201")
-        Client.deleteIndex(indexName = "customer_outstanding_301")
-        Client.deleteIndex(indexName = "customer_outstanding_401")
-        Client.deleteIndex(indexName = "customer_outstanding_501")
+
+        ENTITY_ID.keys.map {
+            Client.deleteIndex(indexName = "customer_outstanding_$it")
+        }
     }
 
     @Test
