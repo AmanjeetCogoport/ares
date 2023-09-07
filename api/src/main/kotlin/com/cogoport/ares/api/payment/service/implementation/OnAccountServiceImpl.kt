@@ -115,7 +115,6 @@ import com.cogoport.hades.model.incident.enums.Source
 import com.cogoport.hades.model.incident.request.AdvanceSecurityDepositRefund
 import com.cogoport.hades.model.incident.request.CreateIncidentRequest
 import com.cogoport.kuber.client.KuberClient
-import com.cogoport.kuber.model.bills.request.LedgerExchangeRateRequest
 import com.cogoport.plutus.model.invoice.GetUserRequest
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
@@ -333,22 +332,8 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     private suspend fun createNonSuspensePaymentEntryCSDWrapper(receivableRequest: Payment): Long {
-
-        val entityId = AresConstants.ENTITY_ID[receivableRequest.entityType]
-        val req = LedgerExchangeRateRequest(
-            cogoEntityId = UUID.fromString(entityId),
-            fromCurrency = receivableRequest.currency!!
-        )
-
-        val res = authClient.getLedgerExchangeRate(req)
-
-        if (res.ledgerExchangeRate == null) {
-            throw AresException(AresError.ERR_1505, receivableRequest.currency!!)
-        }
-
-        receivableRequest.exchangeRate = res.ledgerExchangeRate
-
         val savedPaymentId = createNonSuspensePaymentEntry(receivableRequest)
+
         if (receivableRequest.advanceDocumentId != null) {
             hadesClient.createIncident(
                 CreateIncidentRequest(
@@ -363,9 +348,9 @@ open class OnAccountServiceImpl : OnAccountService {
                             totalAmount = receivableRequest.amount,
                             remark = receivableRequest.remarks,
                             shipmentId = null,
-                            supplierName = null,
+                            supplierName = receivableRequest.serviceProvider,
                             uploadProof = null,
-                            sid = null,
+                            sid = receivableRequest.jobNumber,
                             paymentDocUrl = receivableRequest.paymentDocUrl
                         ),
                         organization = Organization(
