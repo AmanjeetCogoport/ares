@@ -348,9 +348,9 @@ open class OnAccountServiceImpl : OnAccountService {
                             totalAmount = receivableRequest.amount,
                             remark = receivableRequest.remarks,
                             shipmentId = null,
-                            supplierName = null,
+                            supplierName = receivableRequest.serviceProvider,
                             uploadProof = null,
-                            sid = null,
+                            sid = receivableRequest.jobNumber,
                             paymentDocUrl = receivableRequest.paymentDocUrl
                         ),
                         organization = Organization(

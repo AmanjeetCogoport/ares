@@ -34,6 +34,9 @@ services:
     - id: bf-rails
       url: http://host.docker.internal:5000
       enabledLocally: true
+    - id: hades
+      url: https://api-mustangs2.dev.cogoport.io
+      enabledLocally: true
   staging: https://api.stage.cogoport.io
   namespace: ${DNS_NAMESPACE:cogoport.stage}
   auth:
