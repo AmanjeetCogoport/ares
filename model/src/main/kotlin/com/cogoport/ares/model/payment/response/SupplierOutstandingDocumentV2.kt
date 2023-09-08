@@ -205,16 +205,16 @@ data class SupplierOutstandingDocumentV2(
     val tradePartySerialId: Long?,
 
     @JsonProperty("closingOutstandingAmountAtFirstApril")
-    val closingOutstandingAmountAtFirstApril: BigDecimal?,
+    var closingOutstandingAmountAtFirstApril: BigDecimal?,
 
     @JsonProperty("closingInvoiceAmountAtFirstApril")
-    val closingInvoiceAmountAtFirstApril: BigDecimal?,
+    var closingInvoiceAmountAtFirstApril: BigDecimal?,
 
     @JsonProperty("closingCreditNoteAmountAtFirstApril")
-    val closingCreditNoteAmountAtFirstApril: BigDecimal?,
+    var closingCreditNoteAmountAtFirstApril: BigDecimal?,
 
     @JsonProperty("closingOnAccountAmountAtFirstApril")
-    val closingOnAccountAmountAtFirstApril: BigDecimal?,
+    var closingOnAccountAmountAtFirstApril: BigDecimal?,
 
     @JsonProperty("creditDays")
     var creditDays: Long?,
