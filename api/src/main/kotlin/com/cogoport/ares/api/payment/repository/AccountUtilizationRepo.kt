@@ -697,7 +697,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             SELECT id 
             FROM account_utilizations
             WHERE amount_curr <> 0 
-                AND case when acc_type in ('SINV', 'SCN', 'PINV', 'PCN', 'PAY', 'REC', 'VTDS', 'CTDS') THEN (amount_curr - pay_curr) > 1 ELSE (amount_curr - pay_curr) > 0 END 
+                AND case when acc_type in ('SINV', 'SCN', 'PINV', 'PCN', 'PAY', 'REC', 'VTDS', 'CTDS', 'EXP') THEN (amount_curr - pay_curr) > 1 ELSE (amount_curr - pay_curr) > 0 END 
                 AND organization_id in (:orgId)
                 AND document_status = 'FINAL'
                 AND ((:accType) is null or acc_type::varchar in (:accType))
@@ -736,8 +736,8 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             COALESCE(amount_curr - pay_curr, 0) as balance_amount,
             COALESCE(
                 CASE 
-                WHEN au.acc_mode = 'AP' AND au.created_at < '2023-07-28' 
-                THEN  CASE WHEN au.acc_type = 'PINV' THEN tds_amount else 0 end
+                WHEN au.acc_mode = 'AP' AND au.created_at > '2023-07-28' 
+                THEN  CASE WHEN au.acc_type IN ('PINV', 'EXP') THEN tds_amount else 0 end
                 ELSE 0
                 END, 0
             ) as tds,
@@ -832,7 +832,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 FROM account_utilizations
                 WHERE 
                     amount_curr <> 0 
-                    AND case when acc_type in ('SINV', 'SCN', 'PINV', 'PCN', 'PAY', 'REC', 'VTDS', 'CTDS') THEN (amount_curr - pay_curr) > 1 ELSE (amount_curr - pay_curr) > 0 END
+                    AND case when acc_type in ('SINV', 'SCN', 'PINV', 'PCN', 'PAY', 'REC', 'VTDS', 'CTDS', 'EXP') THEN (amount_curr - pay_curr) > 1 ELSE (amount_curr - pay_curr) > 0 END
                     AND document_status = 'FINAL'
                     AND organization_id in (:orgId)
                     AND ((:accType) is null or acc_type::varchar in (:accType))
