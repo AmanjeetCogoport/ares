@@ -21,8 +21,8 @@ class SageServiceImpl : SageService {
         if (arrayListOf(AccountType.SINV, AccountType.SCN, AccountType.SDN).contains(documentType)) {
             return isInvoiceDataPostedFromSage("NUM_0", "$sageDatabase.SINVOICE", documentValue)
         }
-        // Check if PINV, PCN exists and it is posted in sage
-        if (arrayListOf(AccountType.PINV, AccountType.PCN, AccountType.PDN).contains(documentType)) {
+        // Check if PINV, PCN, PDN, EXP exists and it is posted in sage
+        if (arrayListOf(AccountType.PINV, AccountType.PCN, AccountType.PDN, AccountType.EXP).contains(documentType)) {
             return isBillDataPostedFromSage(documentValue, organizationSerialId, sageBPRNumber, registrationNumber)
         }
 
