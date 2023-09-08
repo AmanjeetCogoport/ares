@@ -1256,6 +1256,9 @@ class OutStandingServiceImpl : OutStandingService {
             item.creditDays = it.creditDays ?: 0
             item.totalOpenInvoiceCount = it.invoiceNotDueCount + it.invoiceTodayCount + it.invoiceThirtyCount + it.invoiceSixtyCount + it.invoiceNinetyCount + it.invoiceOneEightyCount + it.invoiceThreeSixtyFiveCount + it.invoiceThreeSixtyFivePlusCount
             item.totalOpenOnAccountCount = it.onAccountNotDueCount + it.onAccountTodayCount + it.onAccountThirtyCount + it.onAccountSixtyCount + it.onAccountNinetyCount + it.onAccountOneEightyCount + it.onAccountThreeSixtyFiveCount + it.onAccountThreeSixtyFivePlusCount
+            item.closingInvoiceAmountAtFirstApril = it.closingInvoiceBalance2022
+            item.closingOnAccountAmountAtFirstApril = it.closingOnAccountBalance2022
+            item.closingOutstandingAmountAtFirstApril = it.closingOutstanding2022
             supplierOutstanding.add(item)
         }
 
