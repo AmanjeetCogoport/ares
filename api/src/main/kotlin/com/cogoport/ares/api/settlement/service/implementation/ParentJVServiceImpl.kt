@@ -587,6 +587,10 @@ open class ParentJVServiceImpl : ParentJVService {
                 jvLineItemsDetails.add(jvLineItemDetails)
             }
 
+            if (parentJVDetails.category == "CTDS") {
+                parentJVDetails.category = "REC"
+            }
+
             val result: SageResponse = Client.postJVToSage(
                 JVRequest
                 (
