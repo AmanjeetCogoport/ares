@@ -272,23 +272,27 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
     @Query(
         """
                 SELECT
-                    id
+                    p.id
                 FROM
-                    payments
+                    payments p
+                INNER JOIN
+                    account_utilizations au on p.payment_num_value = au.document_value and p.payment_num = au.document_no
                 WHERE
-                    acc_mode = 'AP'
+                    p.acc_mode = 'AP'
                 AND 
-                    deleted_at IS NULL
+                    p.deleted_at IS NULL AND au.deleted_at IS NULL
                 AND 
                     payment_document_status = 'APPROVED'::payment_document_status
                 AND 
-                    organization_id != '8c7e0382-4f6d-4a32-bb98-d0bf6522fdd8'
+                    p.organization_id != '8c7e0382-4f6d-4a32-bb98-d0bf6522fdd8'
                 AND
-                    entity_code != 501
+                    p.migrated = FALSE AND au.migrated = FALSE
+                AND
+                    p.entity_code != 501
                 AND 
-                    transaction_date <= current_date - INTERVAL '3 days'
+                    p.transaction_date <= current_date - INTERVAL '3 days'
                 AND
-                    transaction_date >= '2023-07-25'
+                    p.transaction_date >= '2023-07-25'
             """
     )
     suspend fun getPaymentIdsForApprovedPayments(): List<Long>?
