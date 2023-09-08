@@ -50,7 +50,8 @@ data class EntityLevelStats(
     val totalOpenOnAccountAmount: BigDecimal?,
     val totalOutstanding: BigDecimal?,
     val ledCurrency: String?,
-    val entityCode: Int?
+    val entityCode: Int?,
+    var closingOutstandingAmountAtFirstApril: BigDecimal?,
 ) {
     @field:Transient
     var totalOpenInvoiceCount: Long? = null
