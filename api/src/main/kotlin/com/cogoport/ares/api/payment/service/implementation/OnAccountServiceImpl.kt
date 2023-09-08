@@ -1729,8 +1729,17 @@ open class OnAccountServiceImpl : OnAccountService {
                 val processedResponse = XML.toJSONObject(result.response)
                 val status = getStatus(processedResponse)
                 if (status == 1) {
-                    createThirdPartyAudit(id, "PostPaymentFromSage", result.requestString, result.response, true)
-                    paymentRepository.updatePaymentDocumentStatus(id, PaymentDocumentStatus.FINAL_POSTED, performedBy)
+                    val paymentNumOnSage = "Select STA_0 from $sageDatabase.PAYMENTH where NUM_0 = '${payment.sageRefNumber!!}'"
+                    val resultForPaymentNumOnSageQuery = SageClient.sqlQuery(paymentNumOnSage)
+                    val mappedResponse = ObjectMapper().readValue<MutableMap<String, Any?>>(resultForPaymentNumOnSageQuery)
+                    val records = ((mappedResponse["recordset"] as? ArrayList<*>)?.first() as java.util.LinkedHashMap<*, *>)["STA_0"]
+                    if (records == 9) {
+                        createThirdPartyAudit(id, "PostPaymentFromSage", result.requestString, result.response, true)
+                        paymentRepository.updatePaymentDocumentStatus(id, PaymentDocumentStatus.FINAL_POSTED, performedBy)
+                    } else {
+                        createThirdPartyAudit(id, "PostPaymentFromSage", result.requestString, "Can't final post on Sage -> ${result.response}", false)
+                        paymentRepository.updatePaymentDocumentStatus(id, PaymentDocumentStatus.POSTED, performedBy)
+                    }
                 } else {
                     createThirdPartyAudit(id, "PostPaymentFromSage", result.requestString, result.response, false)
                     failedIds.add(id)
