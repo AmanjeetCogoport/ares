@@ -2007,7 +2007,7 @@ open class SettlementServiceImpl : SettlementService {
             )
         }
         when (accountUtilization.accType) {
-            AccountType.PINV, AccountType.PCN -> emitPayableBillStatus(accountUtilization, paidTds, performedBy, performedByUserType, isAutoKnockOff, isDelete)
+            AccountType.PINV, AccountType.PCN, AccountType.EXP -> emitPayableBillStatus(accountUtilization, paidTds, performedBy, performedByUserType, isAutoKnockOff, isDelete)
             AccountType.SINV, AccountType.SCN -> updateBalanceAmount(accountUtilization, performedBy, performedByUserType)
             else -> {}
         }
@@ -2227,7 +2227,7 @@ open class SettlementServiceImpl : SettlementService {
                 listOf(SettlementType.PAY, SettlementType.PCN, SettlementType.SINV) + jvList
             }
             SettlementType.PCN -> {
-                listOf(SettlementType.PINV, SettlementType.PDN) + jvList
+                listOf(SettlementType.PINV, SettlementType.PDN, SettlementType.EXP) + jvList
             }
             SettlementType.PAY -> {
                 listOf(SettlementType.PINV, SettlementType.PDN, SettlementType.EXP) + jvList
