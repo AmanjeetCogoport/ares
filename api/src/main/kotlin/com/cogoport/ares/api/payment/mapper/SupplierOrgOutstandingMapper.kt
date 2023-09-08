@@ -14,6 +14,9 @@ interface SupplierOrgOutstandingMapper {
     @Mapping(target = "totalOpenInvoiceCount", expression = "java(0l)")
     @Mapping(target = "totalOpenOnAccountCount", expression = "java(0l)")
     @Mapping(target = "creditDays", expression = "java(0l)")
+    @Mapping(source = "closingInvoiceBalance2022", target = "closingInvoiceAmountAtFirstApril")
+    @Mapping(source = "closingOnAccountBalance2022", target = "closingOnAccountAmountAtFirstApril")
+    @Mapping(source = "closingOutstanding2022", target = "closingOutstandingAmountAtFirstApril")
     fun convertToModel(orgOutstanding: SupplierLevelData): SupplierOutstandingDocumentV2
 
     fun convertToEntity(req: SupplierOutstandingDocumentV2): SupplierLevelData
