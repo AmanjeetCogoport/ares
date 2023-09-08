@@ -1713,6 +1713,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
     override suspend fun postPaymentFromSage(paymentIds: ArrayList<Long>, performedBy: UUID): SageFailedResponse {
         val failedIds: MutableList<Long?> = mutableListOf()
+        var recordStatus: String = ""
         for (id in paymentIds) {
             try {
                 val payment = paymentRepository.findByPaymentId(id)
@@ -1732,13 +1733,18 @@ open class OnAccountServiceImpl : OnAccountService {
                     val paymentNumOnSage = "Select STA_0 from $sageDatabase.PAYMENTH where NUM_0 = '${payment.sageRefNumber!!}'"
                     val resultForPaymentNumOnSageQuery = SageClient.sqlQuery(paymentNumOnSage)
                     val mappedResponse = ObjectMapper().readValue<MutableMap<String, Any?>>(resultForPaymentNumOnSageQuery)
-                    val records = ((mappedResponse["recordset"] as? ArrayList<*>)?.first() as java.util.LinkedHashMap<*, *>)["STA_0"]
-                    if (records == 9) {
-                        createThirdPartyAudit(id, "PostPaymentFromSage", result.requestString, result.response, true)
-                        paymentRepository.updatePaymentDocumentStatus(id, PaymentDocumentStatus.FINAL_POSTED, performedBy)
-                    } else {
-                        createThirdPartyAudit(id, "PostPaymentFromSage", result.requestString, "Can't final post on Sage -> ${result.response}", false)
-                        paymentRepository.updatePaymentDocumentStatus(id, PaymentDocumentStatus.POSTED, performedBy)
+                    val records = mappedResponse["recordset"] as? ArrayList<*>
+                    if (records?.size != 0) {
+                        val recordMap = records!!.toArray()[0] as HashMap<String, String>
+                        recordStatus = recordMap["STA_0"]!!
+                        if (recordStatus == "9") {
+                            createThirdPartyAudit(id, "PostPaymentFromSage", result.requestString, result.response, true)
+                            paymentRepository.updatePaymentDocumentStatus(id, PaymentDocumentStatus.FINAL_POSTED, performedBy)
+                        } else {
+                            createThirdPartyAudit(id, "PostPaymentFromSage", result.requestString, "Can't final post on Sage -> ${result.response}", false)
+                            paymentRepository.updatePaymentDocumentStatus(id, PaymentDocumentStatus.POSTED, performedBy)
+                            failedIds.add(id)
+                        }
                     }
                 } else {
                     createThirdPartyAudit(id, "PostPaymentFromSage", result.requestString, result.response, false)
