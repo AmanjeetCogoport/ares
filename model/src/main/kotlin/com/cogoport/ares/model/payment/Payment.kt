@@ -157,5 +157,11 @@ data class Payment(
     var advanceDocumentId: String? = null,
 
     @JsonProperty("paymentDocUrl")
-    var paymentDocUrl: String? = null
+    var paymentDocUrl: String? = null,
+
+    @JsonProperty("serviceProvider")
+    var serviceProvider: String? = null,
+
+    @JsonProperty("jobNumber")
+    var jobNumber: String? = null
 )

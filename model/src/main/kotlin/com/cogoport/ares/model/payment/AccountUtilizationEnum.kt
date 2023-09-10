@@ -113,7 +113,8 @@ enum class InvoiceType(val value: String) {
     RECJV("AR Payment Jv"),
     PAYJV("AP Payment Jv"),
     CTDS("Customer TDS"),
-    VTDS("Vendor TDS");
+    VTDS("Vendor TDS"),
+    EXP("AP EXPENSE BILL");
 }
 
 /**

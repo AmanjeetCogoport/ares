@@ -255,7 +255,7 @@ open class SettlementServiceImpl : SettlementService {
      */
     override suspend fun getAccountBalance(summaryRequest: SummaryRequest): SummaryResponse {
         val orgId = listOf(summaryRequest.orgId)
-        val validAccTypeForOpenInvoiceCalculation = listOf(AccountType.PINV, AccountType.PCN, AccountType.PREIMB, AccountType.SINV, AccountType.SCN, AccountType.SREIMBCN, AccountType.SREIMB)
+        val validAccTypeForOpenInvoiceCalculation = listOf(AccountType.PINV, AccountType.PCN, AccountType.PREIMB, AccountType.SINV, AccountType.SCN, AccountType.SREIMBCN, AccountType.SREIMB, AccountType.EXP)
         val validAccTypeForOnAccountCalculation = listOf(AccountType.VTDS, AccountType.REC, AccountType.CTDS, AccountType.PAY, AccountType.BANK, AccountType.CONTR, AccountType.ROFF, AccountType.MTCCV, AccountType.MISC, AccountType.INTER, AccountType.OPDIV, AccountType.MTC)
         val openInvoiceAmount =
             accountUtilizationRepository.getAccountBalance(
@@ -537,7 +537,7 @@ open class SettlementServiceImpl : SettlementService {
                             listOf(SettlementType.REC, SettlementType.SCN, SettlementType.SINV, SettlementType.CTDS)
                         )
                         SettlementType.VTDS -> tdsType.addAll(
-                            listOf(SettlementType.PAY, SettlementType.PCN, SettlementType.SINV, SettlementType.VTDS)
+                            listOf(SettlementType.PAY, SettlementType.PCN, SettlementType.SINV, SettlementType.VTDS, SettlementType.EXP)
                         )
                         else -> tdsType.add(it1)
                     }
@@ -659,7 +659,7 @@ open class SettlementServiceImpl : SettlementService {
                 request.documentPaymentStatus
             )
 
-        val billListIds = documentModel.filter { it.accountType in listOf("PINV", "PREIMB") }.map { it.documentNo }
+        val billListIds = documentModel.filter { it.accountType in listOf("PINV", "PREIMB", "EXP") }.map { it.documentNo }
 
         val listBillRequest: ListBillRequest
         var responseList: com.cogoport.kuber.model.common.ResponseList<BillDocResponse>? = null
@@ -831,23 +831,23 @@ open class SettlementServiceImpl : SettlementService {
             docType == AresConstants.PAYMENT && accMode == AccMode.AR -> { listOf(AccountType.REC) }
             docType == AresConstants.PAYMENT && accMode == AccMode.AP -> { listOf(AccountType.PAY) }
             docType == AresConstants.INVOICE && accMode == AccMode.AR -> { listOf(AccountType.SINV, AccountType.SREIMB) }
-            docType == AresConstants.INVOICE && accMode == AccMode.AP -> { listOf(AccountType.PINV, AccountType.PREIMB) }
+            docType == AresConstants.INVOICE && accMode == AccMode.AP -> { listOf(AccountType.PINV, AccountType.PREIMB, AccountType.EXP) }
             docType == AresConstants.CREDIT_NOTE && accMode == AccMode.AR -> { listOf(AccountType.SCN, AccountType.SREIMBCN) }
             docType == AresConstants.CREDIT_NOTE && accMode == AccMode.AP -> { listOf(AccountType.PCN) }
             docType == AresConstants.TDS && accMode == AccMode.AR -> { listOf(AccountType.CTDS) }
             docType == AresConstants.TDS && accMode == AccMode.AP -> { listOf(AccountType.VTDS) }
             docType == AresConstants.TDS && accMode == AccMode.VTDS -> { listOf(AccountType.VTDS) }
             docType == AresConstants.JV -> { jvList }
-            docType == AresConstants.INVOICE && accMode == null -> { listOf(AccountType.SINV, AccountType.PINV) }
+            docType == AresConstants.INVOICE && accMode == null -> { listOf(AccountType.SINV, AccountType.PINV, AccountType.EXP) }
             docType == AresConstants.TDS && accMode == null -> { listOf(AccountType.VTDS, AccountType.CTDS) }
             docType == AresConstants.CREDIT_NOTE && accMode == null -> { listOf(AccountType.PCN, AccountType.SCN) }
             docType == null && accMode == AccMode.AR -> {
                 listOf(AccountType.SINV, AccountType.REC, AccountType.SCN, AccountType.SDN, AccountType.CTDS, AccountType.SREIMB, AccountType.SREIMBCN) + jvList
             }
             docType == null && accMode == AccMode.AP -> {
-                listOf(AccountType.PINV, AccountType.PCN, AccountType.PDN, AccountType.PAY, AccountType.VTDS, AccountType.PREIMB) + jvList
+                listOf(AccountType.PINV, AccountType.PCN, AccountType.PDN, AccountType.PAY, AccountType.VTDS, AccountType.PREIMB, AccountType.EXP) + jvList
             }
-            docType == null && accMode == null -> { listOf(AccountType.SINV, AccountType.PINV, AccountType.SCN, AccountType.PCN) }
+            docType == null && accMode == null -> { listOf(AccountType.SINV, AccountType.PINV, AccountType.SCN, AccountType.PCN, AccountType.EXP) }
             else -> { emptyList() }
         }
     }
@@ -1325,7 +1325,7 @@ open class SettlementServiceImpl : SettlementService {
             SettlementType.CTDS -> listOf(SettlementType.CTDS)
             else -> if (settlementServiceHelper.getJvList(SettlementType::class.java).contains(settlementType)) {
                 settlementServiceHelper.getJvList(SettlementType::class.java).toMutableList().apply {
-                    addAll(listOf(SettlementType.SINV, SettlementType.SCN, SettlementType.PINV, SettlementType.PCN))
+                    addAll(listOf(SettlementType.SINV, SettlementType.SCN, SettlementType.PINV, SettlementType.PCN, SettlementType.EXP))
                 }
             } else {
                 listOf(SettlementType.PCN, SettlementType.VTDS, SettlementType.PECH, SettlementType.NOSTRO)
@@ -1494,7 +1494,8 @@ open class SettlementServiceImpl : SettlementService {
                 SettlementType.SDN,
                 SettlementType.PDN,
                 SettlementType.PREIMB,
-                SettlementType.SREIMB
+                SettlementType.SREIMB,
+                SettlementType.EXP
             )
         val jvType = settlementServiceHelper.getJvList(SettlementType::class.java)
         for (doc in request.stackDetails!!.reversed()) {
@@ -1522,7 +1523,7 @@ open class SettlementServiceImpl : SettlementService {
         if (source.isEmpty() &&
             (
                 dest.map { it.accountType }.contains(SettlementType.SINV) &&
-                    dest.map { it.accountType }.contains(SettlementType.PINV)
+                    dest.map { it.accountType }.contains(SettlementType.PINV) && dest.map { it.accountType }.contains(SettlementType.EXP)
                 ) ||
             (
                 dest.map { it.accountType }.contains(SettlementType.SREIMB) &&
@@ -1579,7 +1580,7 @@ open class SettlementServiceImpl : SettlementService {
                 }
                 if (payment.tds!!.compareTo(BigDecimal.ZERO) != 0 &&
                     payment.settledTds.compareTo(BigDecimal.ZERO) == 0 &&
-                    payment.accountType in (listOf(SettlementType.PINV, SettlementType.SINV)) &&
+                    payment.accountType in (listOf(SettlementType.PINV, SettlementType.SINV, SettlementType.EXP)) &&
                     performDbOperation
                 ) {
                     createTdsRecord(
@@ -2006,7 +2007,7 @@ open class SettlementServiceImpl : SettlementService {
             )
         }
         when (accountUtilization.accType) {
-            AccountType.PINV, AccountType.PCN -> emitPayableBillStatus(accountUtilization, paidTds, performedBy, performedByUserType, isAutoKnockOff, isDelete)
+            AccountType.PINV, AccountType.PCN, AccountType.EXP -> emitPayableBillStatus(accountUtilization, paidTds, performedBy, performedByUserType, isAutoKnockOff, isDelete)
             AccountType.SINV, AccountType.SCN -> updateBalanceAmount(accountUtilization, performedBy, performedByUserType)
             else -> {}
         }
@@ -2208,7 +2209,7 @@ open class SettlementServiceImpl : SettlementService {
     }
 
     private fun fetchSettlingDocs(accType: SettlementType): List<SettlementType> {
-        val jvSettleList = listOf(SettlementType.SINV, SettlementType.PINV, SettlementType.REC, SettlementType.PAY, SettlementType.SREIMB, SettlementType.PREIMB, SettlementType.SCN)
+        val jvSettleList = listOf(SettlementType.SINV, SettlementType.PINV, SettlementType.REC, SettlementType.PAY, SettlementType.SREIMB, SettlementType.PREIMB, SettlementType.SCN, SettlementType.EXP)
         val jvList = settlementServiceHelper.getJvList(classType = SettlementType::class.java)
 
         if (jvList.contains(accType)) {
@@ -2222,11 +2223,14 @@ open class SettlementServiceImpl : SettlementService {
             SettlementType.PINV -> {
                 listOf(SettlementType.PAY, SettlementType.PCN, SettlementType.SINV) + jvList
             }
+            SettlementType.EXP -> {
+                listOf(SettlementType.PAY, SettlementType.PCN, SettlementType.SINV) + jvList
+            }
             SettlementType.PCN -> {
-                listOf(SettlementType.PINV, SettlementType.PDN) + jvList
+                listOf(SettlementType.PINV, SettlementType.PDN, SettlementType.EXP) + jvList
             }
             SettlementType.PAY -> {
-                listOf(SettlementType.PINV, SettlementType.PDN) + jvList
+                listOf(SettlementType.PINV, SettlementType.PDN, SettlementType.EXP) + jvList
             }
             SettlementType.SINV -> {
                 listOf(SettlementType.REC, SettlementType.SCN, SettlementType.PINV) + jvList
@@ -2244,7 +2248,7 @@ open class SettlementServiceImpl : SettlementService {
                 listOf(SettlementType.SINV, SettlementType.SDN, SettlementType.SCN)
             }
             SettlementType.VTDS -> {
-                listOf(SettlementType.PINV, SettlementType.PDN, SettlementType.PCN)
+                listOf(SettlementType.PINV, SettlementType.PDN, SettlementType.PCN, SettlementType.EXP)
             }
             SettlementType.PREIMB -> {
                 listOf(SettlementType.SREIMB)
