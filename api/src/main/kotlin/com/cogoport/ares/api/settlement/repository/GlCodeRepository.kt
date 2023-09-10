@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.settlement.repository
 
 import com.cogoport.ares.api.settlement.entity.GlCode
+import com.cogoport.plutus.model.invoice.enums.Currency
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -25,12 +26,14 @@ interface GlCodeRepository : CoroutineCrudRepository<GlCode, Long> {
                 FROM 
                     gl_codes
                 WHERE 
-                    (:entityCode IS NULL OR entity_code = :entityCode)
+                    (:entityCode IS NULL OR entity_code = :entityCode) and
+                    (:accountNumber IS NULL OR account_number = :accountNumber) and 
+                    (:currency IS NULL OR currency = :currency)
                 AND
                     gl_code ILIKE :q
                 LIMIT
                     :pageLimit
             """
     )
-    fun getGLCode(entityCode: Int?, q: String?, pageLimit: Int?): List<GlCode>
+    fun getGLCode(entityCode: Int?, q: String?, pageLimit: Int?, accountNumber: String?,currency: String?): List<GlCode>
 }

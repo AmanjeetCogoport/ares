@@ -1,5 +1,5 @@
 package com.cogoport.ares.model.payment.response
 
 data class SaasInvoiceHookResponse(
-    val id: Long
+    val id: List<Long>
 )

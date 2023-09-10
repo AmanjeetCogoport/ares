@@ -13,6 +13,7 @@ import com.cogoport.ares.model.payment.request.BulkUploadRequest
 import com.cogoport.ares.model.payment.request.DeletePaymentRequest
 import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.request.OnAccountTotalAmountRequest
+import com.cogoport.ares.model.payment.request.SaasInvoiceHookRequest
 import com.cogoport.ares.model.payment.response.ARLedgerResponse
 import com.cogoport.ares.model.payment.response.AccountCollectionResponse
 import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
@@ -54,5 +55,5 @@ interface OnAccountService {
 
     suspend fun updateCSDPayments(request: UpdateCSDPaymentRequest)
 
-    suspend fun saasInvoiceHook(req: SaasUTRUploadRequest): SaasInvoiceHookResponse
+    suspend fun saasInvoiceHook(req: SaasInvoiceHookRequest): SaasInvoiceHookResponse
 }

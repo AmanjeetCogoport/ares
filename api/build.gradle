@@ -93,7 +93,7 @@ dependencies {
 
     //Plutus Client
     implementation("com.cogoport.plutus:plutus-model:1.1.7")
-    implementation("com.cogoport.plutus:plutus-client:1.2.7")
+    implementation(files("libs/plutus-client-1.2.9.jar"))
     //Hades Client & Model
     implementation("com.cogoport.hades:hades-client:1.0.22")
     implementation(files("libs/hades-model-1.0.30.jar"))
