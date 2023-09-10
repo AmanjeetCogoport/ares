@@ -788,7 +788,7 @@ open class ParentJVServiceImpl : ParentJVService {
     override suspend fun getGLCode(entityCode: Int?, q: String?, pageLimit: Int?): List<GlCode> {
         val query = util.toQueryString(q)
         val updatedPageLimit = pageLimit ?: 10
-        return glCodeRepository.getGLCode(entityCode, query, updatedPageLimit,null,null)
+        return glCodeRepository.getGLCode(entityCode, query, updatedPageLimit, null, null)
     }
 
     override suspend fun getGLCodeMaster(accMode: AccMode?, q: String?, pageLimit: Int?, entityCode: Int?): List<GlCodeMaster> {
