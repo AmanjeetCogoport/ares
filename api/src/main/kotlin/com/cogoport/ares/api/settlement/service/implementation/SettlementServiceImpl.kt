@@ -2387,10 +2387,8 @@ open class SettlementServiceImpl : SettlementService {
     override suspend fun settleWithSourceIdAndDestinationId(
         autoKnockOffRequest: AutoKnockOffRequest
     ): List<CheckDocument>? {
-        val sourceDocumentNo = paymentRepo.findByPaymentId(Hashids.decode(autoKnockOffRequest.paymentIdAsSourceId)[0]).paymentNum!!
-        val sourceDocument = accountUtilizationRepository.findRecord(sourceDocumentNo, autoKnockOffRequest.sourceType)
-        val destinationDocument = accountUtilizationRepository.findRecord(Hashids.decode(autoKnockOffRequest.destinationId)[0], autoKnockOffRequest.destinationType)
-
+        var sourceDocument = getDocumentData(autoKnockOffRequest.sourceId, autoKnockOffRequest.sourceType!!)
+        val destinationDocument = getDocumentData(autoKnockOffRequest.destinationId, autoKnockOffRequest.destinationType!!)
         val listOfDocuments = mutableListOf<AccountUtilization>()
         listOfDocuments.add(sourceDocument!!)
         listOfDocuments.add(destinationDocument!!)
@@ -2472,6 +2470,23 @@ open class SettlementServiceImpl : SettlementService {
         )
 
         return settle(checkRequest)
+    }
+    suspend fun getDocumentData(id: String, type: String): AccountUtilization {
+        var document: AccountUtilization? = null
+        val jvType = settlementServiceHelper.getJvList(SettlementType::class.java)
+        val paymentsType = listOf("REC", "PAY")
+        if (jvType.contains(SettlementType.valueOf(type))) {
+            val jv = journalVoucherRepository.findById(Hashids.decode(id)[0])
+            if (jv != null) {
+                document = accountUtilizationRepository.findRecordByDocumentValue(jv.jvNum, jv.category, jv.accMode.toString())
+            }
+        } else if (paymentsType.contains(type)) {
+            val sourceDocumentNo = paymentRepo.findByPaymentId(Hashids.decode(id)[0]).paymentNum!!
+            document = accountUtilizationRepository.findRecord(sourceDocumentNo, type)
+        } else {
+            document = accountUtilizationRepository.findRecord(Hashids.decode(id)[0], type!!)
+        }
+        return document!!
     }
 
     private suspend fun calculatingTds(documentEntity: List<com.cogoport.ares.api.settlement.entity.Document?>, entityCode: Int?): List<Document> {

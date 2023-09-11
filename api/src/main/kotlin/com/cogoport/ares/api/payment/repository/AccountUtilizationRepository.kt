@@ -1309,4 +1309,14 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         entityCodes: List<Int>?,
         destinationTypes: List<SettlementType>?
     ): PaymentHistoryDetails
+
+//    @Query(
+//        """
+//            SELECT document_no FROM account_utilizations au
+//            INNER JOIN
+//            journal_vouchers jv ON
+//            au.document_value = jv.jv_num
+//            WHERE document_value = :documentValue
+//        """
+//    )
 }
