@@ -44,7 +44,6 @@ import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
 import com.cogoport.ares.api.settlement.service.implementation.SettlementServiceHelper
 import com.cogoport.ares.api.settlement.service.interfaces.ParentJVService
-import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditService
 import com.cogoport.ares.api.utils.ExcelUtils
 import com.cogoport.ares.api.utils.Util
@@ -224,9 +223,6 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Inject
     lateinit var parentJVService: ParentJVService
-
-    @Inject
-    lateinit var settlementService: SettlementService
 
     @Value("\${sage.databaseName}")
     var sageDatabase: String? = null
@@ -2148,7 +2144,7 @@ open class OnAccountServiceImpl : OnAccountService {
             }
         } else {
             paymentIds?.forEach { paymentId ->
-                settlementService.settleWithSourceIdAndDestinationId(
+                aresMessagePublisher.emitSendPaymentDetailsForKnockOff(
                     AutoKnockOffRequest(
                         sourceId = Hashids.encode(paymentId),
                         destinationId = Hashids.encode(accountUtilization.documentNo),
@@ -2239,7 +2235,7 @@ open class OnAccountServiceImpl : OnAccountService {
         if (jvs != null) {
             // settle debit jv with payments
             paymentIds.forEach { paymentId ->
-                settlementService.settleWithSourceIdAndDestinationId(
+                aresMessagePublisher.emitSendPaymentDetailsForKnockOff(
                     AutoKnockOffRequest(
                         sourceId = Hashids.encode(paymentId),
                         destinationId = Hashids.encode(jvs.filter { it.jvNum == creditedEntityJv && it.type == "DEBIT" }[0].id!!),
@@ -2251,7 +2247,7 @@ open class OnAccountServiceImpl : OnAccountService {
             }
 
             // settle credit jv with invoice
-            settlementService.settleWithSourceIdAndDestinationId(
+            aresMessagePublisher.emitSendPaymentDetailsForKnockOff(
                 AutoKnockOffRequest(
                     sourceId = Hashids.encode(jvs.filter { it.jvNum == creditedEntityJv && it.type == "CREDIT" }[0].id!!),
                     destinationId = Hashids.encode(proformaId),

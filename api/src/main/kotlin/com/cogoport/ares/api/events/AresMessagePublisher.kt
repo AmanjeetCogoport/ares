@@ -19,6 +19,7 @@ import com.cogoport.ares.model.settlement.GlCodeMaster
 import com.cogoport.ares.model.settlement.PostJVToSageRequest
 import com.cogoport.ares.model.settlement.PostPaymentToSage
 import com.cogoport.ares.model.settlement.event.UpdateSettlementWhenBillUpdatedEvent
+import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import com.cogoport.ares.model.settlement.request.PostSettlementRequest
 import io.micronaut.messaging.annotation.MessageHeader
 import io.micronaut.rabbitmq.annotation.Binding
@@ -118,4 +119,7 @@ interface AresMessagePublisher {
 
     @Binding("ares.migrate.payment.amount")
     suspend fun emitMigratePaymentAmount(id: Long)
+
+    @Binding("ares.send.payment.details.for.autoKnockOff")
+    suspend fun emitSendPaymentDetailsForKnockOff(autoKnockOffRequest: AutoKnockOffRequest)
 }
