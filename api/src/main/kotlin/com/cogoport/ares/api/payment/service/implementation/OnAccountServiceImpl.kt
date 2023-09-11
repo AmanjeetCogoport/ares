@@ -1735,8 +1735,8 @@ open class OnAccountServiceImpl : OnAccountService {
                     val mappedResponse = ObjectMapper().readValue<MutableMap<String, Any?>>(resultForPaymentNumOnSageQuery)
                     val records = mappedResponse["recordset"] as? ArrayList<*>
                     if (records?.size != 0) {
-                        val recordMap = records!!.toArray()[0] as HashMap<String, String>
-                        recordStatus = recordMap["STA_0"]!!
+                        val recordMap = records!!.toArray()[0] as HashMap<String, Any>
+                        recordStatus = recordMap["STA_0"]!!.toString()
                         if (recordStatus == "9") {
                             createThirdPartyAudit(id, "PostPaymentFromSage", result.requestString, result.response, true)
                             paymentRepository.updatePaymentDocumentStatus(id, PaymentDocumentStatus.FINAL_POSTED, performedBy)
