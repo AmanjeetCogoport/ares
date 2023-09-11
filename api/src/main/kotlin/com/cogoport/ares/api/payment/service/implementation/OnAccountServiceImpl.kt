@@ -2187,20 +2187,26 @@ open class OnAccountServiceImpl : OnAccountService {
             currency = currency,
             pageLimit = 1
         )
+
+        val ledgerEntityDetail = railsClient.getCogoEntity(ledgerEntityCode.toString()).list[0]
+        val ledgerEntityBankDetails = authClient.getCogoBank(CogoEntitiesRequest(entityCode = ledgerEntityCode.toString()))
         val bucketGlcode = glCodeRepository.getGLCode(
             entityCode = ledgerEntityCode,
             currency = allowedCurrencyToEntityCodeMapping.get(ledgerEntityCode),
-            accountNumber = null,
+            accountNumber = ledgerEntityBankDetails.bankList.filter {
+                it.entityCode == creditedEntityCode
+            }[0].bankDetails?.filter {
+                it.currency == currency
+            }?.get(0)?.accountNumber,
             q = null,
             pageLimit = 1
         )
+
         val ledgerExchangeRate = settlementServiceHelper.getExchangeRate(
             from = currency!!,
             to = allowedCurrencyToEntityCodeMapping.get(ledgerEntityCode)!!,
             transactionDate = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(Date())
         )
-        val ledgerEntityDetail = railsClient.getCogoEntity(ledgerEntityCode.toString()).list[0]
-        val ledgerEntityBankDetails = authClient.getCogoBank(CogoEntitiesRequest(entityCode = ledgerEntityCode.toString()))
 
         orgDetail.entityId = UUID.fromString(creditedEntityDetail.get("id").toString())
         val jvLineItem = createJvLineItemRequest(
