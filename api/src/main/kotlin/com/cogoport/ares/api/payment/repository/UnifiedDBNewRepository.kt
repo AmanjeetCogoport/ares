@@ -341,7 +341,6 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
             ELSE
                 0
             END), 0) AS total_open_on_account_amount,
-        COALESCE(sum(CASE WHEN aau.created_at >= '2023-04-01' then sign_flag * (amount_loc - pay_loc) else 0 end), 0) AS total_outstanding,
         COALESCE(SUM(
             CASE WHEN (acc_type::VARCHAR IN (:invoiceAccType) or acc_type::VARCHAR IN (:creditNoteAccType) AND aau.created_at >= '2023-04-01' ) THEN
               sign_flag * amount_loc
@@ -396,7 +395,8 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
         invoice_ninety_amount + on_account_ninety_amount as ninety_outstanding, 
         invoice_one_eighty_amount + on_account_one_eighty_amount as  one_eighty_outstanding,
         invoice_three_sixty_five_amount + on_account_three_sixty_five_plus_amount as three_sixty_five_outstanding,
-        invoice_three_sixty_five_plus_amount + on_account_three_sixty_five_plus_amount as three_sixty_five_plus_outstanding
+        invoice_three_sixty_five_plus_amount + on_account_three_sixty_five_plus_amount as three_sixty_five_plus_outstanding,
+        total_open_invoice_amount + total_open_on_account_amount AS total_outstanding
         from z
         """
     )
