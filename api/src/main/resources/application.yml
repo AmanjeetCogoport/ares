@@ -44,10 +44,10 @@ r2dbc:
 services:
   service:
     - id: bf-rails
-      url: https://api-mustangs1.dev.cogoport.io
+      url: https://api-mustangs2.dev.cogoport.io
       enabledLocally: true
     - auth: bf-rails
-      url: https://api-mustangs1.dev.cogoport.io
+      url: https://api-mustangs2.dev.cogoport.io
       enabledLocally: true
     - id: plutus
       url: https://api.stage.cogoport.io

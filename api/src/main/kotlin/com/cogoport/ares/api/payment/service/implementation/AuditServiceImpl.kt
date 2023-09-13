@@ -4,6 +4,7 @@ import com.cogoport.ares.api.payment.entity.Audit
 import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.repository.AuditRepository
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
+import com.cogoport.ares.api.utils.logger
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.sql.Timestamp
@@ -31,5 +32,30 @@ class AuditServiceImpl : AuditService {
                 createdAt = Timestamp.valueOf(LocalDateTime.now())
             )
         )
+    }
+
+    override suspend fun createAudits(requests: List<AuditRequest>) {
+        val audits: MutableList<Audit> = ArrayList()
+        requests.forEach { request ->
+            var performedById: UUID? = null
+            try {
+                performedById = UUID.fromString(request.performedBy)
+            } catch (_: Exception) {}
+            audits.add(
+                Audit(
+                    id = null,
+                    objectType = request.objectType,
+                    objectId = request.objectId,
+                    actionName = request.actionName,
+                    data = request.data,
+                    performedBy = performedById,
+                    performedByUserType = request.performedByUserType,
+                    createdAt = Timestamp.valueOf(LocalDateTime.now())
+                )
+            )
+        }
+        auditRepository.saveAll(audits).forEach {
+            logger().info("audits: $it")
+        }
     }
 }
