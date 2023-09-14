@@ -1,0 +1,2 @@
+ALTER TABLE payment_invoice_mapping
+DROP CONSTRAINT payments_fk;
