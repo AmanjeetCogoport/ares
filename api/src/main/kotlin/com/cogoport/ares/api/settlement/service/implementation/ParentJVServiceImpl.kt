@@ -27,7 +27,6 @@ import com.cogoport.ares.api.settlement.entity.JvCategory
 import com.cogoport.ares.api.settlement.entity.ParentJournalVoucher
 import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
 import com.cogoport.ares.api.settlement.mapper.JournalVoucherMapper
-import com.cogoport.ares.model.settlement.request.JVBulkFileUploadRequest
 import com.cogoport.ares.api.settlement.model.JobVoucherValidationModel
 import com.cogoport.ares.api.settlement.repository.GlCodeMasterRepository
 import com.cogoport.ares.api.settlement.repository.GlCodeRepository
@@ -55,6 +54,7 @@ import com.cogoport.ares.model.settlement.ParentJournalVoucherResponse
 import com.cogoport.ares.model.settlement.PostJVToSageRequest
 import com.cogoport.ares.model.settlement.enums.JVSageControls
 import com.cogoport.ares.model.settlement.enums.JVStatus
+import com.cogoport.ares.model.settlement.request.JVBulkFileUploadRequest
 import com.cogoport.ares.model.settlement.request.JvListRequest
 import com.cogoport.ares.model.settlement.request.ParentJVUpdateRequest
 import com.cogoport.ares.model.settlement.request.ParentJournalVoucherRequest
@@ -226,14 +226,14 @@ open class ParentJVServiceImpl : ParentJVService {
     }
 
     override suspend fun uploadJournalVouchers(request: JVBulkFileUploadRequest): JVBulkFileUploadResponse {
-        if(aresDocumentRepository.existsByDocumentUrl(request.url)) {
+        if (aresDocumentRepository.existsByDocumentUrl(request.url)) {
             throw Exception("File already uploaded")
         } else {
             val aresDocument = AresDocument(
-                    documentUrl = request.url,
-                    documentName = request.url.split("/").last().split(".").first(),
-                    documentType = "xlsx",
-                    uploadedBy = UUID.fromString(request.user)
+                documentUrl = request.url,
+                documentName = request.url.split("/").last().split(".").first(),
+                documentType = "xlsx",
+                uploadedBy = UUID.fromString(request.user)
             )
             aresDocumentRepository.save(aresDocument)
         }
@@ -296,7 +296,7 @@ open class ParentJVServiceImpl : ParentJVService {
         val accountUtilization: MutableList<AccountUtilization> = ArrayList()
         journalVoucherRepository.saveAll(jvLineItemsToSave).forEach {
             logger().info("journalVoucher: $it")
-            if(it.tradePartyId != null) {
+            if (it.tradePartyId != null) {
                 accountUtilization.add(makeAccountUtilizationRequestForJournalVoucher(it))
             }
             auditRequests.add(
@@ -1218,11 +1218,11 @@ open class ParentJVServiceImpl : ParentJVService {
     private suspend fun getTradePartyDetailsWithValidationForTradePartyExists(errorParentId: MutableSet<String>, journalVouchers: List<Map<String, Any>>, errorList: MutableList<JobVoucherValidationModel>): Map<String, ListOrganizationTradePartyDetailsResponse> {
         val organizationTradePartyDetails: MutableMap<String, ListOrganizationTradePartyDetailsResponse> = HashMap()
         journalVouchers.forEach {
-            if(errorParentId.contains(it["parent_id"].toString()) || organizationTradePartyDetails.containsKey(it["bpr"].toString() + it["acc_mode"].toString())) {
+            if (errorParentId.contains(it["parent_id"].toString()) || organizationTradePartyDetails.containsKey(it["bpr"].toString() + it["acc_mode"].toString())) {
                 return@forEach
             }
             val tradePartyDetails = railsClient.getListOrganizationTradePartyDetails("active", it["bpr"].toString(), if (it["acc_mode"].toString() == "AP") "service_provider" else "importer_exporter", true)
-            if(tradePartyDetails.list.size == 0) {
+            if (tradePartyDetails.list.size == 0) {
                 errorParentId.add(it["parent_id"].toString())
                 errorList.add(
                     JobVoucherValidationModel(
@@ -1230,7 +1230,7 @@ open class ParentJVServiceImpl : ParentJVService {
                         errorName = "trade party could not be found"
                     )
                 )
-            }else {
+            } else {
                 organizationTradePartyDetails[it["bpr"].toString() + it["acc_mode"].toString()] = tradePartyDetails
             }
         }
