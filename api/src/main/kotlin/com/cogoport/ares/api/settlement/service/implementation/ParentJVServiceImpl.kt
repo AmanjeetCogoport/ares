@@ -238,8 +238,8 @@ open class ParentJVServiceImpl : ParentJVService {
             aresDocumentRepository.save(aresDocument)
         }
         val excelFile = downloadExcelFile(request.url)
-        val jvParentSheet = ExcelSheetReader(excelFile).readSheet("Sheet1")
-        val jvLineItemSheet = ExcelSheetReader(excelFile).readSheet("Sheet2")
+        val jvParentSheet = ExcelSheetReader(excelFile).readSheet("ParentJV")
+        val jvLineItemSheet = ExcelSheetReader(excelFile).readSheet("JVLineItems")
 
         excelFile.delete()
 
