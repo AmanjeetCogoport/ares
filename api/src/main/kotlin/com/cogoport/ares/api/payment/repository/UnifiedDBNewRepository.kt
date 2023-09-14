@@ -107,7 +107,7 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
             aau.organization_id,
             entity_code,
             led_currency,
-            max(organization_name) as organization_name,
+            max(organization_name),
             acc_mode,
             COALESCE(sum(
                 CASE WHEN (acc_type::varchar in (:invoiceAccType)
