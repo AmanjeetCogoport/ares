@@ -630,7 +630,7 @@ class OutStandingServiceImpl : OutStandingService {
         val ageingBucketsInInvoiceCurrency = HashMap<String, AgeingBucketOutstanding>()
         var invoiceCount = 0
         customerOutstanding.forEach {
-            invoiceCount += it.notDueCount + it.thirtyCount  + it.sixtyCount + it.ninetyCount + it.oneEightyCount + it.threeSixtyFiveCount + it.oneEightyPlusCount
+            invoiceCount += it.notDueCount + it.thirtyCount  + it.sixtyCount + it.ninetyCount + it.oneEightyCount + it.threeSixtyFiveCount + it.threeSixtyFivePlusCount
             val notDue = DueAmount(it.currency, it.notDueCurrAmount, it.notDueCount)
             val thirty = DueAmount(it.currency, it.thirtyCurrAmount, it.thirtyCount)
             val fortyFive = DueAmount(it.currency, it.fortyFiveCurrAmount, it.fortyFiveCount)

@@ -107,7 +107,7 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
             aau.organization_id,
             entity_code,
             led_currency,
-            organization_name,
+            max(organization_name),
             acc_mode,
             COALESCE(sum(
                 CASE WHEN (acc_type::varchar in (:invoiceAccType)
@@ -385,7 +385,7 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
         AND acc_type::VARCHAR IN (:accTypes) and acc_type::VARCHAR != 'NEWPR'
         AND document_status IN ('FINAL')
     GROUP BY 
-        aau.organization_id, entity_code, led_currency, acc_mode, otpd.registration_number, soim.sage_organization_id, cb.closing_balance_debit_2022, cb.closing_balance_credit_2022, organization_name)
+        aau.organization_id, entity_code, led_currency, acc_mode, otpd.registration_number, soim.sage_organization_id, cb.closing_balance_debit_2022, cb.closing_balance_credit_2022)
         select 
         z.*,
         invoice_not_due_amount + on_account_not_due_amount as not_due_outstanding, 
