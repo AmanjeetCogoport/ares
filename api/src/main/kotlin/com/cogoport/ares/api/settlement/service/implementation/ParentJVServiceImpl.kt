@@ -246,15 +246,15 @@ open class ParentJVServiceImpl : ParentJVService {
         if (jvParentSheet[0].size != 9 && jvLineItemSheet[0].size != 9) {
             throw Exception("Number of columns is not equal to 9")
         }
-        val errorPair = getValidationErrorsOnUploadJobVouchers(jvLineItemSheet, request.user)
-        val data: MutableMap<String, ParentJournalVoucher> = HashMap()
+        val errorTriplet = getValidationErrorsOnUploadJobVouchers(jvLineItemSheet, request.user)
+        val mappingParentIdToParentJournalVoucher: MutableMap<String, ParentJournalVoucher> = HashMap()
         val auditRequests: MutableList<AuditRequest> = ArrayList()
 
         jvParentSheet.forEach {
-            if (errorPair.first.contains(it["parent_id"])) {
+            if (errorTriplet.first.contains(it["parent_id"])) {
                 return@forEach
             }
-            data[it["parent_id"].toString()] = ParentJournalVoucher(
+            mappingParentIdToParentJournalVoucher[it["parent_id"].toString()] = ParentJournalVoucher(
                 id = null,
                 status = JVStatus.APPROVED,
                 category = it["category"].toString(),
@@ -273,7 +273,7 @@ open class ParentJVServiceImpl : ParentJVService {
             )
         }
 
-        val savedParentJV = parentJVRepository.saveAll(data.values.toList())
+        val savedParentJV = parentJVRepository.saveAll(mappingParentIdToParentJournalVoucher.values.toList())
         val jvLineItemsToSave: MutableList<JournalVoucher> = ArrayList()
 
         savedParentJV.forEach { parentJv ->
@@ -288,9 +288,9 @@ open class ParentJVServiceImpl : ParentJVService {
                     performedByUserType = request.userType
                 )
             )
-            val parentId = data.filter { parentJv.jvNum == it.value.jvNum }.keys.first()
+            val parentId = mappingParentIdToParentJournalVoucher.filter { parentJv.jvNum == it.value.jvNum }.keys.first()
             val jvLineItems = jvLineItemSheet.filter { it["parent_id"].toString() == parentId }
-            jvLineItemsToSave.addAll(makeJournalVoucherLineItem(parentJv, jvLineItems, request, errorPair.third))
+            jvLineItemsToSave.addAll(makeJournalVoucherLineItem(parentJv, jvLineItems, request, errorTriplet.third))
         }
 
         val accountUtilization: MutableList<AccountUtilization> = ArrayList()
@@ -324,7 +324,7 @@ open class ParentJVServiceImpl : ParentJVService {
             )
         }
         auditService.createAudits(auditRequests.toList())
-        return JVBulkFileUploadResponse(errorPair.second)
+        return JVBulkFileUploadResponse(errorTriplet.second)
     }
 
     /**

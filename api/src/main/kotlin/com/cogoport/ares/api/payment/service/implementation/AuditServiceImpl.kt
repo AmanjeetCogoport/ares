@@ -54,8 +54,6 @@ class AuditServiceImpl : AuditService {
                 )
             )
         }
-        auditRepository.saveAll(audits).forEach {
-            logger().info("audits: $it")
-        }
+        auditRepository.saveAll(audits)
     }
 }

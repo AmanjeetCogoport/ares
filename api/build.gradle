@@ -115,7 +115,6 @@ dependencies {
     implementation("io.r2dbc:r2dbc-postgresql:0.8.12.RELEASE")
     runtimeOnly("org.postgresql:postgresql")
     implementation("io.micronaut.data:micronaut-data-r2dbc:3.5.0")
-    implementation("io.micronaut.reactor:micronaut-reactor")
 
     // AWS X-ray, Distributed tracing and logging
     runtimeOnly("io.zipkin.brave:brave-instrumentation-http:5.13.9")
