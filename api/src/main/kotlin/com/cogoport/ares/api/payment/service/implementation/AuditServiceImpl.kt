@@ -4,7 +4,6 @@ import com.cogoport.ares.api.payment.entity.Audit
 import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.repository.AuditRepository
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
-import com.cogoport.ares.api.utils.logger
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.sql.Timestamp
