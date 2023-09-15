@@ -1,10 +1,12 @@
 package com.cogoport.ares.model.payment.request
 
+import io.micronaut.core.annotation.Introspected
 import java.math.BigDecimal
 import java.util.Date
 import java.util.UUID
 import javax.validation.constraints.NotNull
 
+@Introspected
 data class SaasInvoiceHookRequest(
     @field: NotNull(message = "Proforma Number cannot be null")
     var proformaId: Long? = null,

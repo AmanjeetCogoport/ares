@@ -39,6 +39,7 @@ import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
 import com.cogoport.ares.api.sage.service.implementation.SageServiceImpl
 import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
+import com.cogoport.ares.api.settlement.repository.GlCodeMasterRepository
 import com.cogoport.ares.api.settlement.repository.GlCodeRepository
 import com.cogoport.ares.api.settlement.repository.JournalVoucherRepository
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
@@ -99,6 +100,7 @@ import com.cogoport.ares.model.sage.SageFailedResponse
 import com.cogoport.ares.model.sage.SageOrganizationAccountTypeRequest
 import com.cogoport.ares.model.settlement.PostPaymentToSage
 import com.cogoport.ares.model.settlement.SettlementType
+import com.cogoport.ares.model.settlement.enums.JVCategory
 import com.cogoport.ares.model.settlement.enums.JVSageAccount
 import com.cogoport.ares.model.settlement.enums.JVSageControls
 import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
@@ -249,7 +251,7 @@ open class OnAccountServiceImpl : OnAccountService {
     lateinit var journalVoucherRepository: JournalVoucherRepository
 
     @Inject
-    lateinit var glCodeRepository: GlCodeRepository
+    lateinit var glCodeMasterRepository: GlCodeMasterRepository
 
     @Value("\${server.base-url}") // application-prod.yml path
     private lateinit var baseUrl: String
@@ -484,6 +486,7 @@ open class OnAccountServiceImpl : OnAccountService {
             accUtilEntity.tdsAmountLoc = BigDecimal.ZERO
             accUtilEntity.tdsAmount = BigDecimal.ZERO
         }
+
 
         val accUtilRes = accountUtilizationRepository.save(accUtilEntity)
 
@@ -2071,14 +2074,16 @@ open class OnAccountServiceImpl : OnAccountService {
     @Transactional(rollbackOn = [Exception::class, AresException::class])
     override suspend fun saasInvoiceHook(req: SaasInvoiceHookRequest): SaasInvoiceHookResponse {
         val ledgerEntity = AresConstants.ENTITY_401
-        val paymentIds: MutableList<Long>? = null
-        val proformaRecord = accountUtilizationRepository.findRecord(req.proformaId!!, AccountType.REC.toString(), AccMode.AR.toString())
-        val bankDetails = authClient.getCogoBank(CogoEntitiesRequest(req.entityCode.toString())).bankList.filter { it.entityCode == req.entityCode }[0].bankDetails?.filter { it.accountNumber == req.bankAccountNumber }?.get(0)
-        val totalAmount: BigDecimal? = BigDecimal(0)
-        val allowedLedgerCurrency = allowedCurrencyToEntityCodeMapping[req.entityCode]
+        val ledgerCurrency = AresConstants.LEDGER_CURRENCY[req.entityCode]
         val incomingCurrency = req.currency
-        var ledgerExchangeRate: BigDecimal? = BigDecimal(1.0)
-        val accountUtilization = accountUtilizationRepository.getAccountUtilizationsByDocNo(req.proformaId.toString(), AccountType.REC)
+
+        val proformaRecord = accountUtilizationRepository.findRecord(req.proformaId!!, AccountType.SINV.toString(), AccMode.AR.toString())
+        val bankDetails = authClient.getCogoBank(CogoEntitiesRequest(req.entityCode.toString())).bankList.filter { it.entityCode == req.entityCode }[0].bankDetails?.filter { it.accountNumber == req.bankAccountNumber }?.get(0)
+
+        var totalAmount: BigDecimal = BigDecimal(0)
+        val paymentIds: MutableList<Long> = mutableListOf()
+        var ledgerExchangeRate: BigDecimal = BigDecimal(1)
+
         plutusMessagePublisher.emitUpdateStatus(
             InvoiceStatusUpdateRequest(
                 id = Hashids.encode(req.proformaId!!),
@@ -2088,17 +2093,19 @@ open class OnAccountServiceImpl : OnAccountService {
                 performedByUserType = req.performedByUserType
             )
         )
+
         req.utrDetails?.forEach { utrDetail ->
-            // add remarks,
-            if (allowedLedgerCurrency != incomingCurrency) {
+            totalAmount = totalAmount.plus(utrDetail.paidAmount!!)
+            val signFlag:Short = 1
+            if (req.entityCode != ledgerEntity) {
                 ledgerExchangeRate = settlementServiceHelper.getExchangeRate(
                     from = incomingCurrency!!,
-                    to = allowedLedgerCurrency!!,
+                    to = ledgerCurrency!!,
                     transactionDate = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(utrDetail.transactionDate)
                 )
             }
             val paymentModel = Payment(
-                entityType = proformaRecord?.entityCode,
+                entityType = req.entityCode,
                 orgSerialId = proformaRecord?.orgSerialId,
                 organizationId = proformaRecord?.organizationId,
                 taggedOrganizationId = proformaRecord?.taggedOrganizationId,
@@ -2106,10 +2113,10 @@ open class OnAccountServiceImpl : OnAccountService {
                 organizationName = proformaRecord?.organizationName,
                 accMode = proformaRecord?.accMode,
                 accCode = proformaRecord?.accCode,
-                signFlag = proformaRecord?.signFlag,
+                signFlag = signFlag,
                 currency = incomingCurrency,
                 amount = utrDetail.paidAmount,
-                ledCurrency = allowedLedgerCurrency,
+                ledCurrency = AresConstants.LEDGER_CURRENCY[req.entityCode],
                 ledAmount = utrDetail.paidAmount?.multiply(ledgerExchangeRate)!!,
                 utr = utrDetail.utrNumber,
                 bankAccountNumber = bankDetails?.accountNumber,
@@ -2120,39 +2127,53 @@ open class OnAccountServiceImpl : OnAccountService {
                 paymentNum = null,
                 paymentNumValue = null,
                 refAccountNo = null,
-                serviceType = null
+                serviceType = null,
+                createdBy = req.performedBy.toString(),
+                updatedBy = req.performedBy.toString()
             )
-            setOrganizations(paymentModel)
-            setBankDetails(paymentModel)
             val paymentId = createNonSuspensePaymentEntry(paymentModel)
             paymentIds?.add(paymentId)
         }
         if (req.entityCode != ledgerEntity) {
+
+            val bucketGlcode = parentJVService.getGLCodeMaster(AccMode.AR, entityCode = AresConstants.ENTITY_401, pageLimit = 1,q=null).filter { it.ledAccount == "SGP" }[0].accountCode
+
+            val debitGlcode = parentJVService.getGLCodeMaster(AccMode.AR, entityCode = req.entityCode, pageLimit = 1,q=null).filter {
+                when {
+                    req.currency == "INR" -> it.ledAccount == "IND"
+                    req.currency == "USD" -> it.ledAccount == "USD"
+                    else -> false
+                }
+            }[0].accountCode
             if (proformaRecord != null) {
                 settleInterEntity(
                     proformaRecord.id!!,
-                    paymentIds!!, totalAmount!!, AccMode.AR,
+                    paymentIds!!, totalAmount!!,
+                    bucketGlcode,debitGlcode,
+                    AccMode.AR,
                     req.currency!!, req.entityCode!!,
                     AresConstants.ENTITY_401,
                     OrgDetail(
                         proformaRecord.organizationName!!,
                         proformaRecord.organizationId!!,
-                        req.entityCode, null
+                        req.entityCode, UUID.fromString(AresConstants.ENTITY_ID[req.entityCode])
                     ),
-                    req.performedBy!!
+                    req.performedBy!!,
                 )
             }
         } else {
-            paymentIds?.forEach { paymentId ->
-                aresMessagePublisher.emitSendPaymentDetailsForKnockOff(
-                    AutoKnockOffRequest(
-                        sourceId = Hashids.encode(paymentId),
-                        destinationId = Hashids.encode(accountUtilization.documentNo),
-                        sourceType = AccountType.REC.name,
-                        destinationType = AccountType.SINV.name,
-                        createdBy = req.performedBy!!
+            paymentIds.forEach { paymentId ->
+                if (proformaRecord != null) {
+                    aresMessagePublisher.emitSendPaymentDetailsForKnockOff(
+                        AutoKnockOffRequest(
+                            sourceId = Hashids.encode(paymentId),
+                            destinationId = Hashids.encode(proformaRecord.documentNo),
+                            sourceType = AccountType.REC.name,
+                            destinationType = AccountType.SINV.name,
+                            createdBy = req.performedBy!!
+                        )
                     )
-                )
+                }
             }
         }
         return SaasInvoiceHookResponse(id = paymentIds!!)
@@ -2162,72 +2183,37 @@ open class OnAccountServiceImpl : OnAccountService {
         proformaId: Long,
         paymentIds: List<Long>,
         amount: BigDecimal,
+        bucketGlcode: Int?,
+        debitGlcode: Int?,
         accMode: AccMode,
         currency: String,
         creditedEntityCode: Int,
         ledgerEntityCode: Int,
-        orgDetail: OrgDetail,
+        tradePartyDetails: OrgDetail,
         performedBy: UUID
 
     ) {
-        val creditedEntityDetail = railsClient.getCogoEntity(creditedEntityCode.toString()).list[0]
-        val creditedEntityBankDetails = authClient.getCogoBank(CogoEntitiesRequest(entityCode = creditedEntityCode.toString()))
-        val creditedEntityGlcode = glCodeRepository.getGLCode(
-            entityCode = creditedEntityCode,
-            accountNumber = creditedEntityBankDetails.bankList.filter {
-                it.entityCode == creditedEntityCode
-            }[0].bankDetails?.filter {
-                it.currency == currency
-            }?.get(0)?.accountNumber,
-            q = null,
-            currency = currency,
-            pageLimit = 1
-        )
-
-        val ledgerEntityDetail = railsClient.getCogoEntity(ledgerEntityCode.toString()).list[0]
-        val ledgerEntityBankDetails = authClient.getCogoBank(CogoEntitiesRequest(entityCode = ledgerEntityCode.toString()))
-        val bucketGlcode = glCodeRepository.getGLCode(
+        val jvCodeNum = ""
+        val creditedEntityDetails = OrgDetail(
+            null,
+            null,
             entityCode = ledgerEntityCode,
-            currency = allowedCurrencyToEntityCodeMapping.get(ledgerEntityCode),
-            accountNumber = ledgerEntityBankDetails.bankList.filter {
-                it.entityCode == creditedEntityCode
-            }[0].bankDetails?.filter {
-                it.currency == currency
-            }?.get(0)?.accountNumber,
-            q = null,
-            pageLimit = 1
+            entityId = UUID.fromString(AresConstants.ENTITY_ID[ledgerEntityCode])
         )
-
-        val ledgerExchangeRate = settlementServiceHelper.getExchangeRate(
-            from = currency!!,
-            to = allowedCurrencyToEntityCodeMapping.get(ledgerEntityCode)!!,
-            transactionDate = SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(Date())
-        )
-
-        orgDetail.entityId = UUID.fromString(creditedEntityDetail.get("id").toString())
         val jvLineItem = createJvLineItemRequest(
-            accMode, amount,
-            OrgDetail(
-                null,
-                null,
-                entityCode = ledgerEntityCode,
-                entityId = UUID.fromString(ledgerEntityDetail.get("id").toString())
-
-            ),
-            orgDetail,
-            debitGlcode = creditedEntityGlcode[0].glCode,
-            bucketGlcode = bucketGlcode[0].glCode,
-            ledgerExchangeRate
-
+            accMode, amount,creditedEntityDetails,
+            tradePartyDetails,
+            debitGlcode = debitGlcode.toString(),
+            bucketGlcode = bucketGlcode.toString()
         )
         val jvRequest = createJvRequestForInterEntity(
             currency = currency,
-            entity = creditedEntityCode,
+            entityCode = creditedEntityCode,
             jvLineItem = jvLineItem,
             description = "Inter Entity Settlement of ${Hashids.encode(proformaId)}",
             createdBy = performedBy,
-            entityId = UUID.fromString(creditedEntityDetail.get("id").toString()),
-            jvCodeNum = ""
+            entityId = UUID.fromString(AresConstants.ENTITY_ID[creditedEntityCode]),
+            jvCodeNum = jvCodeNum
         )
 
         val creditedEntityJv = parentJVService.createJournalVoucher(jvRequest)
@@ -2265,56 +2251,51 @@ open class OnAccountServiceImpl : OnAccountService {
         creditOrgDetails: OrgDetail,
         ledgerOrgDetails: OrgDetail,
         debitGlcode: String,
-        bucketGlcode: String,
-        exchangeRate: BigDecimal,
+        bucketGlcode: String
     ): MutableList<JvLineItemRequest> {
         return mutableListOf(
             JvLineItemRequest(
                 id = null,
-                entityCode = null,
-                entityId = null,
+                entityCode = ledgerOrgDetails.entityCode,
+                entityId = ledgerOrgDetails.entityId,
                 accMode = accMode,
                 tradePartyName = creditOrgDetails.tradePartyName,
                 tradePartyId = creditOrgDetails.tradePartyId,
                 type = "CREDIT",
                 amount = amount,
-                validityDate = null,
+                validityDate = Date(),
                 glCode = bucketGlcode,
             ),
             JvLineItemRequest(
                 id = null,
-                entityCode = null,
-                entityId = null,
+                entityCode = creditOrgDetails.entityCode,
+                entityId = creditOrgDetails.entityId,
                 accMode = accMode,
                 tradePartyName = ledgerOrgDetails.tradePartyName,
                 tradePartyId = ledgerOrgDetails.tradePartyId,
                 type = "DEBIT",
-                amount = amount * exchangeRate,
-                validityDate = null,
+                amount = amount ,
+                validityDate = Date(),
                 glCode = debitGlcode,
             )
         )
     }
     private fun createJvRequestForInterEntity(
         currency: String,
-        entity: Int,
+        entityCode: Int,
         entityId: UUID,
         createdBy: UUID?,
         description: String?,
         jvCodeNum: String,
         jvLineItem: MutableList<JvLineItemRequest>
     ): ParentJournalVoucherRequest {
-        jvLineItem.forEach {
-            it.entityCode = entity
-            it.entityId = entityId
-        }
         return ParentJournalVoucherRequest(
             id = null,
-            jvCategory = "",
+            jvCategory = SettlementType.INTER.name,
             transactionDate = Date(),
             currency = currency,
-            ledCurrency = allowedCurrencyToEntityCodeMapping.get(entity)!!,
-            entityCode = entity,
+            ledCurrency = AresConstants.LEDGER_CURRENCY[entityCode]!!,
+            entityCode = entityCode,
             jvCodeNum = jvCodeNum,
             exchangeRate = BigDecimal(1),
             description = description!!,
@@ -2324,13 +2305,6 @@ open class OnAccountServiceImpl : OnAccountService {
         )
     }
     companion object {
-        val allowedCurrencyToEntityCodeMapping = mapOf(
-            101 to "INR",
-            201 to "EUR",
-            301 to "INR",
-            401 to "SGD",
-            501 to "VND",
-        )
         data class OrgDetail(
             var tradePartyName: String?,
             var tradePartyId: UUID?,

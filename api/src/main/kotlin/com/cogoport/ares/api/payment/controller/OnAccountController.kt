@@ -154,7 +154,7 @@ class OnAccountController {
     }
 
     @Post("/saas-invoice-hook")
-    suspend fun saasInvoiceHook(req: SaasInvoiceHookRequest): SaasInvoiceHookResponse {
+    suspend fun saasInvoiceHook(@Valid @Body req: SaasInvoiceHookRequest): SaasInvoiceHookResponse {
         return onAccountService.saasInvoiceHook(req)
     }
 }

@@ -35,6 +35,7 @@ object AresConstants {
     const val ZONE = "zone"
     const val QUARTER = "quarter"
     const val YEAR = "year"
+
     const val DATE = "date"
     const val ORG_ID = "orgId"
     const val ORG_NAME = "orgName"
