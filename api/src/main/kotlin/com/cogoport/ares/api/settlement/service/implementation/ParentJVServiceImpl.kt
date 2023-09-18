@@ -27,6 +27,7 @@ import com.cogoport.ares.api.settlement.entity.JvCategory
 import com.cogoport.ares.api.settlement.entity.ParentJournalVoucher
 import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
 import com.cogoport.ares.api.settlement.mapper.JournalVoucherMapper
+import com.cogoport.ares.api.settlement.model.JVValidationAndCollectedInformation
 import com.cogoport.ares.api.settlement.model.JobVoucherValidationModel
 import com.cogoport.ares.api.settlement.repository.GlCodeMasterRepository
 import com.cogoport.ares.api.settlement.repository.GlCodeRepository
@@ -233,7 +234,7 @@ open class ParentJVServiceImpl : ParentJVService {
                 documentUrl = request.url,
                 documentName = request.url.split("/").last().split(".").first(),
                 documentType = "xlsx",
-                uploadedBy = UUID.fromString(request.user)
+                uploadedBy = request.performedById
             )
             aresDocumentRepository.save(aresDocument)
         }
@@ -246,12 +247,12 @@ open class ParentJVServiceImpl : ParentJVService {
         if (jvParentSheet[0].size != 9 && jvLineItemSheet[0].size != 9) {
             throw Exception("Number of columns is not equal to 9")
         }
-        val errorTriplet = getValidationErrorsOnUploadJobVouchers(jvLineItemSheet, request.user)
+        val errorTriplet = getValidationErrorsOnUploadJobVouchers(jvLineItemSheet, request.performedById.toString())
         val mappingParentIdToParentJournalVoucher: MutableMap<String, ParentJournalVoucher> = HashMap()
         val auditRequests: MutableList<AuditRequest> = ArrayList()
 
         jvParentSheet.forEach {
-            if (errorTriplet.first.contains(it["parent_id"])) {
+            if (errorTriplet.errorParentId.contains(it["parent_id"])) {
                 return@forEach
             }
             mappingParentIdToParentJournalVoucher[it["parent_id"].toString()] = ParentJournalVoucher(
@@ -260,8 +261,8 @@ open class ParentJVServiceImpl : ParentJVService {
                 category = it["category"].toString(),
                 validityDate = SimpleDateFormat("dd-MM-yyyy").parse(it["validity_date"].toString()),
                 jvNum = getJvNumber(),
-                createdBy = UUID.fromString(request.user),
-                updatedBy = UUID.fromString(request.user),
+                createdBy = request.performedById,
+                updatedBy = request.performedById,
                 currency = it["currency"].toString(),
                 description = it["description"].toString(),
                 exchangeRate = BigDecimal(it["exchange_rate"].toString()),
@@ -274,28 +275,26 @@ open class ParentJVServiceImpl : ParentJVService {
         }
 
         val savedParentJV = parentJVRepository.saveAll(mappingParentIdToParentJournalVoucher.values.toList())
-        val jvLineItemsToSave: MutableList<JournalVoucher> = ArrayList()
+        val jvLineItemsEntity: MutableList<JournalVoucher> = ArrayList()
 
         savedParentJV.forEach { parentJv ->
-            logger().info("ParentJv: $parentJv")
             auditRequests.add(
                 AuditRequest(
                     objectType = AresConstants.PARENT_JOURNAL_VOUCHERS,
                     objectId = parentJv.id,
                     actionName = AresConstants.CREATE,
                     data = parentJv,
-                    performedBy = request.user,
+                    performedBy = request.performedById.toString(),
                     performedByUserType = request.userType
                 )
             )
             val parentId = mappingParentIdToParentJournalVoucher.filter { parentJv.jvNum == it.value.jvNum }.keys.first()
             val jvLineItems = jvLineItemSheet.filter { it["parent_id"].toString() == parentId }
-            jvLineItemsToSave.addAll(makeJournalVoucherLineItem(parentJv, jvLineItems, request, errorTriplet.third))
+            jvLineItemsEntity.addAll(journalVoucherService.makeJournalVoucherLineItem(parentJv, jvLineItems, request, errorTriplet.tradePartyDetails))
         }
 
         val accountUtilization: MutableList<AccountUtilization> = ArrayList()
-        journalVoucherRepository.saveAll(jvLineItemsToSave).forEach {
-            logger().info("journalVoucher: $it")
+        journalVoucherRepository.saveAll(jvLineItemsEntity).forEach {
             if (it.tradePartyId != null) {
                 accountUtilization.add(makeAccountUtilizationRequestForJournalVoucher(it))
             }
@@ -305,26 +304,25 @@ open class ParentJVServiceImpl : ParentJVService {
                     objectId = it.id,
                     actionName = AresConstants.CREATE,
                     data = it,
-                    performedBy = request.user,
+                    performedBy = request.performedById.toString(),
                     performedByUserType = request.userType
                 )
             )
         }
         accountUtilizationRepo.saveAll(accountUtilization).forEach {
-            logger().info("AccountUtilization: $it")
             auditRequests.add(
                 AuditRequest(
                     objectType = AresConstants.ACCOUNT_UTILIZATIONS,
                     objectId = it.id,
                     actionName = AresConstants.CREATE,
                     data = it,
-                    performedBy = request.user,
+                    performedBy = request.performedById.toString(),
                     performedByUserType = request.userType
                 )
             )
         }
         auditService.createAudits(auditRequests.toList())
-        return JVBulkFileUploadResponse(errorTriplet.second)
+        return JVBulkFileUploadResponse(errorTriplet.errorFileUrl)
     }
 
     /**
@@ -1084,48 +1082,12 @@ open class ParentJVServiceImpl : ParentJVService {
         return file
     }
 
-    private fun makeJournalVoucherLineItem(parentJvData: ParentJournalVoucher, journalVouchers: List<Map<String, Any>>, jvBulkFileUploadRequest: JVBulkFileUploadRequest, tradePartyDetails: Map<String, ListOrganizationTradePartyDetailsResponse>): MutableList<JournalVoucher> {
-        val data: MutableList<JournalVoucher> = ArrayList()
-
-        journalVouchers.forEach {
-            data.add(
-                JournalVoucher(
-                    id = null,
-                    jvNum = parentJvData.jvNum!!,
-                    accMode = if (it["acc_mode"].toString().isNotBlank()) AccMode.valueOf(it["acc_mode"].toString()) else AccMode.OTHER,
-                    category = it["category"].toString(),
-                    createdAt = parentJvData.createdAt,
-                    createdBy = UUID.fromString(jvBulkFileUploadRequest.user),
-                    updatedAt = parentJvData.createdAt,
-                    updatedBy = UUID.fromString(jvBulkFileUploadRequest.user),
-                    currency = parentJvData.currency,
-                    ledCurrency = parentJvData.ledCurrency!!,
-                    amount = BigDecimal(it["amount"].toString()),
-                    ledAmount = BigDecimal(it["led_amount"].toString()),
-                    description = parentJvData.description,
-                    entityCode = parentJvData.entityCode,
-                    entityId = UUID.fromString(AresConstants.ENTITY_ID[parentJvData.entityCode]),
-                    exchangeRate = parentJvData.exchangeRate,
-                    glCode = it["gl_code"].toString(),
-                    parentJvId = parentJvData.id,
-                    type = it["type"].toString(),
-                    signFlag = getSignFlag(it["type"].toString()),
-                    status = JVStatus.APPROVED,
-                    tradePartyId = if (it["acc_mode"].toString().isBlank()) null else UUID.fromString(tradePartyDetails[it["bpr"].toString() + it["acc_mode"].toString()]!!.list[0]["id"].toString()),
-                    tradePartyName = if (it["acc_mode"].toString().isBlank()) null else tradePartyDetails[it["bpr"].toString() + it["acc_mode"]]!!.list[0]["legal_business_name"].toString(),
-                    validityDate = parentJvData.transactionDate,
-                    migrated = false,
-                    deletedAt = null,
-                    additionalDetails = null
-                )
-            )
-        }
-        return data
-    }
-
-    private suspend fun getValidationErrorsOnUploadJobVouchers(jvLineItems: List<Map<String, Any>>, user: String): Triple<MutableSet<String>, String?, Map<String, ListOrganizationTradePartyDetailsResponse>> {
-        val errorList: MutableList<JobVoucherValidationModel> = ArrayList()
-        val errorParentId: MutableSet<String> = HashSet()
+    private suspend fun getValidationErrorsOnUploadJobVouchers(
+        jvLineItems: List<Map<String, Any>>,
+        user: String
+    ): JVValidationAndCollectedInformation {
+        val errorList: MutableList<JobVoucherValidationModel> = mutableListOf()
+        val errorParentId: MutableSet<String> = mutableSetOf()
 
         val lineItemsOfDifferentParentJV = jvLineItems.groupBy { it["parent_id"].toString() }
 
@@ -1142,7 +1104,7 @@ open class ParentJVServiceImpl : ParentJVService {
             }
         }
 
-        jvLineItems.filter { it["acc_mode"].toString().isNotBlank() }.forEach {
+        jvLineItems.filter { it["acc_mode"] != null && it["acc_mode"].toString().isNotBlank() }.forEach {
             if (it["bpr"].toString().isBlank()) {
                 errorList.add(
                     JobVoucherValidationModel(
@@ -1167,9 +1129,9 @@ open class ParentJVServiceImpl : ParentJVService {
                 uploadedBy = UUID.fromString(user)
             )
             aresDocumentRepository.save(aresDocument)
-            return Triple(errorParentId, url, tradePartyDetails)
+            return JVValidationAndCollectedInformation(errorParentId, url, tradePartyDetails)
         }
-        return Triple(errorParentId, null, tradePartyDetails)
+        return JVValidationAndCollectedInformation(errorParentId, null, tradePartyDetails)
     }
 
     private suspend fun makeAccountUtilizationRequestForJournalVoucher(journalVoucher: JournalVoucher): AccountUtilization {
@@ -1216,7 +1178,7 @@ open class ParentJVServiceImpl : ParentJVService {
     }
 
     private suspend fun getTradePartyDetailsWithValidationForTradePartyExists(errorParentId: MutableSet<String>, journalVouchers: List<Map<String, Any>>, errorList: MutableList<JobVoucherValidationModel>): Map<String, ListOrganizationTradePartyDetailsResponse> {
-        val organizationTradePartyDetails: MutableMap<String, ListOrganizationTradePartyDetailsResponse> = HashMap()
+        val organizationTradePartyDetails: MutableMap<String, ListOrganizationTradePartyDetailsResponse> = mutableMapOf()
         journalVouchers.forEach {
             if (errorParentId.contains(it["parent_id"].toString()) || organizationTradePartyDetails.containsKey(it["bpr"].toString() + it["acc_mode"].toString())) {
                 return@forEach
@@ -1234,6 +1196,6 @@ open class ParentJVServiceImpl : ParentJVService {
                 organizationTradePartyDetails[it["bpr"].toString() + it["acc_mode"].toString()] = tradePartyDetails
             }
         }
-        return organizationTradePartyDetails.toMap()
+        return organizationTradePartyDetails
     }
 }

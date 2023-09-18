@@ -36,10 +36,7 @@ class AuditServiceImpl : AuditService {
     override suspend fun createAudits(requests: List<AuditRequest>) {
         val audits: MutableList<Audit> = ArrayList()
         requests.forEach { request ->
-            var performedById: UUID? = null
-            try {
-                performedById = UUID.fromString(request.performedBy)
-            } catch (_: Exception) {}
+            val performedById = UUID.fromString(request.performedBy)
             audits.add(
                 Audit(
                     id = null,
