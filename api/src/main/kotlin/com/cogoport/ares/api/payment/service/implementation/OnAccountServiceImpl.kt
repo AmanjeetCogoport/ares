@@ -1383,7 +1383,7 @@ open class OnAccountServiceImpl : OnAccountService {
             }
 
             lateinit var result: SageResponse
-            val paymentLineItemDetails = getPaymentLineItem(paymentDetails)
+            val paymentLineItemDetails = getPaymentLineItem(paymentDetails.accMode)
 
             var bankCode: String? = null
             var entityCode: String? = null
@@ -1409,7 +1409,7 @@ open class OnAccountServiceImpl : OnAccountService {
                     entityCode = paymentDetails.entityCode.toString()
                     currency = PaymentSageGLCodes.RAZO.currency
                 } else {
-                    bankCodeDetails = getPaymentGLCode(paymentDetails.cogoAccountNo!!)
+                    bankCodeDetails = getPaymentBankDetails(paymentDetails.cogoAccountNo!!)
                     bankCode = bankCodeDetails["bankCode"]!!
                     entityCode = bankCodeDetails["entityCode"].toString()
                     currency = bankCodeDetails["currency"]!!
@@ -1435,11 +1435,13 @@ open class OnAccountServiceImpl : OnAccountService {
             }
 
             var jvSageAccount: String? = ""
+            val sageSignSuffix = getSignIntOfSageForAccModeAndPaymentCode(paymentDetails.accMode, paymentDetails.paymentCode!!)
+            val paymentCode = getPaymentCodeOfSageForAccMode(paymentDetails.accMode, paymentDetails.paymentCode!!)
 
             val bankDetails = CogoBankAccount.values().find { it.cogoAccountNo == paymentDetails.cogoAccountNo }
             if (!bankDetails?.cogoAccountNo.isNullOrEmpty()) {
                 if (((paymentDetails.cogoAccountNo == bankDetails?.cogoAccountNo) && (paymentDetails.entityCode == bankCodeDetails["entityCode"]?.toInt()) && (paymentDetails.currency == bankCodeDetails["currency"])) || (paymentDetails.payMode == PayMode.RAZORPAY)) {
-                    jvSageAccount = if (paymentDetails.accMode == AccMode.AP) JVSageAccount.AP.value else JVSageAccount.AR.value
+                    jvSageAccount = getGLCodeOfSageForAccMode(paymentDetails.accMode)
                 } else {
                     paymentRepository.updatePaymentDocumentStatus(paymentId, PaymentDocumentStatus.POSTING_FAILED, performedBy)
                     thirdPartyApiAuditService.createAudit(
@@ -1462,7 +1464,7 @@ open class OnAccountServiceImpl : OnAccountService {
             result = SageClient.postPaymentToSage(
                 PaymentRequest
                 (
-                    if (paymentDetails.accMode == AccMode.AP) PaymentCode.PAY.name else PaymentCode.REC.name,
+                    paymentCode,
                     paymentDetails.paymentNumValue!!,
                     sageOrganization.sageOrganizationId!!,
                     AresConstants.IND,
@@ -1471,7 +1473,7 @@ open class OnAccountServiceImpl : OnAccountService {
                     paymentDetails.transactionDate!!,
                     currency!!,
                     entityCode!!,
-                    if (paymentDetails.accMode == AccMode.AP) 1 else 2,
+                    sageSignSuffix,
                     paymentDetails.amount.setScale(AresConstants.ROUND_OFF_DECIMAL_TO_2, RoundingMode.UP),
                     paymentDetails.transRefNumber,
                     paymentDetails.ledAmount!!.setScale(AresConstants.ROUND_OFF_DECIMAL_TO_2, RoundingMode.UP),
@@ -1607,13 +1609,47 @@ open class OnAccountServiceImpl : OnAccountService {
         }
     }
 
-    private fun getPaymentLineItem(payment: com.cogoport.ares.api.payment.entity.Payment): PaymentLineItem {
+    private fun getPaymentLineItem(accMode: AccMode): PaymentLineItem {
         return PaymentLineItem(
-            accMode = if (payment.accMode == AccMode.AP) JVSageControls.AP.value else JVSageControls.AR.value,
+            accMode = when (accMode) {
+                AccMode.AR -> JVSageControls.AR.value
+                AccMode.CSD -> JVSageControls.CSD.value
+                else -> JVSageControls.AP.value
+            }
         )
     }
 
-    private fun getPaymentGLCode(cogoAccountNo: String): HashMap<String, String> {
+    private fun getGLCodeOfSageForAccMode(accMode: AccMode): String {
+        val glCode = when (accMode) {
+            AccMode.AR -> JVSageAccount.AR.value
+            AccMode.CSD -> JVSageAccount.CSD.value
+            else -> JVSageAccount.AP.value
+        }
+        return glCode
+    }
+
+    private fun getSignIntOfSageForAccModeAndPaymentCode(accMode: AccMode, paymentCode: PaymentCode): Int {
+        val signInt = when(accMode) {
+            AccMode.AR -> 2
+            AccMode.CSD -> when(paymentCode) {
+                PaymentCode.REC -> 2
+                else -> 1
+            }
+            else -> 1
+        }
+        return signInt
+    }
+
+    private fun getPaymentCodeOfSageForAccMode(accMode: AccMode, paymentCode: PaymentCode): String {
+        val paymentCodeForSage = when(accMode) {
+            AccMode.AR -> PaymentCode.REC.name
+            AccMode.CSD -> paymentCode.name
+            else -> PaymentCode.PAY.name
+        }
+        return paymentCodeForSage
+    }
+
+    private fun getPaymentBankDetails(cogoAccountNo: String): HashMap<String, String> {
         val bankCode = CogoBankAccount.values().find { it.cogoAccountNo == cogoAccountNo }?.name ?: throw AresException(AresError.ERR_1538, "")
 
         val currency = PaymentSageGLCodes.valueOf(bankCode).currency
