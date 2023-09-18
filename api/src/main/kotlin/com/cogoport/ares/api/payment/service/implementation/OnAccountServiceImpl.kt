@@ -734,7 +734,12 @@ open class OnAccountServiceImpl : OnAccountService {
     private suspend fun setPaymentEntity(payment: com.cogoport.ares.api.payment.entity.Payment) {
         val financialYearSuffix = sequenceGeneratorImpl.getFinancialYearSuffix()
         payment.accCode = AresModelConstants.ACC_MODE_PAYMENT_CODE_MAPPING["${payment.accMode.name}_${payment.paymentCode?.name}"]!!
-        payment.paymentNum = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.valueOf(payment.paymentCode?.name!!).prefix)
+        val sequence = when (payment.paymentCode) {
+            PaymentCode.PAY -> SequenceSuffix.PAYMENT.prefix
+            PaymentCode.REC -> SequenceSuffix.RECEIVED.prefix
+            else -> SequenceSuffix.valueOf(payment.paymentCode?.name!!).prefix
+        }
+        payment.paymentNum = sequenceGeneratorImpl.getPaymentNumber(sequence)
         payment.paymentNumValue = payment.paymentCode.toString() + financialYearSuffix + payment.paymentNum
         payment.signFlag = SignSuffix.valueOf(payment.paymentCode?.name!!).sign
         payment.migrated = false
@@ -1967,14 +1972,14 @@ open class OnAccountServiceImpl : OnAccountService {
             throw AresException(AresError.ERR_1003, "Bank Account")
         }
 
-        if (req.accMode == AccMode.AR) {
-            if (paymentRepository.isARTransRefNumberExists(accMode = AccMode.AR.name, transRefNumber = req.utr!!)) {
+        if (req.accMode in listOf(AccMode.AR, AccMode.CSD)) {
+            if (paymentRepository.isARTransRefNumberExists(accMode = req.accMode!!.name, transRefNumber = req.utr!!)) {
                 throw AresException(AresError.ERR_1537, "")
             }
         }
 
         if (req.accMode == AccMode.CSD) {
-            throw AresException(AresError.ERR_1003, "Payment Code")
+            if (req.paymentCode == null) throw AresException(AresError.ERR_1003, "Payment Code")
         }
     }
 
