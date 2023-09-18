@@ -1631,9 +1631,9 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     private fun getSignIntOfSageForAccModeAndPaymentCode(accMode: AccMode, paymentCode: PaymentCode): Int {
-        val signInt = when(accMode) {
+        val signInt = when (accMode) {
             AccMode.AR -> 2
-            AccMode.CSD -> when(paymentCode) {
+            AccMode.CSD -> when (paymentCode) {
                 PaymentCode.REC -> 2
                 else -> 1
             }
@@ -1643,7 +1643,7 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     private fun getPaymentCodeOfSageForAccMode(accMode: AccMode, paymentCode: PaymentCode): String {
-        val paymentCodeForSage = when(accMode) {
+        val paymentCodeForSage = when (accMode) {
             AccMode.AR -> PaymentCode.REC.name
             AccMode.CSD -> paymentCode.name
             else -> PaymentCode.PAY.name
