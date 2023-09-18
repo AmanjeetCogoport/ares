@@ -327,6 +327,8 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     private suspend fun createNonSuspensePaymentEntryCSDWrapper(receivableRequest: Payment): Long {
+        receivableRequest.accCode = AresModelConstants.CSD_ACCOUNT_CODE
+        receivableRequest.paymentCode = PaymentCode.REC
         val savedPaymentId = createNonSuspensePaymentEntry(receivableRequest)
 
         if (receivableRequest.advanceDocumentId != null) {
