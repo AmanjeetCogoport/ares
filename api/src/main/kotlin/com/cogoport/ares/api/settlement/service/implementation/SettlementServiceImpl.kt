@@ -2023,7 +2023,7 @@ open class SettlementServiceImpl : SettlementService {
         }
         when (accountUtilization.accType) {
             AccountType.PINV, AccountType.PCN, AccountType.EXP -> emitPayableBillStatus(accountUtilization, paidTds, performedBy, performedByUserType, isAutoKnockOff, isDelete)
-//            AccountType.SINV, AccountType.SCN -> updateBalanceAmount(accountUtilization, performedBy, performedByUserType)
+            AccountType.SINV, AccountType.SCN -> updateBalanceAmount(accountUtilization, performedBy, performedByUserType)
             else -> {}
         }
     }
