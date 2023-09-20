@@ -32,4 +32,24 @@ class AuditServiceImpl : AuditService {
             )
         )
     }
+
+    override suspend fun createAudits(requests: List<AuditRequest>) {
+        val audits: MutableList<Audit> = ArrayList()
+        requests.forEach { request ->
+            val performedById = UUID.fromString(request.performedBy)
+            audits.add(
+                Audit(
+                    id = null,
+                    objectType = request.objectType,
+                    objectId = request.objectId,
+                    actionName = request.actionName,
+                    data = request.data,
+                    performedBy = performedById,
+                    performedByUserType = request.performedByUserType,
+                    createdAt = Timestamp.valueOf(LocalDateTime.now())
+                )
+            )
+        }
+        auditRepository.saveAll(audits)
+    }
 }
