@@ -187,7 +187,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     END) AS forty_five_led_amount,
                 sum(
                     CASE WHEN acc_type::varchar IN (:accType)
-                        and(now()::date - due_date) BETWEEN 46 AND 60 THEN
+                        and(now()::date - due_date) BETWEEN 31 AND 60 THEN
                         sign_flag * (amount_loc - pay_loc)
                     ELSE
                         0
@@ -256,7 +256,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     END) AS forty_five_curr_amount,
                 sum(
                     CASE WHEN acc_type::varchar IN (:accType)
-                        and(now()::date - due_date) BETWEEN 46 AND 60 THEN
+                        and(now()::date - due_date) BETWEEN 31 AND 60 THEN
                         sign_flag * (amount_curr - pay_curr)
                     ELSE
                         0
@@ -321,7 +321,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                         0
                     END) AS forty_five_count,
                 sum(
-                    CASE WHEN (now()::date - due_date) BETWEEN 46 AND 60 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
+                    CASE WHEN (now()::date - due_date) BETWEEN 31 AND 60 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
@@ -345,7 +345,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                         0
                     END) AS one_eighty_plus_count,
                 sum(
-                    CASE WHEN (now()::date - due_date) BETWEEN 180 AND 365 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
+                    CASE WHEN (now()::date - due_date) BETWEEN 181 AND 365 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
@@ -404,7 +404,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     END) AS forty_five_led_amount,
                 sum(
                     CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')
-                        and(now()::date - transaction_date) BETWEEN 46 AND 60 THEN
+                        and(now()::date - transaction_date) BETWEEN 31 AND 60 THEN
                         sign_flag * (amount_loc - pay_loc)
                     ELSE
                         0
@@ -473,7 +473,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     END) AS forty_five_curr_amount,
                 sum(
                     CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')
-                        and(now()::date - transaction_date) BETWEEN 46 AND 60 THEN
+                        and(now()::date - transaction_date) BETWEEN 31 AND 60 THEN
                         sign_flag * (amount_curr - pay_curr)
                     ELSE
                         0
@@ -554,7 +554,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 ) AS forty_five_count,
                 SUM(
                     CASE 
-                        WHEN (now()::date - transaction_date) BETWEEN 46 AND 60 
+                        WHEN (now()::date - transaction_date) BETWEEN 31 AND 60 
                             AND acc_type IN ('REC', 'CTDS') 
                             AND ABS(amount_curr - pay_curr) > 0.001 THEN 1 
                         WHEN (now()::date - transaction_date) BETWEEN 46 AND 60 
@@ -1542,7 +1542,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     END) AS forty_five_led_amount,
                 sum(
                     CASE WHEN acc_type::varchar IN (:accType)
-                        and(now()::date - due_date) BETWEEN 46 AND 60 THEN
+                        and(now()::date - due_date) BETWEEN 31 AND 60 THEN
                         sign_flag * (amount_loc - pay_loc)
                     ELSE
                         0
@@ -1607,7 +1607,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                         0
                     END) AS forty_five_count,
                 sum(
-                    CASE WHEN (now()::date - due_date) BETWEEN 46 AND 60 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
+                    CASE WHEN (now()::date - due_date) BETWEEN 31 AND 60 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
@@ -1631,7 +1631,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                         0
                     END) AS one_eighty_plus_count,
                 sum(
-                    CASE WHEN (now()::date - due_date) BETWEEN 180 AND 365 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
+                    CASE WHEN (now()::date - due_date) BETWEEN 181 AND 365 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
@@ -1694,7 +1694,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     END) AS forty_five_led_amount,
                 sum(
                     CASE WHEN acc_type::varchar IN (:accType)
-                        and(now()::date - transaction_date) BETWEEN 46 AND 60 THEN
+                        and(now()::date - transaction_date) BETWEEN 31 AND 60 THEN
                         sign_flag * (amount_loc - pay_loc)
                     ELSE
                         0
@@ -1775,10 +1775,10 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 ) AS forty_five_count,
                 SUM(
                     CASE 
-                        WHEN (now()::date - transaction_date) BETWEEN 46 AND 60 
+                        WHEN (now()::date - transaction_date) BETWEEN 31 AND 60 
                             AND acc_type::varchar IN (:paymentAccType) 
                             AND ABS(amount_curr - pay_curr) > 0.001 THEN 1 
-                        WHEN (now()::date - transaction_date) BETWEEN 46 AND 60 
+                        WHEN (now()::date - transaction_date) BETWEEN 31 AND 60 
                             AND acc_type::varchar IN (:jvAccType) 
                             AND amount_curr - pay_curr <> 0 THEN 1 
                         ELSE 0 

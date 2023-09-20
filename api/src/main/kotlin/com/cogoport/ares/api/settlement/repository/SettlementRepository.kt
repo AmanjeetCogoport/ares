@@ -433,7 +433,7 @@ ORDER BY
             SELECT s.id
             FROM settlements s
             INNER JOIN account_utilizations aau ON aau.document_no = s.destination_id
-            WHERE s.settlement_status::varchar in ('CREATED', 'POSTING_FAILED')
+            WHERE s.settlement_status::varchar in ('CREATED')
               AND s.deleted_at IS NULL
               AND s.led_currency != 'VND'
               AND s.source_type NOT IN ('SECH', 'PECH')

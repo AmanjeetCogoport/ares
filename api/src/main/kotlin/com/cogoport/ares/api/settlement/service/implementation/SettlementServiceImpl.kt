@@ -1523,11 +1523,14 @@ open class SettlementServiceImpl : SettlementService {
         if (source.isEmpty() &&
             (
                 dest.map { it.accountType }.contains(SettlementType.SINV) &&
-                    dest.map { it.accountType }.contains(SettlementType.PINV) && dest.map { it.accountType }.contains(SettlementType.EXP)
+                    dest.map { it.accountType }.contains(SettlementType.PINV)
                 ) ||
             (
                 dest.map { it.accountType }.contains(SettlementType.SREIMB) &&
                     dest.map { it.accountType }.contains(SettlementType.PREIMB)
+                ) || (
+                dest.map { it.accountType }.contains(SettlementType.EXP) &&
+                    dest.map { it.accountType }.contains(SettlementType.SINV)
                 )
         ) {
 
@@ -1535,6 +1538,18 @@ open class SettlementServiceImpl : SettlementService {
             val res = dest.filter { it -> allowedSettlementType.contains(it.accountType) }.forEach {
                 source.add(it)
                 dest.remove(it)
+            }
+        }
+
+        if (dest.isEmpty() && source.any { it.accMode == AccMode.CSD } && (
+            source.map { it.accountType }.contains(SettlementType.REC) &&
+                source.map { it.accountType }.contains(SettlementType.PAY)
+            )
+        ) {
+            val allowedSettlementType = mutableListOf(SettlementType.PAY)
+            source.filter { it -> allowedSettlementType.contains(it.accountType) }.forEach {
+                dest.add(it)
+                source.remove(it)
             }
         }
         businessValidation(source, dest)
@@ -2218,7 +2233,7 @@ open class SettlementServiceImpl : SettlementService {
 
         return when (accType) {
             SettlementType.REC -> {
-                listOf(SettlementType.SINV, SettlementType.SDN) + jvList
+                listOf(SettlementType.SINV, SettlementType.SDN, SettlementType.PAY) + jvList
             }
             SettlementType.PINV -> {
                 listOf(SettlementType.PAY, SettlementType.PCN, SettlementType.SINV) + jvList
@@ -2230,7 +2245,7 @@ open class SettlementServiceImpl : SettlementService {
                 listOf(SettlementType.PINV, SettlementType.PDN, SettlementType.EXP) + jvList
             }
             SettlementType.PAY -> {
-                listOf(SettlementType.PINV, SettlementType.PDN, SettlementType.EXP) + jvList
+                listOf(SettlementType.PINV, SettlementType.PDN, SettlementType.EXP, SettlementType.REC) + jvList
             }
             SettlementType.SINV -> {
                 listOf(SettlementType.REC, SettlementType.SCN, SettlementType.PINV) + jvList
@@ -2268,7 +2283,7 @@ open class SettlementServiceImpl : SettlementService {
     private fun storeSettledTds(request: CheckRequest): MutableMap<String, BigDecimal> {
         val settledTdsCopy = mutableMapOf<String, BigDecimal>()
         request.stackDetails!!.forEach {
-            settledTdsCopy.put(it.id, it.settledTds)
+            settledTdsCopy[it.id] = it.settledTds
         }
         return settledTdsCopy
     }
