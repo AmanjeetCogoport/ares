@@ -153,8 +153,8 @@ class Scheduler(
     @Scheduled(cron = "0 17 * * *")
     fun bulkMatchingSettlement() = runBlocking {
         val today = now()
-        logger().info("Scheduler started for Bulk Matching Settlement On Sage for date: $today")
         val settlementsIds = settlementRepository.getSettlementIdForCreatedStatus()
+        logger().info("Scheduler started for Bulk Matching Settlement On Sage for date: $today and total ids: $settlementsIds")
         if (!settlementsIds.isNullOrEmpty()) {
             settlementService.bulkMatchingSettlementOnSage(settlementsIds, AresConstants.ARES_USER_ID)
         }

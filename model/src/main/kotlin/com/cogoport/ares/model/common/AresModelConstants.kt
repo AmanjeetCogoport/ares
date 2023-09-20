@@ -43,6 +43,16 @@ object AresModelConstants {
     const val AP_ACCOUNT_CODE = 321000
     const val TDS_AR_ACCOUNT_CODE = 240000
     const val TDS_AP_ACCOUNT_CODE = 324001
+    const val CSD_ACCOUNT_CODE = 214035
 
     val COGO_INDIA = listOf(101, 301)
+
+    val ACC_MODE_PAYMENT_CODE_MAPPING = mapOf(
+        "AP_PAY" to AP_ACCOUNT_CODE,
+        "AR_REC" to AR_ACCOUNT_CODE,
+        "AP_VTDS" to TDS_AP_ACCOUNT_CODE,
+        "AR_CTDS" to TDS_AR_ACCOUNT_CODE,
+        "CSD_REC" to CSD_ACCOUNT_CODE,
+        "CSD_PAY" to CSD_ACCOUNT_CODE
+    )
 }
