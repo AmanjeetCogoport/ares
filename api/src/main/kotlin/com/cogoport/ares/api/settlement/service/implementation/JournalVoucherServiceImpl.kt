@@ -304,7 +304,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                     glCode = it["gl_code"].toString(),
                     parentJvId = parentJvData.id,
                     type = it["type"].toString(),
-                    signFlag = getSignFlag(it["sign_flag"].toString()),
+                    signFlag = getSignFlag(it["type"].toString()),
                     status = JVStatus.APPROVED,
                     tradePartyId = if (it["acc_mode"].toString().isBlank()) null else UUID.fromString(tradePartyDetails[it["bpr"].toString() + it["acc_mode"].toString()]!!.list[0]["id"].toString()),
                     tradePartyName = if (it["acc_mode"].toString().isBlank()) null else tradePartyDetails[it["bpr"].toString() + it["acc_mode"]]!!.list[0]["legal_business_name"].toString(),
