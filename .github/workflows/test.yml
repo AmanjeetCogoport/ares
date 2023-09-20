@@ -20,8 +20,8 @@ env:
   OPENSEARCH_PASS: admin
   OPENSEARCH_SCHEME: http
   AWS_REGION: ap-south-1
-  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.ECS_DEPLOY_AWS_ACCESS_KEY }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.ECS_DEPLOY_AWS_SECRET_KEY }}
 
 jobs:
   integration-tests:
