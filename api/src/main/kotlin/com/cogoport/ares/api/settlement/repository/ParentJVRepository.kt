@@ -12,6 +12,8 @@ import java.util.UUID
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface ParentJVRepository : CoroutineCrudRepository<ParentJournalVoucher, Long> {
 
+    suspend fun saveAll(parentJournalVoucher: List<ParentJournalVoucher>): List<ParentJournalVoucher>
+
     @NewSpan
     @Query(
         """

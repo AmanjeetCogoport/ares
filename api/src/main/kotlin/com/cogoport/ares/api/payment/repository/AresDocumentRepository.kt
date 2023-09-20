@@ -21,4 +21,12 @@ interface AresDocumentRepository : CoroutineCrudRepository<AresDocument, Long> {
     """
     )
     suspend fun getSupplierOutstandingUrl(reportId: Long): String?
+
+    @NewSpan
+    @Query(
+        """
+            SELECT EXISTS(SELECT * FROM ares_documents WHERE document_url = :documentUrl) 
+        """
+    )
+    suspend fun existsByDocumentUrl(documentUrl: String): Boolean
 }
