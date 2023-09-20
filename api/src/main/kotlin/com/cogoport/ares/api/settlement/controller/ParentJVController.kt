@@ -9,8 +9,10 @@ import com.cogoport.ares.api.utils.Util
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.settlement.JVBulkFileUploadResponse
 import com.cogoport.ares.model.settlement.ParentJournalVoucherResponse
 import com.cogoport.ares.model.settlement.PostJVToSageRequest
+import com.cogoport.ares.model.settlement.request.JVBulkFileUploadRequest
 import com.cogoport.ares.model.settlement.request.JvListRequest
 import com.cogoport.ares.model.settlement.request.ParentJVUpdateRequest
 import com.cogoport.ares.model.settlement.request.ParentJournalVoucherRequest
@@ -48,6 +50,11 @@ class ParentJVController {
     @Post
     suspend fun createJv(@Body request: ParentJournalVoucherRequest): Response<String?> {
         return Response<String?>().ok("Journal Voucher Created Successfully", parentJVService.createJournalVoucher(request))
+    }
+
+    @Post("/bulk-jv-upload")
+    suspend fun jvUpload(@Body request: JVBulkFileUploadRequest): Response<JVBulkFileUploadResponse> {
+        return Response<JVBulkFileUploadResponse>().ok("File Processed Successfully", parentJVService.uploadJournalVouchers(request))
     }
 
     @Auth

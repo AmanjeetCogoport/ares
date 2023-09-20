@@ -30,6 +30,9 @@ interface RailsClient {
     @Get("/organization/list_organization_trade_party_details?filters%5Bid%5D={id}")
     suspend fun getListOrganizationTradePartyDetails(id: UUID): ListOrganizationTradePartyDetailsResponse
 
+    @Get("/organization/list_organization_trade_party_details?filters%5Bstatus%5D={status}&filters%5Bsage_organization_id%5D={sageOrganizationId}&filters%5Baccount_type%5D={accountType}&sage_organization_id_required={sageOrganizationIdRequired}")
+    suspend fun getListOrganizationTradePartyDetails(status: String, sageOrganizationId: String, accountType: String, sageOrganizationIdRequired: Boolean): ListOrganizationTradePartyDetailsResponse
+
     @Get("/list_cogo_entities?filters%5Bentity_code%5D={entityCode}")
     suspend fun getCogoEntity(entityCode: String): ListCogoEntities
 

@@ -7,7 +7,9 @@ import com.cogoport.ares.api.settlement.entity.JournalCode
 import com.cogoport.ares.api.settlement.entity.JvCategory
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.settlement.JVBulkFileUploadResponse
 import com.cogoport.ares.model.settlement.ParentJournalVoucherResponse
+import com.cogoport.ares.model.settlement.request.JVBulkFileUploadRequest
 import com.cogoport.ares.model.settlement.request.JvListRequest
 import com.cogoport.ares.model.settlement.request.ParentJVUpdateRequest
 import com.cogoport.ares.model.settlement.request.ParentJournalVoucherRequest
@@ -18,6 +20,8 @@ import kotlin.collections.HashMap
 
 interface ParentJVService {
     suspend fun createJournalVoucher(request: ParentJournalVoucherRequest): String?
+
+    suspend fun uploadJournalVouchers(request: JVBulkFileUploadRequest): JVBulkFileUploadResponse
 
     suspend fun getJournalVouchers(jvListRequest: JvListRequest): ResponseList<ParentJournalVoucherResponse>
 
