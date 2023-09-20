@@ -555,7 +555,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                         WHEN (now()::date - transaction_date) BETWEEN 31 AND 60 
                             AND acc_type IN ('REC', 'CTDS') 
                             AND ABS(amount_curr - pay_curr) > 0.001 THEN 1 
-                        WHEN (now()::date - transaction_date) BETWEEN 46 AND 60 
+                        WHEN (now()::date - transaction_date) BETWEEN 31 AND 60 
                             AND acc_type IN ('BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') 
                             AND amount_curr - pay_curr <> 0 THEN 1 
                         ELSE 0 
