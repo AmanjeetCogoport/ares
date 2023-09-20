@@ -29,6 +29,8 @@ import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, Long> {
+
+    suspend fun saveAll(accountUtilizations: List<AccountUtilization>): List<AccountUtilization>
     @NewSpan
     @Query(
         """
