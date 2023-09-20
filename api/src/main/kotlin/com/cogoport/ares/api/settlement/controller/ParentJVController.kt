@@ -53,8 +53,8 @@ class ParentJVController {
     }
 
     @Post("/bulk-jv-upload")
-    suspend fun jvUpload(@Body request: JVBulkFileUploadRequest): Response<JVBulkFileUploadResponse> {
-        return Response<JVBulkFileUploadResponse>().ok("File Processed Successfully", parentJVService.uploadJournalVouchers(request))
+    suspend fun jvUpload(@Body request: JVBulkFileUploadRequest): JVBulkFileUploadResponse {
+        return parentJVService.uploadJournalVouchers(request)
     }
 
     @Auth

@@ -8,7 +8,6 @@ import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
-
 interface AresDocumentRepository : CoroutineCrudRepository<AresDocument, Long> {
 
     @NewSpan
