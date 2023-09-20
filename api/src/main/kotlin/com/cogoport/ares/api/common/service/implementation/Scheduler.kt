@@ -57,16 +57,21 @@ class Scheduler(
     @Value("\${server.base-url}") // application-prod.yml path
     private lateinit var baseUrl: String
 
+    @Value("\${scheduler.enabled}")
+    private var schedulerEnabled: Boolean = false
+
     @Scheduled(cron = "0 0 * * *")
     fun updateSupplierOutstandingOnOpenSearch() {
-        runBlocking {
-            val orgIds = accountUtilizationRepository.getTradePartyOrgIds(AccMode.AP)
-            for (orgId in orgIds) {
-                try {
-                    emitter.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = orgId))
-                } catch (e: Exception) {
-                    logger().error(e.message)
-                    Sentry.captureException(e)
+        if (schedulerEnabled) {
+            runBlocking {
+                val orgIds = accountUtilizationRepository.getTradePartyOrgIds(AccMode.AP)
+                for (orgId in orgIds) {
+                    try {
+                        emitter.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = orgId))
+                    } catch (e: Exception) {
+                        logger().error(e.message)
+                        Sentry.captureException(e)
+                    }
                 }
             }
         }
@@ -74,157 +79,207 @@ class Scheduler(
 
     @Scheduled(cron = "0 0 * * *")
     fun updateCustomerOutstandingOnOpenSearch() {
-        runBlocking {
-            val orgIds = accountUtilizationRepository.getTradePartyOrgIds(AccMode.AR)
-            for (orgId in orgIds) {
-                try {
-                    emitter.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(orgId = orgId))
-                } catch (e: Exception) {
-                    logger().error(e.message)
-                    Sentry.captureException(e)
+        if (schedulerEnabled) {
+            runBlocking {
+                val orgIds = accountUtilizationRepository.getTradePartyOrgIds(AccMode.AR)
+                for (orgId in orgIds) {
+                    try {
+                        emitter.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(orgId = orgId))
+                    } catch (e: Exception) {
+                        logger().error(e.message)
+                        Sentry.captureException(e)
+                    }
                 }
             }
         }
     }
     @Scheduled(cron = "30 04 * * *")
     fun uploadPayblesInfo() {
-        runBlocking {
-            outStandingService.uploadPayblesStats()
+        if (schedulerEnabled) {
+            runBlocking {
+                outStandingService.uploadPayblesStats()
+            }
         }
     }
 
     @Scheduled(cron = "0 * * * *")
     fun deleteInvoicesNotPresentInPlutus() {
-        runBlocking {
-            val ids = unifiedDBRepo.getInvoicesNotPresentInPlutus()
-            if (!ids.isNullOrEmpty()) {
-                for (id in ids) {
-                    emitter.emitDeleteInvoicesNotPresentInPlutus(id)
+        if (schedulerEnabled) {
+            runBlocking {
+                val ids = unifiedDBRepo.getInvoicesNotPresentInPlutus()
+                if (!ids.isNullOrEmpty()) {
+                    for (id in ids) {
+                        emitter.emitDeleteInvoicesNotPresentInPlutus(id)
+                    }
                 }
             }
         }
     }
 
     @Scheduled(cron = "0 0 * * *", zoneId = "Europe/Paris")
-    fun createLedgerBalancesForNetherlands() = runBlocking {
-        val calendar = Calendar.getInstance(TimeZone.getTimeZone("Europe/Paris"))
-        ledgerBalanceServiceImpl.createLedgerBalances(calendar.time, 201)
+    fun createLedgerBalancesForNetherlands() {
+        if (schedulerEnabled) {
+            runBlocking {
+                val calendar = Calendar.getInstance(TimeZone.getTimeZone("Europe/Paris"))
+                ledgerBalanceServiceImpl.createLedgerBalances(calendar.time, 201)
+            }
+        }
     }
 
     @Scheduled(cron = "0 0 * * *", zoneId = "Asia/Ho_Chi_Minh")
-    fun createLedgerBalancesForVietnam() = runBlocking {
-        val calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"))
-        ledgerBalanceServiceImpl.createLedgerBalances(calendar.time, 501)
+    fun createLedgerBalancesForVietnam() {
+        if (schedulerEnabled) {
+            runBlocking {
+                val calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"))
+                ledgerBalanceServiceImpl.createLedgerBalances(calendar.time, 501)
+            }
+        }
     }
 
     @Scheduled(cron = "0 0 * * *", zoneId = "Asia/Kolkata")
-    fun createLedgerBalancesForIndia() = runBlocking {
-        val calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Kolkata"))
-        ledgerBalanceServiceImpl.createLedgerBalances(calendar.time, 301)
-        ledgerBalanceServiceImpl.createLedgerBalances(calendar.time, 101)
+    fun createLedgerBalancesForIndia() {
+        if (schedulerEnabled) {
+            runBlocking {
+                val calendar = Calendar.getInstance(TimeZone.getTimeZone("Asia/Kolkata"))
+                ledgerBalanceServiceImpl.createLedgerBalances(calendar.time, 301)
+                ledgerBalanceServiceImpl.createLedgerBalances(calendar.time, 101)
+            }
+        }
     }
 
     /**
      * Asia/Singapore is UTC+08:00
      **/
     @Scheduled(cron = "0 16 * * *")
-    fun createLedgerBalancesForSingapore() = runBlocking {
-        val calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT+8"))
-        ledgerBalanceServiceImpl.createLedgerBalances(calendar.time, 401)
+    fun createLedgerBalancesForSingapore() {
+        if (schedulerEnabled) {
+            runBlocking {
+                val calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT+8"))
+                ledgerBalanceServiceImpl.createLedgerBalances(calendar.time, 401)
+            }
+        }
     }
 
     @Scheduled(cron = "0 16 * * *")
-    fun bulkPaymentFinalPostOnSage() = runBlocking {
-        val threeDayBefore = now().minus(3, ChronoUnit.DAYS)
-        logger().info("Scheduler started for AP post payment to sage for date: $threeDayBefore")
-        val paymentIds = paymentRepository.getPaymentIdsForApprovedPayments()
-        if (!paymentIds.isNullOrEmpty()) {
-            paymentIds.forEach {
-                aresMessagePublisher.emitBulkPostPaymentToSage(
-                    PostPaymentToSage(
-                        it,
-                        AresConstants.ARES_USER_ID
-                    )
-                )
+    fun bulkPaymentFinalPostOnSage() {
+        runBlocking {
+            if (schedulerEnabled) {
+                val threeDayBefore = now().minus(3, ChronoUnit.DAYS)
+                logger().info("Scheduler started for AP post payment to sage for date: $threeDayBefore")
+                val paymentIds = paymentRepository.getPaymentIdsForApprovedPayments()
+                if (!paymentIds.isNullOrEmpty()) {
+                    paymentIds.forEach {
+                        aresMessagePublisher.emitBulkPostPaymentToSage(
+                            PostPaymentToSage(
+                                it,
+                                AresConstants.ARES_USER_ID
+                            )
+                        )
+                    }
+                }
             }
         }
     }
 
     @Scheduled(cron = "0 17 * * *")
-    fun bulkMatchingSettlement() = runBlocking {
-        val today = now()
-        val settlementsIds = settlementRepository.getSettlementIdForCreatedStatus()
-        logger().info("Scheduler started for Bulk Matching Settlement On Sage for date: $today and total ids: $settlementsIds")
-        if (!settlementsIds.isNullOrEmpty()) {
-            settlementService.bulkMatchingSettlementOnSage(settlementsIds, AresConstants.ARES_USER_ID)
+    fun bulkMatchingSettlement() {
+        if (schedulerEnabled) {
+            runBlocking {
+                val today = now()
+                logger().info("Scheduler started for Bulk Matching Settlement On Sage for date: $today")
+                val settlementsIds = settlementRepository.getSettlementIdForCreatedStatus()
+                if (!settlementsIds.isNullOrEmpty()) {
+                    settlementService.bulkMatchingSettlementOnSage(settlementsIds, AresConstants.ARES_USER_ID)
+                }
+            }
         }
     }
 
     @Scheduled(cron = "30 19 * * *")
     fun settlementMatchingFailedOnSageEmail() {
-        val today = now()
-        logger().info("Scheduler has been initiated to send Email notifications for settlement matching failures up to the date: $today")
-        val settlementsNotPosted = runBlocking {
-            settlementRepository.getAllSettlementsMatchingFailedOnSage()
-        }
-        if (settlementsNotPosted.isNullOrEmpty()) return
-        val excelName = "Failed_Settlements_Matching_On_Sage" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_hhmmss"))
-        val file = runBlocking {
-            ExcelUtils.writeIntoExcel(settlementsNotPosted as List<Any>, excelName, "Failed Settlements Matching On Sage")
-        }
-        val url = s3Client.upload(s3Bucket, "$excelName.xlsx", file)
-        val aresDocument = AresDocument(
-            documentUrl = url.toString(),
-            documentName = "failed_settlement_matching",
-            documentType = "xlsx",
-            uploadedBy = AresConstants.ARES_USER_ID
-        )
-        val saveUrl = runBlocking {
-            aresDocumentRepository.save(aresDocument)
-        }
-        val visibleUrl = "$baseUrl/payments/download?id=${Hashids.encode(saveUrl.id!!)}"
-        runBlocking {
-            settlementService.sendEmailSettlementsMatchingFailed(visibleUrl)
+        if (schedulerEnabled) {
+            val today = now()
+            logger().info("Scheduler has been initiated to send Email notifications for settlement matching failures up to the date: $today")
+            val settlementsNotPosted = runBlocking {
+                settlementRepository.getAllSettlementsMatchingFailedOnSage()
+            }
+            if (settlementsNotPosted.isNullOrEmpty()) return
+            val excelName = "Failed_Settlements_Matching_On_Sage" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_hhmmss"))
+            val file = runBlocking {
+                ExcelUtils.writeIntoExcel(settlementsNotPosted as List<Any>, excelName, "Failed Settlements Matching On Sage")
+            }
+            val url = s3Client.upload(s3Bucket, "$excelName.xlsx", file)
+            val aresDocument = AresDocument(
+                documentUrl = url.toString(),
+                documentName = "failed_settlement_matching",
+                documentType = "xlsx",
+                uploadedBy = AresConstants.ARES_USER_ID
+            )
+            val saveUrl = runBlocking {
+                aresDocumentRepository.save(aresDocument)
+            }
+            val visibleUrl = "$baseUrl/payments/download?id=${Hashids.encode(saveUrl.id!!)}"
+            runBlocking {
+                settlementService.sendEmailSettlementsMatchingFailed(visibleUrl)
+            }
         }
     }
 
     @Scheduled(cron = "0 5 * * *")
-    fun sendSagePlatformPaymentReport() = runBlocking {
-        val endDate: String = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE)
-        val startDate: String = LocalDate.now().minusDays(1).format(DateTimeFormatter.BASIC_ISO_DATE)
+    fun sendSagePlatformPaymentReport() {
+        if (schedulerEnabled) {
+            runBlocking {
+                val endDate: String = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE)
+                val startDate: String = LocalDate.now().minusDays(1).format(DateTimeFormatter.BASIC_ISO_DATE)
 
-        onAccountService.downloadSagePlatformReport(startDate, endDate)
+                onAccountService.downloadSagePlatformReport(startDate, endDate)
+            }
+        }
     }
 
     @Scheduled(cron = "30 20 * * *")
     fun migrateMTCCVJV() {
-        val endDate: String = LocalDate.now().toString()
-        val startDate: String = LocalDate.now().minusDays(1).toString()
-        logger().info("Scheduler has been initiated to migrate MTCCV JV for the date range : $endDate - $startDate")
-        val size = runBlocking {
-            paymentMigration.migrateMTCCVJV(startDate, endDate)
+        if (schedulerEnabled) {
+            val endDate: String = LocalDate.now().toString()
+            val startDate: String = LocalDate.now().minusDays(1).toString()
+            logger().info("Scheduler has been initiated to migrate MTCCV JV for the date range : $endDate - $startDate")
+            val size = runBlocking {
+                paymentMigration.migrateMTCCVJV(startDate, endDate)
+            }
+            logger().info("Request for mtccv jv migration received, total number of parent jv to migrate is $size")
         }
-        logger().info("Request for mtccv jv migration received, total number of parent jv to migrate is $size")
     }
 
     @Scheduled(cron = "0 0 6,18 * * *")
-    fun createLedgerSummaryForAp() = runBlocking {
-        val today = now()
-        logger().info("Migrating organizations data for : $today")
-        outStandingService.createLedgerSummary()
+    fun createLedgerSummaryForAp() {
+        if (schedulerEnabled) {
+            runBlocking {
+                val today = now()
+                logger().info("Migrating organizations data for : $today")
+                outStandingService.createLedgerSummary()
+            }
+        }
     }
 
     @Scheduled(cron = "0 15 * * *")
-    fun postToSageJV() = runBlocking {
-        val today = now()
-        logger().info("Posting JVs to Sage : $today")
-        parentJVService.bulkPostingJvToSage()
+    fun postToSageJV() {
+        if (schedulerEnabled) {
+            runBlocking {
+                val today = now()
+                logger().info("Posting JVs to Sage : $today")
+                parentJVService.bulkPostingJvToSage()
+            }
+        }
     }
 
     @Scheduled(cron = "0 30 6,18 * * *")
-    fun createSupplierDetail() = runBlocking {
-        val today = now()
-        logger().info("Creating supplier record : $today")
-        outStandingService.createSupplierDetailsV2()
+    fun createSupplierDetail() {
+        if (schedulerEnabled) {
+            runBlocking {
+                val today = now()
+                logger().info("Creating supplier record : $today")
+                outStandingService.createSupplierDetailsV2()
+            }
+        }
     }
 }
