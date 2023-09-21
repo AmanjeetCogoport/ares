@@ -2089,11 +2089,10 @@ open class OnAccountServiceImpl : OnAccountService {
             totalAmount = totalAmount.plus(utrDetail.paidAmount!!)
             val ledgerCurrency = AresConstants.LEDGER_CURRENCY[req.entityCode]
             // change payment ledger amount if doesn't matches with profroma
-            if(ledgerCurrency!= req.currency)
-            {
-                exchangeRate = settlementServiceHelper.getExchangeRate(req.currency!!,proformaRecord?.ledCurrency!!,SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(utrDetail.transactionDate))
+            if (ledgerCurrency != req.currency) {
+                exchangeRate = settlementServiceHelper.getExchangeRate(req.currency!!, proformaRecord?.ledCurrency!!, SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(utrDetail.transactionDate))
             }
-            val signFlag:Short = 1
+            val signFlag: Short = 1
             var paymentModel = Payment(
                 entityType = req.entityCode,
                 orgSerialId = proformaRecord?.orgSerialId,
@@ -2200,7 +2199,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 tradePartyId = null,
                 type = "CREDIT",
                 amount = ledgerAmount,
-                currency =ledgerCurrency,
+                currency = ledgerCurrency,
                 validityDate = Date(),
                 glCode = bucketGlcode.toString(),
             ),
@@ -2212,8 +2211,8 @@ open class OnAccountServiceImpl : OnAccountService {
                 tradePartyName = tradePartyDetails.tradePartyName,
                 tradePartyId = tradePartyDetails.tradePartyId,
                 type = "DEBIT",
-                amount = amount ,
-                currency = currency ,
+                amount = amount,
+                currency = currency,
                 validityDate = Date(),
                 glCode = debitGlcode.toString(),
             )
