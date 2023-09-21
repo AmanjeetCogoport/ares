@@ -22,7 +22,9 @@ import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.settlement.JvLineItemResponse
+import com.cogoport.ares.model.settlement.ListOrganizationTradePartyDetailsResponse
 import com.cogoport.ares.model.settlement.enums.JVStatus
+import com.cogoport.ares.model.settlement.request.JVBulkFileUploadRequest
 import com.cogoport.brahma.hashids.Hashids
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -204,7 +206,9 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                 migrated = false,
                 deletedAt = null,
                 additionalDetails = JVAdditionalDetails(
-                    utr = utr
+                    utr = utr,
+                    bpr = null,
+                    aresDocumentId = null
                 )
             )
         }
@@ -275,5 +279,68 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                 performedByUserType = createdByUserType
             )
         )
+    }
+
+    override fun makeJournalVoucherLineItem(
+        parentMapping: HashMap<String, ParentJournalVoucher>,
+        journalVouchers: List<Map<String, Any>>,
+        jvBulkFileUploadRequest: JVBulkFileUploadRequest,
+        tradePartyDetails: Map<String, ListOrganizationTradePartyDetailsResponse>,
+        documentId: Long?
+    ): List<JournalVoucher> {
+        val jvList = mutableListOf<JournalVoucher>()
+        journalVouchers.groupBy { it["parent_id"].toString() }.map { (k, v) ->
+            v.map {
+                val tradeParty = if (it["bpr"].toString() != "" && it["acc_mode"].toString() != "") tradePartyDetails[it["bpr"].toString() + it["acc_mode"].toString()]!!.list[0] else null
+                val tradePartyId = if (tradeParty == null) null else UUID.fromString(tradeParty["id"].toString())
+                val tradePartyName = if (tradeParty == null) null else tradeParty["legal_business_name"].toString()
+                val parentJvData = parentMapping[k]
+                jvList.add(
+                    JournalVoucher(
+                        id = null,
+                        jvNum = parentJvData?.jvNum!!,
+                        accMode = if (it["acc_mode"].toString().isNotBlank()) AccMode.valueOf(it["acc_mode"].toString()) else AccMode.OTHER,
+                        category = it["category"].toString(),
+                        createdAt = parentJvData.createdAt,
+                        createdBy = jvBulkFileUploadRequest.performedByUserId,
+                        updatedAt = parentJvData.createdAt,
+                        updatedBy = jvBulkFileUploadRequest.performedByUserId,
+                        currency = parentJvData.currency,
+                        ledCurrency = parentJvData.ledCurrency!!,
+                        amount = BigDecimal(it["amount"].toString()),
+                        ledAmount = BigDecimal(it["led_amount"].toString()),
+                        description = parentJvData.description,
+                        entityCode = parentJvData.entityCode,
+                        entityId = UUID.fromString(AresConstants.ENTITY_ID[parentJvData.entityCode]),
+                        exchangeRate = parentJvData.exchangeRate,
+                        glCode = it["gl_code"].toString(),
+                        parentJvId = parentJvData.id,
+                        type = it["type"].toString(),
+                        signFlag = getSignFlag(it["type"].toString()),
+                        status = JVStatus.APPROVED,
+                        tradePartyId = tradePartyId,
+                        tradePartyName = tradePartyName,
+                        validityDate = parentJvData.transactionDate,
+                        migrated = false,
+                        deletedAt = null,
+                        additionalDetails = JVAdditionalDetails(
+                            utr = null,
+                            bpr = it["bpr"].toString(),
+                            aresDocumentId = documentId
+                        )
+                    )
+                )
+            }
+        }
+
+        return jvList
+    }
+
+    private fun getSignFlag(type: String): Short {
+        return when (type.uppercase()) {
+            "CREDIT" -> -1
+            "DEBIT" -> 1
+            else -> throw AresException(AresError.ERR_1009, "JV type")
+        }
     }
 }

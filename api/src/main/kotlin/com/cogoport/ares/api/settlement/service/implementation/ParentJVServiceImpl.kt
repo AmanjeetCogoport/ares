@@ -12,9 +12,11 @@ import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.api.payment.entity.AresDocument
 import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.payment.repository.AresDocumentRepository
 import com.cogoport.ares.api.payment.service.implementation.SequenceGeneratorImpl
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.settlement.entity.GlCode
@@ -25,6 +27,8 @@ import com.cogoport.ares.api.settlement.entity.JvCategory
 import com.cogoport.ares.api.settlement.entity.ParentJournalVoucher
 import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
 import com.cogoport.ares.api.settlement.mapper.JournalVoucherMapper
+import com.cogoport.ares.api.settlement.model.JVValidationAndCollectedInformation
+import com.cogoport.ares.api.settlement.model.JobVoucherValidationModel
 import com.cogoport.ares.api.settlement.repository.GlCodeMasterRepository
 import com.cogoport.ares.api.settlement.repository.GlCodeRepository
 import com.cogoport.ares.api.settlement.repository.JournalCodeRepository
@@ -34,21 +38,30 @@ import com.cogoport.ares.api.settlement.repository.ParentJVRepository
 import com.cogoport.ares.api.settlement.service.interfaces.JournalVoucherService
 import com.cogoport.ares.api.settlement.service.interfaces.ParentJVService
 import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditService
+import com.cogoport.ares.api.utils.ExcelUtils.writeIntoExcel
 import com.cogoport.ares.api.utils.Util
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
+import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.payment.DocumentStatus
+import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.sage.SageCustomerRecord
+import com.cogoport.ares.model.settlement.JVBulkFileUploadResponse
+import com.cogoport.ares.model.settlement.ListOrganizationTradePartyDetailsResponse
 import com.cogoport.ares.model.settlement.ParentJournalVoucherResponse
 import com.cogoport.ares.model.settlement.PostJVToSageRequest
 import com.cogoport.ares.model.settlement.enums.JVSageControls
 import com.cogoport.ares.model.settlement.enums.JVStatus
+import com.cogoport.ares.model.settlement.request.JVBulkFileUploadRequest
 import com.cogoport.ares.model.settlement.request.JvListRequest
 import com.cogoport.ares.model.settlement.request.ParentJVUpdateRequest
 import com.cogoport.ares.model.settlement.request.ParentJournalVoucherRequest
+import com.cogoport.brahma.excel.utils.ExcelSheetReader
 import com.cogoport.brahma.hashids.Hashids
+import com.cogoport.brahma.s3.client.S3Client
 import com.cogoport.brahma.sage.Client
 import com.cogoport.brahma.sage.SageException
 import com.cogoport.brahma.sage.model.request.JVLineItem
@@ -64,11 +77,27 @@ import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.json.JSONObject
 import org.json.XML
+import java.io.ByteArrayInputStream
+import java.io.File
+import java.io.InputStream
+import java.lang.Double.parseDouble
+import java.lang.Integer.parseInt
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 import java.sql.SQLException
 import java.sql.Timestamp
+import java.text.SimpleDateFormat
 import java.time.Instant
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.UUID
 import javax.transaction.Transactional
@@ -126,6 +155,15 @@ open class ParentJVServiceImpl : ParentJVService {
 
     @Inject
     lateinit var accountUtilizationRepo: AccountUtilizationRepo
+
+    @Inject
+    lateinit var aresDocumentRepository: AresDocumentRepository
+
+    @Inject
+    lateinit var s3Client: S3Client
+
+    @Value("\${aws.s3.bucket}")
+    private lateinit var s3Bucket: String
 
     @Value("\${sage.databaseName}")
     var sageDatabase: String? = null
@@ -186,6 +224,107 @@ open class ParentJVServiceImpl : ParentJVService {
         }
 
         return parentJvData.jvNum
+    }
+
+    override suspend fun uploadJournalVouchers(request: JVBulkFileUploadRequest): JVBulkFileUploadResponse {
+        var aresDocument: AresDocument? = null
+        if (aresDocumentRepository.existsByDocumentUrl(request.documentUrl)) {
+            throw Exception("File already uploaded")
+        } else {
+            aresDocument = AresDocument(
+                documentUrl = request.documentUrl,
+                documentName = request.documentUrl.split("/").last().split(".").first(),
+                documentType = "xlsx",
+                uploadedBy = request.performedByUserId
+            )
+            aresDocumentRepository.save(aresDocument)
+        }
+        val excelFile = downloadExcelFile(request.documentUrl)
+        val jvParentSheet = ExcelSheetReader(excelFile).readSheet("ParentJV").toMutableList()
+        val jvLineItemSheet = ExcelSheetReader(excelFile).readSheet("JVLineItems").toMutableList()
+
+        excelFile.delete()
+        if (jvParentSheet[0].size != 9 && jvLineItemSheet[0].size != 9) {
+            throw Exception("Number of columns is not equal to 9")
+        }
+        val errorTriplet = getValidationErrorsOnUploadJobVouchers(jvLineItemSheet, request.performedByUserId.toString())
+        val mappingParentIdToParentJournalVoucher = hashMapOf<String, ParentJournalVoucher>()
+        val auditRequests = mutableListOf<AuditRequest>()
+
+        errorTriplet.errorParentId.map { parentId ->
+            jvParentSheet.removeIf { it["id"] == parentId }
+            jvLineItemSheet.removeIf { it["parent_id"] == parentId }
+        }
+
+        jvParentSheet.forEach {
+            if (errorTriplet.errorParentId.contains(it["parent_id"])) {
+                return@forEach
+            }
+            mappingParentIdToParentJournalVoucher[it["parent_id"].toString()] = ParentJournalVoucher(
+                id = null,
+                status = JVStatus.APPROVED,
+                category = it["category"].toString(),
+                validityDate = SimpleDateFormat("dd-MM-yyyy").parse(it["validity_date"].toString()),
+                jvNum = getJvNumber(),
+                createdBy = request.performedByUserId,
+                updatedBy = request.performedByUserId,
+                currency = it["currency"].toString(),
+                description = it["description"].toString(),
+                exchangeRate = BigDecimal(it["exchange_rate"].toString()),
+                jvCodeNum = it["jv_code_num"].toString(),
+                ledCurrency = it["led_currency"].toString(),
+                entityCode = parseInt(it["entity_code"].toString()),
+                transactionDate = SimpleDateFormat("dd-MM-yyyy").parse(it["validity_date"].toString()),
+                isUtilized = false
+            )
+        }
+
+        val savedParentJV = parentJVRepository.saveAll(mappingParentIdToParentJournalVoucher.values.toList())
+
+        savedParentJV.forEach { parentJv ->
+            auditRequests.add(
+                AuditRequest(
+                    objectType = AresConstants.PARENT_JOURNAL_VOUCHERS,
+                    objectId = parentJv.id,
+                    actionName = AresConstants.CREATE,
+                    data = parentJv,
+                    performedBy = request.performedByUserId.toString(),
+                    performedByUserType = request.performedByUserType
+                )
+            )
+        }
+
+        var journalVouchers = journalVoucherService.makeJournalVoucherLineItem(mappingParentIdToParentJournalVoucher, jvLineItemSheet, request, errorTriplet.tradePartyDetails, aresDocument.id)
+        journalVouchers = journalVoucherRepository.saveAll(journalVouchers)
+
+        val accUtilEntityList = makeAccountUtilizationRequestForJournalVoucher(journalVouchers, errorTriplet.tradePartyDetails)
+        journalVouchers.forEach {
+            auditRequests.add(
+                AuditRequest(
+                    objectType = AresConstants.JOURNAL_VOUCHERS,
+                    objectId = it.id,
+                    actionName = AresConstants.CREATE,
+                    data = it,
+                    performedBy = request.performedByUserId.toString(),
+                    performedByUserType = request.performedByUserType
+                )
+            )
+        }
+
+        accountUtilizationRepo.saveAll(accUtilEntityList).forEach {
+            auditRequests.add(
+                AuditRequest(
+                    objectType = AresConstants.ACCOUNT_UTILIZATIONS,
+                    objectId = it.id,
+                    actionName = AresConstants.CREATE,
+                    data = it,
+                    performedBy = request.performedByUserId.toString(),
+                    performedByUserType = request.performedByUserType
+                )
+            )
+        }
+        auditService.createAudits(auditRequests.toList())
+        return JVBulkFileUploadResponse(errorTriplet.errorFileUrl)
     }
 
     /**
@@ -924,5 +1063,146 @@ open class ParentJVServiceImpl : ParentJVService {
                 journalVoucherRepository.deleteAll(jvData)
             }
         }
+    }
+
+    private fun downloadExcelFile(url: String): File {
+        val httpClient: HttpClient = HttpClient.newBuilder().build()
+
+        val httpRequest: HttpRequest = HttpRequest
+            .newBuilder()
+            .uri(URI(url))
+            .GET()
+            .build()
+
+        val response: HttpResponse<InputStream> = httpClient
+            .send(httpRequest) { HttpResponse.BodySubscribers.ofInputStream() }
+        val fileName = url.split("/").last()
+        val file = File(fileName)
+        val inp: InputStream = ByteArrayInputStream(response.body().readAllBytes())
+        val path = Paths.get(file.path) as Path
+        Files.copy(inp, path, StandardCopyOption.REPLACE_EXISTING)
+        return file
+    }
+
+    private suspend fun getValidationErrorsOnUploadJobVouchers(
+        jvLineItems: List<Map<String, Any>>,
+        user: String
+    ): JVValidationAndCollectedInformation {
+        val errorList: MutableList<JobVoucherValidationModel> = mutableListOf()
+        val errorParentId: MutableSet<String> = mutableSetOf()
+
+        val lineItemsOfDifferentParentJV = jvLineItems.groupBy { it["parent_id"].toString() }
+
+        lineItemsOfDifferentParentJV.forEach { lineItem ->
+            val total = lineItem.value.sumOf { parseDouble(it["amount"].toString()) * getSignFlag(it["type"].toString()) }
+            if (total != 0.0) {
+                errorList.add(
+                    JobVoucherValidationModel(
+                        parentId = lineItem.key,
+                        errorName = "debit and credit are not equal"
+                    )
+                )
+                errorParentId.add(lineItem.key)
+            }
+        }
+
+        jvLineItems.filter { it["acc_mode"] != null && it["acc_mode"].toString().isNotBlank() }.forEach {
+            if (it["bpr"].toString().isBlank()) {
+                errorList.add(
+                    JobVoucherValidationModel(
+                        parentId = it["parent_id"].toString(),
+                        errorName = "acc_mode is present but bpr is not present"
+                    )
+                )
+                errorParentId.add(it["parent_id"].toString())
+            }
+        }
+
+        val tradePartyDetails = getTradePartyDetailsWithValidationForTradePartyExists(errorParentId, jvLineItems, errorList)
+
+        if (errorList.isNotEmpty()) {
+            val errorExcelName = "JV_Upload_Error_List" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_hhmmss"))
+            val errorFile = writeIntoExcel(errorList, errorExcelName, "Sheet1")
+            val url = s3Client.upload(s3Bucket, "$errorExcelName.xlsx", errorFile).toString()
+            val aresDocument = AresDocument(
+                documentUrl = url,
+                documentName = errorExcelName,
+                documentType = "xlsx",
+                uploadedBy = UUID.fromString(user)
+            )
+            aresDocumentRepository.save(aresDocument)
+            return JVValidationAndCollectedInformation(errorParentId, url, tradePartyDetails)
+        }
+        return JVValidationAndCollectedInformation(errorParentId, null, tradePartyDetails)
+    }
+
+    private fun makeAccountUtilizationRequestForJournalVoucher(journalVoucherList: List<JournalVoucher>, tradePartyDetails: Map<String, ListOrganizationTradePartyDetailsResponse>): List<AccountUtilization> {
+        return journalVoucherList.filter { it.tradePartyId != null && it.accMode != null && it.additionalDetails?.bpr != null }.map { journalVoucher ->
+            val accCode = when (journalVoucher.accMode == AccMode.AR) {
+                true -> AresModelConstants.AR_ACCOUNT_CODE
+                else -> AresModelConstants.AP_ACCOUNT_CODE
+            }
+
+            val orgDetails = tradePartyDetails[journalVoucher.additionalDetails?.bpr + journalVoucher.accMode]?.list?.first()
+            AccountUtilization(
+                id = null,
+                documentNo = journalVoucher.id!!,
+                entityCode = journalVoucher.entityCode!!,
+                orgSerialId = orgDetails?.get("serial_id").toString().toLong(),
+                sageOrganizationId = orgDetails?.get("sage_organization_id").toString(),
+                organizationId = journalVoucher.tradePartyId,
+                taggedOrganizationId = null,
+                tradePartyMappingId = null,
+                organizationName = journalVoucher.tradePartyName,
+                accType = AccountType.valueOf(journalVoucher.category),
+                accMode = journalVoucher.accMode!!,
+                signFlag = journalVoucher.signFlag!!,
+                currency = journalVoucher.currency!!,
+                ledCurrency = journalVoucher.ledCurrency,
+                amountCurr = journalVoucher.amount ?: BigDecimal.ZERO,
+                amountLoc = journalVoucher.amount?.multiply(journalVoucher.exchangeRate) ?: BigDecimal.ZERO,
+                payCurr = BigDecimal.ZERO,
+                payLoc = BigDecimal.ZERO,
+                taxableAmount = BigDecimal.ZERO,
+                zoneCode = "WEST",
+                documentStatus = DocumentStatus.FINAL,
+                documentValue = journalVoucher.jvNum,
+                dueDate = journalVoucher.validityDate,
+                transactionDate = journalVoucher.validityDate,
+                serviceType = ServiceType.NA.toString(),
+                category = null,
+                createdAt = Timestamp.from(Instant.now()),
+                updatedAt = Timestamp.from(Instant.now()),
+                accCode = accCode,
+                migrated = false,
+                settlementEnabled = true,
+                isProforma = false
+            )
+        }
+    }
+
+    private suspend fun getTradePartyDetailsWithValidationForTradePartyExists(errorParentId: MutableSet<String>, journalVouchers: List<Map<String, Any>>, errorList: MutableList<JobVoucherValidationModel>): Map<String, ListOrganizationTradePartyDetailsResponse> {
+        val organizationTradePartyDetails: MutableMap<String, ListOrganizationTradePartyDetailsResponse> = mutableMapOf()
+        journalVouchers.forEach {
+            if (errorParentId.contains(it["parent_id"].toString()) || organizationTradePartyDetails.containsKey(it["bpr"].toString() + it["acc_mode"].toString())) {
+                return@forEach
+            }
+            var tradePartyDetails: ListOrganizationTradePartyDetailsResponse? = null
+            if (it["bpr"].toString() != "" && it["acc_mode"].toString() != "") {
+                tradePartyDetails = railsClient.getListOrganizationTradePartyDetails("active", it["bpr"].toString(), if (it["acc_mode"].toString() == "AP") "service_provider" else "importer_exporter", true)
+                if (tradePartyDetails.list.isNullOrEmpty()) {
+                    errorParentId.add(it["parent_id"].toString())
+                    errorList.add(
+                        JobVoucherValidationModel(
+                            parentId = it["parent_id"].toString(),
+                            errorName = "trade party could not be found"
+                        )
+                    )
+                } else {
+                    organizationTradePartyDetails[it["bpr"].toString() + it["acc_mode"].toString()] = tradePartyDetails
+                }
+            }
+        }
+        return organizationTradePartyDetails
     }
 }
