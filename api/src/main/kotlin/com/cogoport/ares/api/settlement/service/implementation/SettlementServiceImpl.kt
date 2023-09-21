@@ -2489,7 +2489,7 @@ open class SettlementServiceImpl : SettlementService {
     suspend fun getDocumentData(id: String, type: String): AccountUtilization {
         var document: AccountUtilization? = null
         val jvType = settlementServiceHelper.getJvList(SettlementType::class.java)
-        val paymentsType = listOf("REC", "PAY")
+        val paymentsType = listOf("REC", "PAY","CTDS")
         if (jvType.contains(SettlementType.valueOf(type))) {
             val jv = journalVoucherRepository.findById(Hashids.decode(id)[0])
             if (jv != null) {
