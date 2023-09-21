@@ -248,8 +248,8 @@ open class ParentJVServiceImpl : ParentJVService {
             throw Exception("Number of columns is not equal to 9")
         }
         val errorTriplet = getValidationErrorsOnUploadJobVouchers(jvLineItemSheet, request.performedByUserId.toString())
-        val mappingParentIdToParentJournalVoucher: MutableMap<String, ParentJournalVoucher> = HashMap()
-        val auditRequests: MutableList<AuditRequest> = ArrayList()
+        var mappingParentIdToParentJournalVoucher = hashMapOf<String, ParentJournalVoucher>()
+        val auditRequests = mutableListOf<AuditRequest>()
 
         jvParentSheet.forEach {
             if (errorTriplet.errorParentId.contains(it["parent_id"])) {
@@ -275,9 +275,13 @@ open class ParentJVServiceImpl : ParentJVService {
         }
 
         val savedParentJV = parentJVRepository.saveAll(mappingParentIdToParentJournalVoucher.values.toList())
-        val jvLineItemsEntity: MutableList<JournalVoucher> = ArrayList()
 
         savedParentJV.forEach { parentJv ->
+            val taggedKeyAgainstParent = mappingParentIdToParentJournalVoucher.entries
+                .firstOrNull { it.value.jvNum == parentJv.jvNum }?.key
+
+            mappingParentIdToParentJournalVoucher[taggedKeyAgainstParent.toString()] = parentJv
+
             auditRequests.add(
                 AuditRequest(
                     objectType = AresConstants.PARENT_JOURNAL_VOUCHERS,
@@ -288,16 +292,13 @@ open class ParentJVServiceImpl : ParentJVService {
                     performedByUserType = request.performedByUserType
                 )
             )
-            val parentId = mappingParentIdToParentJournalVoucher.filter { parentJv.jvNum == it.value.jvNum }.keys.first()
-            val jvLineItems = jvLineItemSheet.filter { it["parent_id"].toString() == parentId }
-            jvLineItemsEntity.addAll(journalVoucherService.makeJournalVoucherLineItem(parentJv, jvLineItems, request, errorTriplet.tradePartyDetails))
         }
 
-        val accountUtilization: MutableList<AccountUtilization> = ArrayList()
-        journalVoucherRepository.saveAll(jvLineItemsEntity).forEach {
-            if (it.tradePartyId != null) {
-                accountUtilization.add(makeAccountUtilizationRequestForJournalVoucher(it))
-            }
+        var journalVouchers = journalVoucherService.makeJournalVoucherLineItem(mappingParentIdToParentJournalVoucher, jvLineItemSheet, request, errorTriplet.tradePartyDetails)
+        journalVouchers = journalVoucherRepository.saveAll(journalVouchers)
+
+        val accUtilEntityList = makeAccountUtilizationRequestForJournalVoucher(journalVouchers, errorTriplet.tradePartyDetails)
+        journalVouchers.forEach {
             auditRequests.add(
                 AuditRequest(
                     objectType = AresConstants.JOURNAL_VOUCHERS,
@@ -309,7 +310,8 @@ open class ParentJVServiceImpl : ParentJVService {
                 )
             )
         }
-        accountUtilizationRepo.saveAll(accountUtilization).forEach {
+
+        accountUtilizationRepo.saveAll(accUtilEntityList).forEach {
             auditRequests.add(
                 AuditRequest(
                     objectType = AresConstants.ACCOUNT_UTILIZATIONS,
@@ -1134,47 +1136,49 @@ open class ParentJVServiceImpl : ParentJVService {
         return JVValidationAndCollectedInformation(errorParentId, null, tradePartyDetails)
     }
 
-    private suspend fun makeAccountUtilizationRequestForJournalVoucher(journalVoucher: JournalVoucher): AccountUtilization {
-        val organization = railsClient.getListOrganizationTradePartyDetails(journalVoucher.tradePartyId!!)
+    private fun makeAccountUtilizationRequestForJournalVoucher(journalVoucherList: List<JournalVoucher>, tradePartyDetails: Map<String, ListOrganizationTradePartyDetailsResponse>): List<AccountUtilization> {
+        return journalVoucherList.filter { it.tradePartyId != null }.map { journalVoucher ->
+            val accCode = when (journalVoucher.accMode == AccMode.AR) {
+                true -> AresModelConstants.AR_ACCOUNT_CODE
+                else -> AresModelConstants.AP_ACCOUNT_CODE
+            }
 
-        val accCode = when (journalVoucher.accMode == AccMode.AR) {
-            true -> AresModelConstants.AR_ACCOUNT_CODE
-            else -> AresModelConstants.AP_ACCOUNT_CODE
+            val orgDetails = tradePartyDetails.values.first().list.first { it["id"] == journalVoucher.tradePartyId }
+            AccountUtilization(
+                id = null,
+                documentNo = journalVoucher.id!!,
+                entityCode = journalVoucher.entityCode!!,
+                orgSerialId = orgDetails["serial_id"].toString().toLong(),
+                sageOrganizationId = orgDetails["sage_organization_id"].toString(),
+                organizationId = journalVoucher.tradePartyId,
+                taggedOrganizationId = null,
+                tradePartyMappingId = null,
+                organizationName = journalVoucher.tradePartyName,
+                accType = AccountType.valueOf(journalVoucher.category),
+                accMode = journalVoucher.accMode!!,
+                signFlag = journalVoucher.signFlag!!,
+                currency = journalVoucher.currency!!,
+                ledCurrency = journalVoucher.ledCurrency,
+                amountCurr = journalVoucher.amount ?: BigDecimal.ZERO,
+                amountLoc = journalVoucher.amount?.multiply(journalVoucher.exchangeRate) ?: BigDecimal.ZERO,
+                payCurr = BigDecimal.ZERO,
+                payLoc = BigDecimal.ZERO,
+                taxableAmount = BigDecimal.ZERO,
+                zoneCode = "WEST",
+                documentStatus = DocumentStatus.FINAL,
+                documentValue = journalVoucher.jvNum,
+                dueDate = journalVoucher.validityDate,
+                transactionDate = journalVoucher.validityDate,
+                serviceType = ServiceType.NA.toString(),
+                category = null,
+                createdAt = Timestamp.from(Instant.now()),
+                updatedAt = Timestamp.from(Instant.now()),
+                accCode = accCode,
+                migrated = false,
+                settlementEnabled = true,
+                isProforma = false
+            )
         }
-        return AccountUtilization(
-            id = null,
-            documentNo = journalVoucher.id!!,
-            entityCode = journalVoucher.entityCode!!,
-            orgSerialId = organization.list[0]["serial_id"].toString().toLong(),
-            sageOrganizationId = organization.list[0]["sage_organization_id"].toString(),
-            organizationId = journalVoucher.tradePartyId,
-            taggedOrganizationId = null,
-            tradePartyMappingId = null,
-            organizationName = journalVoucher.tradePartyName,
-            accType = AccountType.valueOf(journalVoucher.category),
-            accMode = journalVoucher.accMode!!,
-            signFlag = journalVoucher.signFlag!!,
-            currency = journalVoucher.currency!!,
-            ledCurrency = journalVoucher.ledCurrency,
-            amountCurr = journalVoucher.amount ?: BigDecimal.ZERO,
-            amountLoc = journalVoucher.amount?.multiply(journalVoucher.exchangeRate) ?: BigDecimal.ZERO,
-            payCurr = BigDecimal.ZERO,
-            payLoc = BigDecimal.ZERO,
-            taxableAmount = BigDecimal.ZERO,
-            zoneCode = "WEST",
-            documentStatus = DocumentStatus.FINAL,
-            documentValue = journalVoucher.jvNum,
-            dueDate = journalVoucher.validityDate,
-            transactionDate = journalVoucher.validityDate,
-            serviceType = ServiceType.NA.toString(),
-            category = null,
-            createdAt = Timestamp.from(Instant.now()),
-            updatedAt = Timestamp.from(Instant.now()),
-            accCode = accCode,
-            migrated = false,
-            settlementEnabled = true,
-            isProforma = false
-        )
     }
 
     private suspend fun getTradePartyDetailsWithValidationForTradePartyExists(errorParentId: MutableSet<String>, journalVouchers: List<Map<String, Any>>, errorList: MutableList<JobVoucherValidationModel>): Map<String, ListOrganizationTradePartyDetailsResponse> {

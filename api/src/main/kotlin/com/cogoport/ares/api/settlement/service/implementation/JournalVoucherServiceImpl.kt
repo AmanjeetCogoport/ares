@@ -279,14 +279,21 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         )
     }
 
-    override fun makeJournalVoucherLineItem(parentJvData: ParentJournalVoucher, journalVouchers: List<Map<String, Any>>, jvBulkFileUploadRequest: JVBulkFileUploadRequest, tradePartyDetails: Map<String, ListOrganizationTradePartyDetailsResponse>): List<JournalVoucher> {
-        val data: MutableList<JournalVoucher> = mutableListOf()
-
-        journalVouchers.forEach {
-            data.add(
+    override fun makeJournalVoucherLineItem(
+        parentMapping: HashMap<String, ParentJournalVoucher>,
+        journalVouchers: List<Map<String, Any>>,
+        jvBulkFileUploadRequest: JVBulkFileUploadRequest,
+        tradePartyDetails: Map<String, ListOrganizationTradePartyDetailsResponse>,
+    ): List<JournalVoucher> {
+        return journalVouchers.groupBy { it["parent_id"].toString() }.map { (k, v) ->
+            v.map {
+                val tradeParty = if(tradePartyDetails.containsKey(it["bpr"].toString() + it["acc_mode"].toString())) tradePartyDetails[it["bpr"].toString() + it["acc_mode"].toString()]!!.list[0] else null
+                val tradePartyId = if (tradeParty == null) null else UUID.fromString(tradeParty["id"].toString())
+                val tradePartyName = if (tradeParty == null) null else tradeParty["legal_business_name"].toString()
+                val parentJvData = parentMapping[k]
                 JournalVoucher(
                     id = null,
-                    jvNum = parentJvData.jvNum!!,
+                    jvNum = parentJvData?.jvNum!!,
                     accMode = if (it["acc_mode"].toString().isNotBlank()) AccMode.valueOf(it["acc_mode"].toString()) else AccMode.OTHER,
                     category = it["category"].toString(),
                     createdAt = parentJvData.createdAt,
@@ -306,16 +313,15 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                     type = it["type"].toString(),
                     signFlag = getSignFlag(it["type"].toString()),
                     status = JVStatus.APPROVED,
-                    tradePartyId = if (it["acc_mode"].toString().isBlank()) null else UUID.fromString(tradePartyDetails[it["bpr"].toString() + it["acc_mode"].toString()]!!.list[0]["id"].toString()),
-                    tradePartyName = if (it["acc_mode"].toString().isBlank()) null else tradePartyDetails[it["bpr"].toString() + it["acc_mode"]]!!.list[0]["legal_business_name"].toString(),
+                    tradePartyId = tradePartyId,
+                    tradePartyName = tradePartyName,
                     validityDate = parentJvData.transactionDate,
                     migrated = false,
                     deletedAt = null,
                     additionalDetails = null
                 )
-            )
-        }
-        return data
+            }
+        }.first()
     }
 
     private fun getSignFlag(type: String): Short {
