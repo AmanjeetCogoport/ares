@@ -26,13 +26,11 @@ interface GlCodeRepository : CoroutineCrudRepository<GlCode, Long> {
                     gl_codes
                 WHERE 
                     (:entityCode IS NULL OR entity_code = :entityCode) and
-                    (:accountNumber IS NULL OR account_number = :accountNumber) and 
-                    (:currency IS NULL OR currency = :currency)
                 AND
                     gl_code ILIKE :q
                 LIMIT
                     :pageLimit
             """
     )
-    fun getGLCode(entityCode: Int?, q: String?, pageLimit: Int?, accountNumber: String?, currency: String?): List<GlCode>
+    fun getGLCode(entityCode: Int?, q: String?, pageLimit: Int?): List<GlCode>
 }

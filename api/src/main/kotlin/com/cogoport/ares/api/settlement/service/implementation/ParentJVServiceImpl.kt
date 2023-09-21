@@ -227,18 +227,18 @@ open class ParentJVServiceImpl : ParentJVService {
     }
 
     override suspend fun uploadJournalVouchers(request: JVBulkFileUploadRequest): JVBulkFileUploadResponse {
-        if (aresDocumentRepository.existsByDocumentUrl(request.url)) {
+        if (aresDocumentRepository.existsByDocumentUrl(request.documentUrl)) {
             throw Exception("File already uploaded")
         } else {
             val aresDocument = AresDocument(
-                documentUrl = request.url,
-                documentName = request.url.split("/").last().split(".").first(),
+                documentUrl = request.documentUrl,
+                documentName = request.documentUrl.split("/").last().split(".").first(),
                 documentType = "xlsx",
-                uploadedBy = request.performedById
+                uploadedBy = request.performedByUserId
             )
             aresDocumentRepository.save(aresDocument)
         }
-        val excelFile = downloadExcelFile(request.url)
+        val excelFile = downloadExcelFile(request.documentUrl)
         val jvParentSheet = ExcelSheetReader(excelFile).readSheet("ParentJV")
         val jvLineItemSheet = ExcelSheetReader(excelFile).readSheet("JVLineItems")
 
@@ -247,7 +247,7 @@ open class ParentJVServiceImpl : ParentJVService {
         if (jvParentSheet[0].size != 9 && jvLineItemSheet[0].size != 9) {
             throw Exception("Number of columns is not equal to 9")
         }
-        val errorTriplet = getValidationErrorsOnUploadJobVouchers(jvLineItemSheet, request.performedById.toString())
+        val errorTriplet = getValidationErrorsOnUploadJobVouchers(jvLineItemSheet, request.performedByUserId.toString())
         val mappingParentIdToParentJournalVoucher: MutableMap<String, ParentJournalVoucher> = HashMap()
         val auditRequests: MutableList<AuditRequest> = ArrayList()
 
@@ -261,8 +261,8 @@ open class ParentJVServiceImpl : ParentJVService {
                 category = it["category"].toString(),
                 validityDate = SimpleDateFormat("dd-MM-yyyy").parse(it["validity_date"].toString()),
                 jvNum = getJvNumber(),
-                createdBy = request.performedById,
-                updatedBy = request.performedById,
+                createdBy = request.performedByUserId,
+                updatedBy = request.performedByUserId,
                 currency = it["currency"].toString(),
                 description = it["description"].toString(),
                 exchangeRate = BigDecimal(it["exchange_rate"].toString()),
@@ -284,7 +284,7 @@ open class ParentJVServiceImpl : ParentJVService {
                     objectId = parentJv.id,
                     actionName = AresConstants.CREATE,
                     data = parentJv,
-                    performedBy = request.performedById.toString(),
+                    performedBy = request.performedByUserId.toString(),
                     performedByUserType = request.performedByUserType
                 )
             )
@@ -304,7 +304,7 @@ open class ParentJVServiceImpl : ParentJVService {
                     objectId = it.id,
                     actionName = AresConstants.CREATE,
                     data = it,
-                    performedBy = request.performedById.toString(),
+                    performedBy = request.performedByUserId.toString(),
                     performedByUserType = request.performedByUserType
                 )
             )
@@ -316,7 +316,7 @@ open class ParentJVServiceImpl : ParentJVService {
                     objectId = it.id,
                     actionName = AresConstants.CREATE,
                     data = it,
-                    performedBy = request.performedById.toString(),
+                    performedBy = request.performedByUserId.toString(),
                     performedByUserType = request.performedByUserType
                 )
             )
@@ -925,7 +925,7 @@ open class ParentJVServiceImpl : ParentJVService {
     override suspend fun getGLCode(entityCode: Int?, q: String?, pageLimit: Int?): List<GlCode> {
         val query = util.toQueryString(q)
         val updatedPageLimit = pageLimit ?: 10
-        return glCodeRepository.getGLCode(entityCode, query, updatedPageLimit, null, null)
+        return glCodeRepository.getGLCode(entityCode, query, updatedPageLimit)
     }
 
     override suspend fun getGLCodeMaster(accMode: AccMode?, q: String?, pageLimit: Int?, entityCode: Int?): List<GlCodeMaster> {
