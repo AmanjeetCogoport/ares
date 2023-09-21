@@ -285,7 +285,7 @@ open class ParentJVServiceImpl : ParentJVService {
                     actionName = AresConstants.CREATE,
                     data = parentJv,
                     performedBy = request.performedById.toString(),
-                    performedByUserType = request.userType
+                    performedByUserType = request.performedByUserType
                 )
             )
             val parentId = mappingParentIdToParentJournalVoucher.filter { parentJv.jvNum == it.value.jvNum }.keys.first()
@@ -305,7 +305,7 @@ open class ParentJVServiceImpl : ParentJVService {
                     actionName = AresConstants.CREATE,
                     data = it,
                     performedBy = request.performedById.toString(),
-                    performedByUserType = request.userType
+                    performedByUserType = request.performedByUserType
                 )
             )
         }
@@ -317,7 +317,7 @@ open class ParentJVServiceImpl : ParentJVService {
                     actionName = AresConstants.CREATE,
                     data = it,
                     performedBy = request.performedById.toString(),
-                    performedByUserType = request.userType
+                    performedByUserType = request.performedByUserType
                 )
             )
         }
