@@ -762,13 +762,12 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             LEFT JOIN settlements s ON 
                 s.destination_id = au.document_no 
                 AND s.destination_type::varchar = au.acc_type::varchar 
-                AND s.source_type::varchar in ('CTDS','VTDS')
+                AND s.source_type::varchar in ('CTDS','VTDS') AND s.deleted_at is null
             WHERE au.id in (
                 SELECT id from FILTERS
             )
             AND au.deleted_at is null
             AND au.document_status != 'DELETED'::document_status
-            AND s.deleted_at is null
             AND p.deleted_at is null 
             AND au.is_void = false
             AND au.settlement_enabled = true

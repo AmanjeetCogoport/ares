@@ -35,5 +35,6 @@ interface JournalVoucherService {
         journalVouchers: List<Map<String, Any>>,
         jvBulkFileUploadRequest: JVBulkFileUploadRequest,
         tradePartyDetails: Map<String, ListOrganizationTradePartyDetailsResponse>,
+        documentId: Long?
     ): List<JournalVoucher>
 }
