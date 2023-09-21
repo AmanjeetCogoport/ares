@@ -21,6 +21,7 @@ import com.cogoport.ares.api.payment.repository.LedgerSummaryRepo
 import com.cogoport.ares.api.payment.repository.UnifiedDBNewRepository
 import com.cogoport.ares.api.payment.service.interfaces.DefaultedBusinessPartnersService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
+import com.cogoport.ares.api.utils.ExcelUtils
 import com.cogoport.ares.api.utils.Util.Companion.divideNumbers
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
@@ -58,6 +59,7 @@ import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocumentV2
 import com.cogoport.ares.model.payment.response.SupplyAgentV2
 import com.cogoport.ares.model.settlement.SettlementType
+import com.cogoport.brahma.excel.utils.ExcelSheetReader
 import com.cogoport.brahma.opensearch.Client
 import com.cogoport.brahma.opensearch.Configuration
 import com.fasterxml.jackson.databind.DeserializationFeature
@@ -1313,5 +1315,32 @@ class OutStandingServiceImpl : OutStandingService {
         }
 
         return entityLevelStats
+    }
+
+    override suspend fun createRecordInBulk(url: String?) {
+        val fileData = ExcelUtils.downloadExcelFile(url!!)
+        val excelSheetReader = ExcelSheetReader(fileData)
+        val accUtilData = excelSheetReader.read()
+        fileData.delete()
+
+        val bprs = accUtilData.map {it["bpr"].toString()}
+        val accMode = accUtilData.first()["acc_mode"].toString()
+
+        val accountType = if (accMode === AccMode.AR.name) { "importer_exporter" } else {"service_provider"}
+
+        val orgLevelData = unifiedDBNewRepository.getOrgDetails(bprs, accountType)
+
+        accUtilData.map {
+            var accType: AccountType? = null
+            if ((it["ledger_ending_debit_balance"].toString()).toBigDecimal() != 0.toBigDecimal() ) {
+                accType = AccountType.SINV
+            }
+            if ((it["ledger_ending_credit_balance"].toString()).toBigDecimal() != 0.toBigDecimal() ) {
+                accType = AccountType.REC
+            }
+
+
+
+        }
     }
 }

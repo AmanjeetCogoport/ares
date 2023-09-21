@@ -74,4 +74,6 @@ interface OutStandingService {
     suspend fun listSupplierDetailsV2(request: SupplierOutstandingRequestV2): ResponseList<SupplierOutstandingDocumentV2?>
 
     suspend fun getEntityLevelStats(entityCode: Int): List<EntityLevelStats>
+
+    suspend fun createRecordInBulk(url: String?)
 }

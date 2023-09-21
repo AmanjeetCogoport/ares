@@ -212,4 +212,9 @@ class OutstandingController {
         val updatedEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: entityCode
         return outStandingService.getEntityLevelStats(updatedEntityCode)
     }
+
+    @Get("/bulk-upload")
+    suspend fun createRecordInBulk(@QueryValue url: String?){
+        return outStandingService.createRecordInBulk(url)
+    }
 }
