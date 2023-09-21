@@ -16,7 +16,7 @@ import io.micronaut.http.annotation.QueryValue
 import io.micronaut.http.client.annotation.Client
 import java.util.UUID
 
-@Client(id = "shipment")
+@Client(id = "bf-rails")
 @Headers(
     Header(name = HttpHeaders.AUTHORIZATION, value = "Bearer: \${cogoport.bearer_token_new}"),
     Header(name = "AuthorizationScope", value = "micro_service"),

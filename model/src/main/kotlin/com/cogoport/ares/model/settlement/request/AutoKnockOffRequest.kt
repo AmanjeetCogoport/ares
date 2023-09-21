@@ -7,7 +7,7 @@ import java.util.UUID
 @Introspected
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class AutoKnockOffRequest(
-    var sourceId: String,
+    var paymentIdAsSourceId: String,
     var destinationId: String,
     var sourceType: String? = "REC",
     var destinationType: String? = "SINV",

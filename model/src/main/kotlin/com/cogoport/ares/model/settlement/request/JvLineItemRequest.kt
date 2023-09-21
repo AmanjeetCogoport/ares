@@ -20,6 +20,5 @@ data class JvLineItemRequest(
     @field:NotNull(message = "Type is mandatory")
     var type: String,
     var amount: BigDecimal,
-    var validityDate: Date?,
-    var currency: String? = null
+    var validityDate: Date?
 )
