@@ -504,8 +504,7 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     @Transactional(rollbackOn = [Exception::class, AresException::class])
-    open suspend fun
-    updateNonSuspensePayment(receivableRequest: Payment, accountUtilizationEntity: AccountUtilization, paymentEntity: com.cogoport.ares.api.payment.entity.Payment): OnAccountApiCommonResponse {
+    open suspend fun updateNonSuspensePayment(receivableRequest: Payment, accountUtilizationEntity: AccountUtilization, paymentEntity: com.cogoport.ares.api.payment.entity.Payment): OnAccountApiCommonResponse {
 
         if (receivableRequest.paymentDocumentStatus != null && receivableRequest.paymentDocumentStatus == PaymentDocumentStatus.APPROVED) {
             accountUtilizationEntity.documentStatus = DocumentStatus.FINAL
