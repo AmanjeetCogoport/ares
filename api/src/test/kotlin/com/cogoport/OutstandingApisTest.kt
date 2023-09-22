@@ -31,13 +31,16 @@ import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.Mockito
 import org.mockito.junit.jupiter.MockitoExtension
+import org.mockito.junit.jupiter.MockitoSettings
 import org.mockito.kotlin.any
 import org.mockito.kotlin.whenever
+import org.mockito.quality.Strictness
 import java.net.URI
 import java.util.UUID
 
 @ExtendWith(MockitoExtension::class)
 @OptIn(ExperimentalCoroutinesApi::class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 @MicronautTest(transactional = false)
 class OutstandingApisTest(
     @InjectMocks

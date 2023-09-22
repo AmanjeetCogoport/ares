@@ -297,7 +297,9 @@ class SettlementHelper(
                 migrated = false,
                 deletedAt = null,
                 additionalDetails = JVAdditionalDetails(
-                    utr = parentJvData.description
+                    utr = parentJvData.description,
+                    null,
+                    null
                 )
             )
         }
