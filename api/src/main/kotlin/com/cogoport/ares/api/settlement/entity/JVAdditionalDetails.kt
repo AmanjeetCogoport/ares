@@ -6,5 +6,7 @@ import io.micronaut.core.annotation.Introspected
 @Introspected
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class JVAdditionalDetails(
-    val utr: String?
+    val utr: String?,
+    val bpr: String?,
+    val aresDocumentId: Long?
 )

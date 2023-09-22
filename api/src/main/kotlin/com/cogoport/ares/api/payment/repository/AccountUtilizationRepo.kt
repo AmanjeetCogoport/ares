@@ -557,7 +557,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                         WHEN (now()::date - transaction_date) BETWEEN 31 AND 60 
                             AND acc_type IN ('REC', 'CTDS') 
                             AND ABS(amount_curr - pay_curr) > 0.001 THEN 1 
-                        WHEN (now()::date - transaction_date) BETWEEN 46 AND 60 
+                        WHEN (now()::date - transaction_date) BETWEEN 31 AND 60 
                             AND acc_type IN ('BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') 
                             AND amount_curr - pay_curr <> 0 THEN 1 
                         ELSE 0 
@@ -762,13 +762,12 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             LEFT JOIN settlements s ON 
                 s.destination_id = au.document_no 
                 AND s.destination_type::varchar = au.acc_type::varchar 
-                AND s.source_type::varchar in ('CTDS','VTDS')
+                AND s.source_type::varchar in ('CTDS','VTDS') AND s.deleted_at is null
             WHERE au.id in (
                 SELECT id from FILTERS
             )
             AND au.deleted_at is null
             AND au.document_status != 'DELETED'::document_status
-            AND s.deleted_at is null
             AND p.deleted_at is null 
             AND au.is_void = false
             AND au.settlement_enabled = true

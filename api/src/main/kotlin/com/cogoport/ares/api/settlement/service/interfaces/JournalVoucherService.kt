@@ -31,9 +31,10 @@ interface JournalVoucherService {
     ): Long?
 
     fun makeJournalVoucherLineItem(
-        parentJvData: ParentJournalVoucher,
+        parentMapping: HashMap<String, ParentJournalVoucher>,
         journalVouchers: List<Map<String, Any>>,
         jvBulkFileUploadRequest: JVBulkFileUploadRequest,
-        tradePartyDetails: Map<String, ListOrganizationTradePartyDetailsResponse>
+        tradePartyDetails: Map<String, ListOrganizationTradePartyDetailsResponse>,
+        documentId: Long?
     ): List<JournalVoucher>
 }
