@@ -233,7 +233,7 @@ open class ParentJVServiceImpl : ParentJVService {
 
     override suspend fun uploadJournalVouchers(request: JVBulkFileUploadRequest): JVBulkFileUploadResponse {
         var aresDocument: AresDocument? = null
-        if (false) {
+        if (aresDocumentRepository.existsByDocumentUrl(request.documentUrl)) {
             throw Exception("File already uploaded")
         } else {
             aresDocument = AresDocument(
