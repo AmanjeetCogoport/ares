@@ -94,3 +94,6 @@ rabbitmq:
 lsp:
   coming_soon_banner:
     enabled: true
+
+scheduler:
+  enabled: true
