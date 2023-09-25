@@ -30,7 +30,7 @@ interface JournalVoucherService {
         utr: String?
     ): Long?
 
-    fun makeJournalVoucherLineItem(
+    suspend fun makeJournalVoucherLineItem(
         parentMapping: HashMap<String, ParentJournalVoucher>,
         journalVouchers: List<Map<String, Any>>,
         jvBulkFileUploadRequest: JVBulkFileUploadRequest,

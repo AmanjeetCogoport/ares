@@ -8,9 +8,11 @@ import com.cogoport.ares.api.common.enums.ThirdPartyApiNames
 import com.cogoport.ares.api.common.enums.ThirdPartyApiType
 import com.cogoport.ares.api.common.enums.ThirdPartyObjectName
 import com.cogoport.ares.api.common.enums.ThirdPartyResponseCode
+import com.cogoport.ares.api.common.models.ExchangeRequest
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
+import com.cogoport.ares.api.gateway.ExchangeClient
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.AresDocument
 import com.cogoport.ares.api.payment.model.AuditRequest
@@ -168,6 +170,9 @@ open class ParentJVServiceImpl : ParentJVService {
     @Value("\${sage.databaseName}")
     var sageDatabase: String? = null
 
+    @Inject
+    lateinit var exchangeClient: ExchangeClient
+
     /**
      * Create a journal voucher and add it to account_utilizationns.
      * @param: ParentJournalVoucherRequest
@@ -228,7 +233,7 @@ open class ParentJVServiceImpl : ParentJVService {
 
     override suspend fun uploadJournalVouchers(request: JVBulkFileUploadRequest): JVBulkFileUploadResponse {
         var aresDocument: AresDocument? = null
-        if (aresDocumentRepository.existsByDocumentUrl(request.documentUrl)) {
+        if (false) {
             throw Exception("File already uploaded")
         } else {
             aresDocument = AresDocument(
@@ -244,8 +249,11 @@ open class ParentJVServiceImpl : ParentJVService {
         val jvLineItemSheet = ExcelSheetReader(excelFile).readSheet("JVLineItems").toMutableList()
 
         excelFile.delete()
-        if (jvParentSheet[0].size != 9 && jvLineItemSheet[0].size != 9) {
-            throw Exception("Number of columns is not equal to 9")
+        if (jvParentSheet[0].size != 8) {
+            throw Exception("Number of columns is not equal to 8")
+        }
+        if (jvLineItemSheet[0].size != 6) {
+            throw Exception("Number of columns is not equal to 6")
         }
         val errorTriplet = getValidationErrorsOnUploadJobVouchers(jvLineItemSheet, request.performedByUserId.toString())
         val mappingParentIdToParentJournalVoucher = hashMapOf<String, ParentJournalVoucher>()
@@ -260,21 +268,31 @@ open class ParentJVServiceImpl : ParentJVService {
             if (errorTriplet.errorParentId.contains(it["parent_id"])) {
                 return@forEach
             }
+            val exchangeRate = if (it["currency"].toString() != it["led_currency"].toString()) {
+                exchangeClient.getExchangeRate(
+                    ExchangeRequest(
+                        from_curr = it["currency"].toString(),
+                        to_curr = it["led_currency"].toString(),
+                        exchange_date = it["validity_date"].toString()
+                    )
+                ).exchangeRate
+            } else { 1.toBigDecimal() }
+
             mappingParentIdToParentJournalVoucher[it["parent_id"].toString()] = ParentJournalVoucher(
                 id = null,
                 status = JVStatus.APPROVED,
                 category = it["category"].toString(),
-                validityDate = SimpleDateFormat("dd-MM-yyyy").parse(it["validity_date"].toString()),
+                validityDate = SimpleDateFormat("yyyy-MM-dd").parse(it["validity_date"].toString()),
                 jvNum = getJvNumber(),
                 createdBy = request.performedByUserId,
                 updatedBy = request.performedByUserId,
                 currency = it["currency"].toString(),
                 description = it["description"].toString(),
-                exchangeRate = BigDecimal(it["exchange_rate"].toString()),
+                exchangeRate = exchangeRate,
                 jvCodeNum = it["jv_code_num"].toString(),
                 ledCurrency = it["led_currency"].toString(),
                 entityCode = parseInt(it["entity_code"].toString()),
-                transactionDate = SimpleDateFormat("dd-MM-yyyy").parse(it["validity_date"].toString()),
+                transactionDate = SimpleDateFormat("yyyy-MM-dd").parse(it["validity_date"].toString()),
                 isUtilized = false
             )
         }
@@ -1115,6 +1133,27 @@ open class ParentJVServiceImpl : ParentJVService {
                     )
                 )
                 errorParentId.add(it["parent_id"].toString())
+            }
+        }
+
+        jvLineItems.map {
+            if (it["gl_code"].toString().isBlank()) {
+                errorList.add(
+                    JobVoucherValidationModel(
+                        parentId = it["parent_id"].toString(),
+                        errorName = "gl code can not be empty."
+                    )
+                )
+                errorParentId.add(it["parent_id"].toString())
+            } else {
+                if (!glCodeMasterRepository.checkIfGlCodeIsValid(it["gl_code"].toString())) {
+                    errorList.add(
+                        JobVoucherValidationModel(
+                            parentId = it["parent_id"].toString(),
+                            errorName = "gl code is invalid."
+                        )
+                    )
+                } else {}
             }
         }
 
