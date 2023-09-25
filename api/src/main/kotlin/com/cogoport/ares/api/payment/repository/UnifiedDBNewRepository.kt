@@ -2,6 +2,9 @@ package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.models.ARLedgerJobDetailsResponse
+import com.cogoport.ares.api.common.models.BankDetails
+import com.cogoport.ares.api.common.models.CreditControllerDetails
+import com.cogoport.ares.api.common.models.InvoiceDetails
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.LedgerSummary
 import com.cogoport.ares.api.payment.entity.SupplierLevelData
@@ -495,4 +498,68 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
         """
     )
     suspend fun getSupplierDetailData(): List<SupplierLevelData>
+
+    @NewSpan
+    @Query(
+            """select b.bank_name from plutus.invoices i
+                left join plutus.addresses a on i.id = a.invoice_id and organization_type = 'SELLER'
+                left join plutus.bank_details b on a.id = b.address_id
+                where i.id = :invoiceId
+            """
+    )
+    suspend fun getBankDetails(invoiceId: Long): BankDetails
+
+    @NewSpan
+    @Query(
+            """
+                select invoice_pdf_url from plutus.invoices where id = :invoiceId
+            """
+    )
+    suspend fun getInvoiceDetails(invoiceId: Long): InvoiceDetails
+
+    @NewSpan
+    @Query(
+            """
+            SELECT u.email 
+            FROM loki.jobs j 
+            LEFT JOIN plutus.invoices i ON j.id = i.job_id
+            LEFT JOIN plutus.addresses a ON a.invoice_id = i.id AND a.organization_type = 'BUYER'
+            LEFT JOIN organization_trade_parties otp ON a.trade_party_mapping_id = otp.id
+            LEFT JOIN organization_stakeholders os ON os.stakeholder_id = (j.job_details->'salesAgent'->>'id')::uuid 
+                AND os.organization_id = otp.organization_id 
+                AND os.status = 'active' 
+                AND os.stakeholder_type = 'sales_agent'
+            LEFT JOIN users u ON u.id = os.user_id
+            WHERE i.id = :invoiceId
+            """
+    )
+    suspend fun getSalesAgentEmail(invoiceId: Long): MutableList<String>
+
+    @NewSpan
+    @Query(
+            """
+                SELECT u.email, u.mobile_country_code, u.mobile_number
+                FROM loki.jobs j 
+                LEFT JOIN plutus.invoices i ON j.id = i.job_id
+                LEFT JOIN plutus.addresses a ON a.invoice_id = i.id AND a.organization_type = 'BUYER'
+                LEFT JOIN organization_trade_parties otp ON a.trade_party_mapping_id = otp.id
+                LEFT JOIN organization_stakeholders os ON
+                    os.organization_id = otp.organization_id 
+                    AND os.status = 'active' 
+                    AND os.stakeholder_type = 'credit_controller'
+                LEFT JOIN users u ON u.id = os.stakeholder_id
+                WHERE i.id = :invoiceId
+            """
+    )
+    suspend fun getCreditControllerEmail(invoiceId: Long): List<CreditControllerDetails>
+
+    @NewSpan
+    @Query(
+            """
+                select otp.organization_id from plutus.addresses a
+                join organization_trade_parties otp on a.trade_party_mapping_id = otp.id and a.organization_type = 'BUYER'
+                where a.invoice_id = 'invoiceId'
+            """
+    )
+    suspend fun getOrganisationId(invoiceId: Long): UUID
 }
