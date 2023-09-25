@@ -3,7 +3,6 @@ package com.cogoport.ares.api.payment.service.implementation
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.config.OpenSearchConfig
 import com.cogoport.ares.api.common.enums.SequenceSuffix
-import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
@@ -26,6 +25,7 @@ import com.cogoport.ares.api.payment.repository.LedgerSummaryRepo
 import com.cogoport.ares.api.payment.repository.UnifiedDBNewRepository
 import com.cogoport.ares.api.payment.service.interfaces.DefaultedBusinessPartnersService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
+import com.cogoport.ares.api.settlement.model.ExcelValidationModel
 import com.cogoport.ares.api.utils.ExcelUtils
 import com.cogoport.ares.api.utils.Util.Companion.divideNumbers
 import com.cogoport.ares.api.utils.Utilities
@@ -71,8 +71,10 @@ import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.brahma.excel.utils.ExcelSheetReader
 import com.cogoport.brahma.opensearch.Client
 import com.cogoport.brahma.opensearch.Configuration
+import com.cogoport.brahma.s3.client.S3Client
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.micronaut.context.annotation.Value
 import io.sentry.Sentry
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -87,6 +89,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.Year
+import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.UUID
 import kotlin.math.ceil
@@ -132,6 +135,12 @@ class OutStandingServiceImpl : OutStandingService {
 
     @Inject
     lateinit var aresDocumentRepository: AresDocumentRepository
+
+    @Value("\${aws.s3.bucket}")
+    private lateinit var s3Bucket: String
+
+    @Inject
+    lateinit var s3Client: S3Client
 
     private fun validateInput(request: OutstandingListRequest) {
         try {
@@ -1333,7 +1342,7 @@ class OutStandingServiceImpl : OutStandingService {
         return entityLevelStats
     }
 
-    override suspend fun createRecordInBulk(request: BulkUploadRequest?) {
+    override suspend fun createRecordInBulk(request: BulkUploadRequest?): String? {
         val url = request?.fileUrl
         val aresDocument = AresDocument(
             documentUrl = url.toString(),
@@ -1355,55 +1364,91 @@ class OutStandingServiceImpl : OutStandingService {
             sageOrgIds = bprs,
             accType = accountType
         )
+        val accUtils = mutableListOf<AccountUtilization>()
+        val excelErrorList = mutableListOf<ExcelValidationModel>()
 
-        val accUtils = accUtilData.map {
+        accUtilData.map {
             val accType = if (accMode == AccMode.AP.name) {
-                if ((it["ledger_ending_debit_balance"].toString()).toBigDecimal() != 0.toBigDecimal()) {
+                if ((it["ledger_ending_debit_balance"].toString()) != "" && (it["ledger_ending_debit_balance"].toString()).toBigDecimal() != 0.toBigDecimal()) {
                     AccountType.PAY
                 } else {
                     AccountType.PINV
                 }
             } else {
-                if ((it["ledger_ending_debit_balance"].toString()).toBigDecimal() != 0.toBigDecimal()) {
+                if ((it["ledger_ending_debit_balance"].toString()) != "" && (it["ledger_ending_debit_balance"].toString()).toBigDecimal() != 0.toBigDecimal()) {
                     AccountType.SINV
                 } else {
                     AccountType.REC
                 }
             }
 
-            val signFlag = SignSuffix.valueOf(accType.name).sign
-            val docNumber = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.CLOSING.prefix)
-            val orgDetail = orgLevelData?.first { org -> org.bpr.toString() == it["bpr"].toString() }
+            val signFlag = when (accType) {
+                AccountType.PAY -> 1
+                AccountType.SINV -> 1
+                AccountType.PINV -> -1
+                AccountType.REC -> -1
+                else -> throw AresException(AresError.ERR_1009, "AccountType")
+            }
 
-            AccountUtilization(
-                id = null,
-                documentNo = docNumber,
-                documentValue = SequenceSuffix.CLOSING.prefix + "/" + Utilities.getFinancialYear() + "/" + docNumber,
-                accCode = if (accMode === AccMode.AR.name) AresModelConstants.AR_ACCOUNT_CODE else AresModelConstants.AP_ACCOUNT_CODE,
-                accType = AccountType.CLOSING,
-                accMode = AccMode.valueOf(accMode),
-                amountCurr = if ((it["ledger_ending_debit_balance"].toString()).toBigDecimal() != 0.toBigDecimal()) (it["ledger_ending_debit_balance"].toString()).toBigDecimal() else (it["ledger_ending_credit_balance"].toString()).toBigDecimal(),
-                amountLoc = if ((it["ledger_ending_debit_balance"].toString()).toBigDecimal() != 0.toBigDecimal()) (it["ledger_ending_debit_balance"].toString()).toBigDecimal() else (it["ledger_ending_credit_balance"].toString()).toBigDecimal(),
-                currency = "INR",
-                ledCurrency = "INR",
-                category = "ASSET",
-                documentStatus = DocumentStatus.FINAL,
-                dueDate = Date(),
-                transactionDate = Date(),
-                entityCode = it["entity_code"].toString().toInt(),
-                migrated = false,
-                organizationId = orgDetail?.organizationId,
-                organizationName = orgDetail?.businessName,
-                orgSerialId = orgDetail?.orgSerialId,
-                sageOrganizationId = orgDetail?.bpr,
-                serviceType = ServiceType.NA.name,
-                signFlag = signFlag,
-                tradePartyMappingId = null,
-                taggedOrganizationId = null,
-                zoneCode = "NORTH"
-            )
+            val docNumber = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.CLOSING.prefix)
+            val orgDetail = orgLevelData?.filter { org -> org.bpr.toString() == it["bpr"].toString() }
+            if (!orgDetail.isNullOrEmpty()) {
+                accUtils.add(
+                    AccountUtilization(
+                        id = null,
+                        documentNo = docNumber,
+                        documentValue = SequenceSuffix.CLOSING.prefix + "/" + Utilities.getFinancialYear() + "/" + docNumber,
+                        accCode = if (accMode == AccMode.AR.name) AresModelConstants.AR_ACCOUNT_CODE else AresModelConstants.AP_ACCOUNT_CODE,
+                        accType = AccountType.CLOSING,
+                        accMode = AccMode.valueOf(accMode),
+                        amountCurr = if ((it["ledger_ending_debit_balance"].toString()).toBigDecimal() != 0.toBigDecimal()) (it["ledger_ending_debit_balance"].toString()).toBigDecimal() else (it["ledger_ending_credit_balance"].toString()).toBigDecimal(),
+                        amountLoc = if ((it["ledger_ending_debit_balance"].toString()).toBigDecimal() != 0.toBigDecimal()) (it["ledger_ending_debit_balance"].toString()).toBigDecimal() else (it["ledger_ending_credit_balance"].toString()).toBigDecimal(),
+                        currency = "INR",
+                        ledCurrency = "INR",
+                        category = "ASSET",
+                        documentStatus = DocumentStatus.FINAL,
+                        dueDate = Date(),
+                        transactionDate = Date(),
+                        entityCode = it["entity_code"].toString().toInt(),
+                        migrated = false,
+                        organizationId = orgDetail.first().organizationId,
+                        organizationName = orgDetail.first().businessName,
+                        orgSerialId = orgDetail.first().orgSerialId,
+                        sageOrganizationId = orgDetail.first().bpr,
+                        serviceType = ServiceType.NA.name,
+                        signFlag = signFlag.toShort(),
+                        tradePartyMappingId = null,
+                        taggedOrganizationId = null,
+                        zoneCode = "NORTH"
+                    )
+                )
+            } else {
+                excelErrorList.add(
+                    ExcelValidationModel(
+                        bpr = it["bpr"].toString(),
+                        errorName = "Bpr not found on platform"
+                    )
+                )
+            }
         }
 
         accountUtilizationRepo.saveAll(accUtils)
+
+        var excelFileUrl = ""
+
+        if (excelErrorList.isNotEmpty()) {
+            val errorExcelName = "Acc_Util_Error_List" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_hhmmss"))
+            val errorFile = ExcelUtils.writeIntoExcel(excelErrorList, errorExcelName, "Sheet1")
+            excelFileUrl = s3Client.upload(s3Bucket, "$errorExcelName.xlsx", errorFile).toString()
+            val aresDocument = AresDocument(
+                documentUrl = url,
+                documentName = errorExcelName,
+                documentType = "xlsx",
+                uploadedBy = request.uploadedBy
+            )
+            aresDocumentRepository.save(aresDocument)
+        }
+
+        return excelFileUrl
     }
 }

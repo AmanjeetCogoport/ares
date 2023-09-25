@@ -76,5 +76,5 @@ interface OutStandingService {
 
     suspend fun getEntityLevelStats(entityCode: Int): List<EntityLevelStats>
 
-    suspend fun createRecordInBulk(request: BulkUploadRequest?)
+    suspend fun createRecordInBulk(request: BulkUploadRequest?): String?
 }

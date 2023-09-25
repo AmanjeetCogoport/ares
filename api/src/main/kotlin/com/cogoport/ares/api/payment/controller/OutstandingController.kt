@@ -215,7 +215,7 @@ class OutstandingController {
     }
 
     @Post("/bulk-upload")
-    suspend fun createRecordInBulk(@Body request: BulkUploadRequest) {
+    suspend fun createRecordInBulk(@Body request: BulkUploadRequest): String? {
         return outStandingService.createRecordInBulk(request)
     }
 }
