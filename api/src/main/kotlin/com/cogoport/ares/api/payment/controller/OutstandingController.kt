@@ -19,6 +19,7 @@ import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
 import com.cogoport.ares.model.payment.SupplierOutstandingList
 import com.cogoport.ares.model.payment.request.AccPayablesOfOrgReq
+import com.cogoport.ares.model.payment.request.BulkUploadRequest
 import com.cogoport.ares.model.payment.request.CustomerMonthlyPaymentRequest
 import com.cogoport.ares.model.payment.request.CustomerOutstandingRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequest
@@ -213,8 +214,8 @@ class OutstandingController {
         return outStandingService.getEntityLevelStats(updatedEntityCode)
     }
 
-    @Get("/bulk-upload")
-    suspend fun createRecordInBulk(@QueryValue url: String?){
-        return outStandingService.createRecordInBulk(url)
+    @Post("/bulk-upload")
+    suspend fun createRecordInBulk(@Body request: BulkUploadRequest) {
+        return outStandingService.createRecordInBulk(request)
     }
 }

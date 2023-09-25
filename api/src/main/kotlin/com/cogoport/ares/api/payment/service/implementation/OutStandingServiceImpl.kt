@@ -8,6 +8,7 @@ import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.api.payment.entity.AresDocument
 import com.cogoport.ares.api.payment.entity.CustomerOrgOutstanding
 import com.cogoport.ares.api.payment.entity.CustomerOutstandingAgeing
 import com.cogoport.ares.api.payment.entity.EntityLevelStats
@@ -20,6 +21,7 @@ import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.api.payment.model.response.TopServiceProviders
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.payment.repository.AresDocumentRepository
 import com.cogoport.ares.api.payment.repository.LedgerSummaryRepo
 import com.cogoport.ares.api.payment.repository.UnifiedDBNewRepository
 import com.cogoport.ares.api.payment.service.interfaces.DefaultedBusinessPartnersService
@@ -47,6 +49,7 @@ import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.SupplierOutstandingList
 import com.cogoport.ares.model.payment.SuppliersOutstanding
 import com.cogoport.ares.model.payment.request.AccPayablesOfOrgReq
+import com.cogoport.ares.model.payment.request.BulkUploadRequest
 import com.cogoport.ares.model.payment.request.CustomerMonthlyPaymentRequest
 import com.cogoport.ares.model.payment.request.CustomerOutstandingRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequest
@@ -64,7 +67,6 @@ import com.cogoport.ares.model.payment.response.PayblesInfoRes
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocumentV2
 import com.cogoport.ares.model.payment.response.SupplyAgentV2
-import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.brahma.excel.utils.ExcelSheetReader
 import com.cogoport.brahma.opensearch.Client
@@ -85,11 +87,10 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.Year
+import java.util.Date
 import java.util.UUID
 import kotlin.math.ceil
 import com.cogoport.ares.api.common.AresConstants.PERCENTILES as PERCENTILES
-import java.util.Date
-import javax.imageio.spi.ServiceRegistry
 
 @Singleton
 class OutStandingServiceImpl : OutStandingService {
@@ -128,6 +129,9 @@ class OutStandingServiceImpl : OutStandingService {
 
     @Inject
     lateinit var sequenceGeneratorImpl: SequenceGeneratorImpl
+
+    @Inject
+    lateinit var aresDocumentRepository: AresDocumentRepository
 
     private fun validateInput(request: OutstandingListRequest) {
         try {
@@ -1329,43 +1333,53 @@ class OutStandingServiceImpl : OutStandingService {
         return entityLevelStats
     }
 
-    override suspend fun createRecordInBulk(url: String?) {
+    override suspend fun createRecordInBulk(request: BulkUploadRequest?) {
+        val url = request?.fileUrl
+        val aresDocument = AresDocument(
+            documentUrl = url.toString(),
+            documentName = "bulk_acc_util_creation",
+            documentType = "xlsx",
+            uploadedBy = AresConstants.ARES_USER_ID
+        )
+        aresDocumentRepository.save(aresDocument)
         val fileData = ExcelUtils.downloadExcelFile(url!!)
         val excelSheetReader = ExcelSheetReader(fileData)
         val accUtilData = excelSheetReader.read()
         fileData.delete()
-        val bprs = accUtilData.map {it["bpr"].toString()}
+        val bprs = accUtilData.map { it["bpr"].toString() }
         val accMode = accUtilData.first()["acc_mode"].toString()
 
-        val accountType = if (accMode === AccMode.AR.name) { "importer_exporter" } else {"service_provider"}
+        val accountType = if (accMode == AccMode.AR.name) "importer_exporter" else "service_provider"
 
-        val orgLevelData = unifiedDBNewRepository.getOrgDetails(bprs, accountType)
+        val orgLevelData = unifiedDBNewRepository.getOrgDetails(
+            sageOrgIds = bprs,
+            accType = accountType
+        )
 
         val accUtils = accUtilData.map {
-            val accType = if (accMode === AccMode.AP.name){
-                if ((it["ledger_ending_debit_balance"].toString()).toBigDecimal() != 0.toBigDecimal() ) {
+            val accType = if (accMode == AccMode.AP.name) {
+                if ((it["ledger_ending_debit_balance"].toString()).toBigDecimal() != 0.toBigDecimal()) {
                     AccountType.PAY
-                }else {
+                } else {
                     AccountType.PINV
                 }
-            }else {
-                if ((it["ledger_ending_debit_balance"].toString()).toBigDecimal() != 0.toBigDecimal() ) {
+            } else {
+                if ((it["ledger_ending_debit_balance"].toString()).toBigDecimal() != 0.toBigDecimal()) {
                     AccountType.SINV
-                }else {
+                } else {
                     AccountType.REC
                 }
             }
 
-
             val signFlag = SignSuffix.valueOf(accType.name).sign
             val docNumber = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.CLOSING.prefix)
-            val orgDetail = orgLevelData?.first { org -> org.bpr.toString() === it["bpr"].toString() }
+            val orgDetail = orgLevelData?.first { org -> org.bpr.toString() == it["bpr"].toString() }
 
             AccountUtilization(
                 id = null,
                 documentNo = docNumber,
                 documentValue = SequenceSuffix.CLOSING.prefix + "/" + Utilities.getFinancialYear() + "/" + docNumber,
-                accCode = if( accMode === AccMode.AR.name) AresModelConstants.AR_ACCOUNT_CODE else AresModelConstants.AP_ACCOUNT_CODE,
+                accCode = if (accMode === AccMode.AR.name) AresModelConstants.AR_ACCOUNT_CODE else AresModelConstants.AP_ACCOUNT_CODE,
                 accType = AccountType.CLOSING,
                 accMode = AccMode.valueOf(accMode),
                 amountCurr = if ((it["ledger_ending_debit_balance"].toString()).toBigDecimal() != 0.toBigDecimal()) (it["ledger_ending_debit_balance"].toString()).toBigDecimal() else (it["ledger_ending_credit_balance"].toString()).toBigDecimal(),
@@ -1378,7 +1392,7 @@ class OutStandingServiceImpl : OutStandingService {
                 transactionDate = Date(),
                 entityCode = it["entity_code"].toString().toInt(),
                 migrated = false,
-                organizationId =orgDetail?.organizationId,
+                organizationId = orgDetail?.organizationId,
                 organizationName = orgDetail?.businessName,
                 orgSerialId = orgDetail?.orgSerialId,
                 sageOrganizationId = orgDetail?.bpr,

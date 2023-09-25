@@ -460,7 +460,6 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
     )
     suspend fun getSupplierDetailData(): List<SupplierLevelData>
 
-
     @NewSpan
     @Query(
         """
