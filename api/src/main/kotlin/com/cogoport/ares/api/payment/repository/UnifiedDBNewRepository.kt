@@ -56,7 +56,7 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
             LEFT JOIN grouped_shipment_documents gsd ON gsd.shipment_id::varchar = j.reference_id
             WHERE au.acc_mode = :accMode AND au.organization_id = :organizationId::UUID AND document_status = 'FINAL'
             AND au.transaction_date >= :startDate::DATE AND au.transaction_date <= :endDate::DATE AND au.entity_code IN (:entityCodes)
-            AND au.deleted_at IS NULL AND au.acc_type != 'NEWPR' AND p.deleted_at IS NULL
+            AND au.deleted_at IS NULL AND au.acc_type NOT IN ('NEWPR', 'MTCCV') AND p.deleted_at IS NULL
             ORDER BY transaction_date
         """
     )
@@ -71,7 +71,7 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
             COALESCE(SUM(CASE WHEN au.sign_flag = 1 THEN (au.amount_loc) ELSE 0 END), 0) AS debit
             FROM ares.account_utilizations au 
             WHERE au.acc_mode = :accMode AND au.organization_id = :organizationId::UUID AND document_status = 'FINAL'
-            AND au.entity_code IN (:entityCodes) AND au.deleted_at IS NULL AND au.acc_type != 'NEWPR' AND
+            AND au.entity_code IN (:entityCodes) AND au.deleted_at IS NULL AND au.acc_type NOT IN ('NEWPR', 'MTCCV') AND
             au.transaction_date < :date::DATE
         """
     )
