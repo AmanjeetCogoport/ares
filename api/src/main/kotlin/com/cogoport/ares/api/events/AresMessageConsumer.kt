@@ -50,7 +50,6 @@ import io.micronaut.rabbitmq.annotation.RabbitHeaders
 import io.micronaut.rabbitmq.annotation.RabbitListener
 import jakarta.inject.Inject
 import kotlinx.coroutines.runBlocking
-import org.intellij.lang.annotations.JdkConstants.InputEventMask
 import java.util.Date
 
 @RabbitListener

@@ -5,7 +5,6 @@ import io.micronaut.core.annotation.Introspected
 
 @Introspected
 data class InvoiceDetails(
-        @JsonProperty("invoice_pdf_url")
-        var invoiceUrl: String?
+    @JsonProperty("invoice_pdf_url")
+    var invoiceUrl: String?
 )
-

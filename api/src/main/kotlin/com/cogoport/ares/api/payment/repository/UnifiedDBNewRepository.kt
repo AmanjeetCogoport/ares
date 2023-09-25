@@ -501,7 +501,7 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
 
     @NewSpan
     @Query(
-            """select b.bank_name from plutus.invoices i
+        """select b.bank_name from plutus.invoices i
                 left join plutus.addresses a on i.id = a.invoice_id and organization_type = 'SELLER'
                 left join plutus.bank_details b on a.id = b.address_id
                 where i.id = :invoiceId
@@ -511,7 +511,7 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
 
     @NewSpan
     @Query(
-            """
+        """
                 select invoice_pdf_url from plutus.invoices where id = :invoiceId
             """
     )
@@ -519,7 +519,7 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
 
     @NewSpan
     @Query(
-            """
+        """
             SELECT u.email 
             FROM loki.jobs j 
             LEFT JOIN plutus.invoices i ON j.id = i.job_id
@@ -537,7 +537,7 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
 
     @NewSpan
     @Query(
-            """
+        """
                 SELECT u.email, u.mobile_country_code, u.mobile_number
                 FROM loki.jobs j 
                 LEFT JOIN plutus.invoices i ON j.id = i.job_id
@@ -555,7 +555,7 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
 
     @NewSpan
     @Query(
-            """
+        """
                 select otp.organization_id from plutus.addresses a
                 join organization_trade_parties otp on a.trade_party_mapping_id = otp.id and a.organization_type = 'BUYER'
                 where a.invoice_id = 'invoiceId'
