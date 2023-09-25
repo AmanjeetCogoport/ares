@@ -2,9 +2,12 @@ package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.config.OpenSearchConfig
+import com.cogoport.ares.api.common.enums.SequenceSuffix
+import com.cogoport.ares.api.common.enums.SignSuffix
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
+import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.CustomerOrgOutstanding
 import com.cogoport.ares.api.payment.entity.CustomerOutstandingAgeing
 import com.cogoport.ares.api.payment.entity.EntityLevelStats
@@ -25,6 +28,7 @@ import com.cogoport.ares.api.utils.ExcelUtils
 import com.cogoport.ares.api.utils.Util.Companion.divideNumbers
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
+import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.CallPriorityScores
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.common.TradePartyOutstandingReq
@@ -34,10 +38,12 @@ import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.AgeingBucket
 import com.cogoport.ares.model.payment.AgeingBucketOutstanding
 import com.cogoport.ares.model.payment.CustomerOutstanding
+import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.DueAmount
 import com.cogoport.ares.model.payment.InvoiceStats
 import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
+import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.SupplierOutstandingList
 import com.cogoport.ares.model.payment.SuppliersOutstanding
 import com.cogoport.ares.model.payment.request.AccPayablesOfOrgReq
@@ -58,6 +64,7 @@ import com.cogoport.ares.model.payment.response.PayblesInfoRes
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocumentV2
 import com.cogoport.ares.model.payment.response.SupplyAgentV2
+import com.cogoport.ares.model.settlement.Document
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.brahma.excel.utils.ExcelSheetReader
 import com.cogoport.brahma.opensearch.Client
@@ -81,6 +88,8 @@ import java.time.Year
 import java.util.UUID
 import kotlin.math.ceil
 import com.cogoport.ares.api.common.AresConstants.PERCENTILES as PERCENTILES
+import java.util.Date
+import javax.imageio.spi.ServiceRegistry
 
 @Singleton
 class OutStandingServiceImpl : OutStandingService {
@@ -116,6 +125,9 @@ class OutStandingServiceImpl : OutStandingService {
 
     @Inject
     lateinit var supplierOrgOutstandingMapper: SupplierOrgOutstandingMapper
+
+    @Inject
+    lateinit var sequenceGeneratorImpl: SequenceGeneratorImpl
 
     private fun validateInput(request: OutstandingListRequest) {
         try {
@@ -1322,7 +1334,6 @@ class OutStandingServiceImpl : OutStandingService {
         val excelSheetReader = ExcelSheetReader(fileData)
         val accUtilData = excelSheetReader.read()
         fileData.delete()
-
         val bprs = accUtilData.map {it["bpr"].toString()}
         val accMode = accUtilData.first()["acc_mode"].toString()
 
@@ -1330,17 +1341,55 @@ class OutStandingServiceImpl : OutStandingService {
 
         val orgLevelData = unifiedDBNewRepository.getOrgDetails(bprs, accountType)
 
-        accUtilData.map {
-            var accType: AccountType? = null
-            if ((it["ledger_ending_debit_balance"].toString()).toBigDecimal() != 0.toBigDecimal() ) {
-                accType = AccountType.SINV
+        val accUtils = accUtilData.map {
+            val accType = if (accMode === AccMode.AP.name){
+                if ((it["ledger_ending_debit_balance"].toString()).toBigDecimal() != 0.toBigDecimal() ) {
+                    AccountType.PAY
+                }else {
+                    AccountType.PINV
+                }
+            }else {
+                if ((it["ledger_ending_debit_balance"].toString()).toBigDecimal() != 0.toBigDecimal() ) {
+                    AccountType.SINV
+                }else {
+                    AccountType.REC
+                }
             }
-            if ((it["ledger_ending_credit_balance"].toString()).toBigDecimal() != 0.toBigDecimal() ) {
-                accType = AccountType.REC
-            }
 
 
+            val signFlag = SignSuffix.valueOf(accType.name).sign
+            val docNumber = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.CLOSING.prefix)
+            val orgDetail = orgLevelData?.first { org -> org.bpr.toString() === it["bpr"].toString() }
 
+            AccountUtilization(
+                id = null,
+                documentNo = docNumber,
+                documentValue = SequenceSuffix.CLOSING.prefix + "/" + Utilities.getFinancialYear() + "/" + docNumber,
+                accCode = if( accMode === AccMode.AR.name) AresModelConstants.AR_ACCOUNT_CODE else AresModelConstants.AP_ACCOUNT_CODE,
+                accType = AccountType.CLOSING,
+                accMode = AccMode.valueOf(accMode),
+                amountCurr = if ((it["ledger_ending_debit_balance"].toString()).toBigDecimal() != 0.toBigDecimal()) (it["ledger_ending_debit_balance"].toString()).toBigDecimal() else (it["ledger_ending_credit_balance"].toString()).toBigDecimal(),
+                amountLoc = if ((it["ledger_ending_debit_balance"].toString()).toBigDecimal() != 0.toBigDecimal()) (it["ledger_ending_debit_balance"].toString()).toBigDecimal() else (it["ledger_ending_credit_balance"].toString()).toBigDecimal(),
+                currency = "INR",
+                ledCurrency = "INR",
+                category = "ASSET",
+                documentStatus = DocumentStatus.FINAL,
+                dueDate = Date(),
+                transactionDate = Date(),
+                entityCode = it["entity_code"].toString().toInt(),
+                migrated = false,
+                organizationId =orgDetail?.organizationId,
+                organizationName = orgDetail?.businessName,
+                orgSerialId = orgDetail?.orgSerialId,
+                sageOrganizationId = orgDetail?.bpr,
+                serviceType = ServiceType.NA.name,
+                signFlag = signFlag,
+                tradePartyMappingId = null,
+                taggedOrganizationId = null,
+                zoneCode = "NORTH"
+            )
         }
+
+        accountUtilizationRepo.saveAll(accUtils)
     }
 }

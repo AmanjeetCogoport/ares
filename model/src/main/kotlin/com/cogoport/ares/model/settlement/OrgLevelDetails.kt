@@ -9,5 +9,4 @@ data class OrgLevelDetails(
     val organizationId: UUID?,
     val orgSerialId: Long?,
     val businessName: String?
-
 )
