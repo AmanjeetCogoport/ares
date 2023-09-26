@@ -1,13 +1,12 @@
 package com.cogoport.ares.api.dunning.service.implementation
 
-import com.cogoport.ares.api.common.models.BankDetails
 import com.cogoport.ares.api.common.models.CreditControllerDetails
+import com.cogoport.ares.api.common.models.EmailBankDetails
 import com.cogoport.ares.api.dunning.service.interfaces.EmailService
 import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.payment.repository.UnifiedDBNewRepository
 import com.cogoport.ares.api.settlement.entity.ThirdPartyApiAudit
 import com.cogoport.ares.api.settlement.service.interfaces.ThirdPartyApiAuditService
-import com.cogoport.ares.model.common.CommunicationResp
 import com.cogoport.ares.model.common.CreateCommunicationRequest
 import jakarta.inject.Inject
 
@@ -19,10 +18,11 @@ class EmailServiceImpl(
     @Inject lateinit var aresMessagePublisher: AresMessagePublisher
     override suspend fun sendEmailForIrnGeneration(invoiceId: Long) {
         val bankDetails = unifiedDBNewRepository.getBankDetails(invoiceId)
+
         val toUserEmail = unifiedDBNewRepository.getSalesAgentEmail(invoiceId)
         val creditControllerDetails = unifiedDBNewRepository.getCreditControllerEmail(invoiceId)
-        val orgID = unifiedDBNewRepository.getOrganisationId(invoiceId)
-        var ccEmailList: MutableList<String>? = mutableListOf()
+//        val orgID = unifiedDBNewRepository.getOrganisationId(invoiceId)
+        var ccEmailList: MutableList<String> = mutableListOf()
         val variables = getEmailVariablesForIrnGeneration(bankDetails, invoiceId, creditControllerDetails)
         if (!toUserEmail.isEmpty()) {
             ccEmailList = toUserEmail.subList(1, toUserEmail.size)
@@ -44,7 +44,7 @@ class EmailServiceImpl(
             performedByUserName = null,
 //                    replyToMessageId = null,
         )
-        var communicationResponse: CommunicationResp? = null
+//        var communicationResponse: CommunicationResp? = null
         try {
             aresMessagePublisher.sendEmail(communicationRequest)
         } catch (err: Exception) {
@@ -53,14 +53,14 @@ class EmailServiceImpl(
         }
     }
     private suspend fun getEmailVariablesForIrnGeneration(
-        bankDetails: BankDetails,
+        bankDetails: EmailBankDetails,
         invoiceId: Long,
         creditControllerDetails: List<CreditControllerDetails>
     ): HashMap<String, String?> {
         val invoiceEmailDetails = unifiedDBNewRepository.getInvoiceDetails(invoiceId)
         return hashMapOf(
             "bankName" to bankDetails.bankName,
-            "invoiceUrl" to invoiceEmailDetails.invoiceUrl,
+            "invoiceUrl" to invoiceEmailDetails.invoicePdfUrl,
             "accountNumber" to bankDetails.accountNumber,
             "creditControllerName" to creditControllerDetails.get(0).name,
             "creditControllerEmail" to creditControllerDetails.get(0).email,

@@ -1,11 +1,9 @@
 package com.cogoport.ares.api.dunning.controller
 
 import com.cogoport.ares.api.dunning.service.interfaces.EmailService
-import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Post
 import io.micronaut.validation.Validated
-import javax.validation.Valid
 
 @Validated
 @Controller("/email")
@@ -14,7 +12,7 @@ class EmailController(
 ) {
     @Post("/send-email")
     suspend fun sendEmail(
-        @Valid @Body invoiceId: Long
+        invoiceId: Long
     ) {
         EmailService.sendEmailForIrnGeneration(invoiceId)
     }

@@ -2,8 +2,8 @@ package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.models.ARLedgerJobDetailsResponse
-import com.cogoport.ares.api.common.models.BankDetails
 import com.cogoport.ares.api.common.models.CreditControllerDetails
+import com.cogoport.ares.api.common.models.EmailBankDetails
 import com.cogoport.ares.api.common.models.InvoiceDetails
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.LedgerSummary
@@ -501,13 +501,13 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
 
     @NewSpan
     @Query(
-        """select b.bank_name from plutus.invoices i
+        """select b.bank_name, b.account_number from plutus.invoices i
                 left join plutus.addresses a on i.id = a.invoice_id and organization_type = 'SELLER'
                 left join plutus.bank_details b on a.id = b.address_id
                 where i.id = :invoiceId
             """
     )
-    suspend fun getBankDetails(invoiceId: Long): BankDetails
+    suspend fun getBankDetails(invoiceId: Long): EmailBankDetails
 
     @NewSpan
     @Query(
@@ -538,7 +538,7 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
     @NewSpan
     @Query(
         """
-                SELECT u.email, u.mobile_country_code, u.mobile_number
+                SELECT u.name, u.email, u.mobile_country_code, u.mobile_number
                 FROM loki.jobs j 
                 LEFT JOIN plutus.invoices i ON j.id = i.job_id
                 LEFT JOIN plutus.addresses a ON a.invoice_id = i.id AND a.organization_type = 'BUYER'
