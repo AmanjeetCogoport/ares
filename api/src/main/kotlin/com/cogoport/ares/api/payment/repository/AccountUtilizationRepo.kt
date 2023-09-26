@@ -700,7 +700,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             FROM account_utilizations
             WHERE amount_curr <> 0 
                 AND case when acc_type in ('SINV', 'SCN', 'PINV', 'PCN', 'PAY', 'REC', 'VTDS', 'CTDS', 'EXP') THEN (amount_curr - pay_curr) > 1 ELSE (amount_curr - pay_curr) > 0 END 
-                AND organization_id in (:orgId)
+                AND (:orgId is null OR organization_id in (:orgId))
                 AND document_status = 'FINAL'
                 AND ((:accType) is null or acc_type::varchar in (:accType))
                 AND (:entityCode is null OR entity_code = :entityCode)
@@ -711,6 +711,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 AND document_status != 'DELETED'::document_status
                 AND deleted_at is null
                 AND settlement_enabled = true
+                AND ((:docValues) is null or document_value in (:docValues))
             ORDER BY transaction_date DESC, id
             LIMIT :limit
             OFFSET :offset
@@ -814,7 +815,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
         limit: Int? = null,
         offset: Int? = null,
         accType: List<AccountType>?,
-        orgId: List<UUID>,
+        orgId: List<UUID?>?,
         entityCode: Int?,
         startDate: Timestamp?,
         endDate: Timestamp?,
@@ -822,7 +823,8 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
         accMode: List<String>?,
         sortBy: String?,
         sortType: String?,
-        documentPaymentStatus: String?
+        documentPaymentStatus: String?,
+        docValues: List<String>?
     ): List<Document?>
 
     @NewSpan
@@ -835,7 +837,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     amount_curr <> 0 
                     AND case when acc_type in ('SINV', 'SCN', 'PINV', 'PCN', 'PAY', 'REC', 'VTDS', 'CTDS', 'EXP') THEN (amount_curr - pay_curr) > 1 ELSE (amount_curr - pay_curr) > 0 END
                     AND document_status = 'FINAL'
-                    AND organization_id in (:orgId)
+                    AND ((:orgId) is null OR organization_id in (:orgId))
                     AND ((:accType) is null or acc_type::varchar in (:accType))
                     AND (:entityCode is null OR entity_code = :entityCode)
                     AND (:startDate is null OR transaction_date >= :startDate::date)
@@ -844,6 +846,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     AND deleted_at is null  and is_void = false
                     AND document_status != 'DELETED'::document_status
                     AND settlement_enabled = true
+                    AND ((:docValues) is null or document_value in (:docValues))
                     AND 
                     (
                         :documentPaymentStatus is null OR 
@@ -858,7 +861,16 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             )
     """
     )
-    suspend fun getDocumentCount(accType: List<AccountType>?, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?, documentPaymentStatus: String?): Long?
+    suspend fun getDocumentCount(
+        accType: List<AccountType>?,
+        orgId: List<UUID?>?,
+        entityCode: Int?,
+        startDate: Timestamp?,
+        endDate: Timestamp?,
+        query: String?,
+        documentPaymentStatus: String?,
+        docValues: List<String>?
+    ): Long?
 
     @NewSpan
     @Query(
@@ -1863,4 +1875,24 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
         """
     )
     suspend fun getEntityWiseOnAccountBucket(entityCode: List<Int>, accType: List<AccountType>, accMode: List<AccMode>, paymentAccType: List<AccountType>, jvAccType: List<AccountType>, defaultersOrgIds: List<UUID>?): EntityWiseOutstandingBucket
+
+    @NewSpan
+    @Query(
+        """
+            select 
+                *
+            from 
+                account_utilizations 
+            where 
+                (document_no in (:documentNos))
+            and document_status != 'DELETED'::document_status
+            and ((:accTypes) is null or acc_type::varchar in (:accTypes)) 
+            and deleted_at is null 
+            and is_void = false
+        """
+    )
+    suspend fun getAccUtilFromDocNumbers(
+        documentNos: List<Long>,
+        accTypes: List<String?>?
+    ): List<AccountUtilization>?
 }

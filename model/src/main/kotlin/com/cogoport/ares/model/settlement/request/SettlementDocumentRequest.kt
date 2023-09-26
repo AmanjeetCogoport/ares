@@ -11,16 +11,18 @@ import java.util.UUID
 @Introspected
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 data class SettlementDocumentRequest(
-    @QueryValue(AresModelConstants.ORG_ID) val orgId: UUID,
+    @QueryValue(AresModelConstants.ORG_ID) val orgId: UUID? = null,
     @QueryValue(AresModelConstants.ENTITY_CODE) var entityCode: Int? = null,
     @QueryValue(AresModelConstants.START_DATE) val startDate: Timestamp? = null,
     @QueryValue(AresModelConstants.END_DATE) val endDate: Timestamp? = null,
     @QueryValue(AresModelConstants.PAGE) val page: Int = 1,
     @QueryValue(AresModelConstants.PAGE_LIMIT) val pageLimit: Int = 10,
     @QueryValue(AresModelConstants.QUERY) val query: String? = "",
-    @QueryValue(AresModelConstants.ACC_MODE) val accModes: List<AccMode>?,
+    @QueryValue(AresModelConstants.ACC_MODE) val accModes: List<AccMode>? = null,
     val docType: String? = null,
     val documentPaymentStatus: String? = null,
     val sortBy: String? = "transactionDate",
-    val sortType: String? = "Desc"
+    val sortType: String? = "Desc",
+    val docValues: List<String>? = null,
+    val countRequired: Boolean? = true
 )
