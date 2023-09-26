@@ -3,8 +3,8 @@ package com.cogoport.ares.api.events
 import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.dunning.model.request.CycleExecutionProcessReq
 import com.cogoport.ares.api.dunning.model.request.PaymentReminderReq
-import com.cogoport.ares.api.dunning.service.implementation.EmailServiceImpl
 import com.cogoport.ares.api.dunning.service.interfaces.DunningHelperService
+import com.cogoport.ares.api.dunning.service.interfaces.EmailService
 import com.cogoport.ares.api.dunning.service.interfaces.ScheduleService
 import com.cogoport.ares.api.migration.model.JVParentDetails
 import com.cogoport.ares.api.migration.model.JVRecordsScheduler
@@ -95,7 +95,7 @@ class AresMessageConsumer {
     lateinit var dunningHelperService: DunningHelperService
 
     @Inject
-    lateinit var EmailServiceImpl: EmailServiceImpl
+    lateinit var emailService: EmailService
 
     @Queue("ares-update-supplier-details", prefetch = 1)
     fun updateSupplierOutstanding(request: UpdateSupplierOutstandingRequest) = runBlocking {
@@ -304,6 +304,6 @@ class AresMessageConsumer {
 
     @Queue("ares-send-email-for-irn-generation", prefetch = 1)
     fun sendEmailForIrnGeneration(invoiceId: Long) = runBlocking {
-        EmailServiceImpl.sendEmailForIrnGeneration(invoiceId)
+        emailService.sendEmailForIrnGeneration(invoiceId)
     }
 }

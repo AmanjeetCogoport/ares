@@ -11,44 +11,31 @@ import com.cogoport.ares.model.common.CreateCommunicationRequest
 import jakarta.inject.Inject
 
 class EmailServiceImpl(
-//        private val railsClient: RailsClient
     private val thirdPartyApiAuditService: ThirdPartyApiAuditService
 ) : EmailService {
     @Inject lateinit var unifiedDBNewRepository: UnifiedDBNewRepository
     @Inject lateinit var aresMessagePublisher: AresMessagePublisher
     override suspend fun sendEmailForIrnGeneration(invoiceId: Long) {
         val bankDetails = unifiedDBNewRepository.getBankDetails(invoiceId)
-
         val toUserEmail = unifiedDBNewRepository.getSalesAgentEmail(invoiceId)
         val creditControllerDetails = unifiedDBNewRepository.getCreditControllerEmail(invoiceId)
-//        val orgID = unifiedDBNewRepository.getOrganisationId(invoiceId)
         var ccEmailList: MutableList<String> = mutableListOf()
         val variables = getEmailVariablesForIrnGeneration(bankDetails, invoiceId, creditControllerDetails)
         if (!toUserEmail.isEmpty()) {
             ccEmailList = toUserEmail.subList(1, toUserEmail.size)
         }
 
-//            val serviceId = UUID.randomUUID().toString()
         val communicationRequest = CreateCommunicationRequest(
             recipientEmail = toUserEmail.get(0),
-//                    type = "email",
-//                    service = "dunning",
-//                    serviceId = serviceId,
             templateName = "send_mail_for_irn_generation_01",
             senderEmail = creditControllerDetails.get(0).email,
             ccEmails = ccEmailList,
-//                    organizationId = orgID.toString(),
-//                    notifyOnBounce = true,
             emailVariables = variables,
-            performedByUserId = null,
-            performedByUserName = null,
-//                    replyToMessageId = null,
         )
-//        var communicationResponse: CommunicationResp? = null
         try {
             aresMessagePublisher.sendEmail(communicationRequest)
         } catch (err: Exception) {
-            recordFailedThirdPartyApiAudits(0, communicationRequest.toString(), err.toString(), "create_communication")
+            recordFailedThirdPartyApiAudits(invoiceId, communicationRequest.toString(), err.toString(), "create_communication")
             throw err
         }
     }
@@ -73,7 +60,7 @@ class EmailServiceImpl(
             ThirdPartyApiAudit(
                 null,
                 apiName,
-                "dunning",
+                "irn_generation_email",
                 executionId,
                 "DUNNING_EXECUTION",
                 "500",
@@ -83,25 +70,4 @@ class EmailServiceImpl(
             )
         )
     }
-
-//    private suspend fun getEmailVariablesforIrnGeneration(bankDetails: BankDetails, invoiceId: Long,creditControllerDetails: List<CreditControllerDetails> ): HashMap<String, String?> {
-//            val invoiceEmailDetails = unifiedDBNewRepository.getInvoiceDetails(invoiceId)
-//            return HashMap<String, String?>() = hashMapOf(
-//                    "bankName" to bankDetails.bankName,
-//                    "invoiceUrl" to invoiceEmailDetails.invoiceUrl,
-//                    "accountNumber" to bankDetails.accountNumber,
-//                    "creditControllerName" to creditControllerDetails.get(0).name,
-//                    "creditControllerEmail" to creditControllerDetails.get(0).email,
-//                    "creditControllerMobileCode" to creditControllerDetails.get(0).mobileCountryCode,
-//                    "creditControllerMobileNumber" to creditControllerDetails.get(0).mobileNumber
-// //                bankName = bankDetails.bankName,
-// //                    invoiceUrl = invoiceEmailDetails.invoiceUrl,
-// //                    accountNumber = bankDetails.accountNumber,
-// ////                    accountName = bankDetails.a
-// //                    creditControllerName = creditControllerDetails.get(0).name,
-// //                    creditControllerEmail = creditControllerDetails.get(0).email,
-// //                    creditControllerMobileCode = creditControllerDetails.get(0).mobileCountryCode,
-// //                    creditControllerMobileNumber = creditControllerDetails.get(0).mobileNumber,
-//            )
-//    }
 }
