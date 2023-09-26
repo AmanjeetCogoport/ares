@@ -517,7 +517,9 @@ class OpenSearchClient {
         var sixty = false
         var ninety = false
         var oneEighty = false
+        var threeSixtyFive = false
         var oneEightyPlus = false
+        var threeSixtyFivePlus = false
         var callPriority = false
 
         when (request.sortBy) {
@@ -530,7 +532,9 @@ class OpenSearchClient {
             "openInvoiceSixtyLedgerAmount" -> sixty = true
             "openInvoiceNinetyLedgerAmount" -> ninety = true
             "openInvoiceOneEightyLedgerAmount" -> oneEighty = true
+            "openInvoiceThreeSixtyFiveLedgerAmount" -> threeSixtyFive = true
             "openInvoiceOneEightyPlusLedgerAmount" -> oneEightyPlus = true
+            "openInvoiceThreeSixtyFivePlusLedgerAmount" -> threeSixtyFivePlus = true
             "callPriority" -> callPriority = true
         }
 
@@ -547,7 +551,9 @@ class OpenSearchClient {
                     sixty -> f.field("openInvoiceAgeingBucket.sixty.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString()))
                     ninety -> f.field("openInvoiceAgeingBucket.ninety.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString()))
                     oneEighty -> f.field("openInvoiceAgeingBucket.oneEighty.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString()))
+                    threeSixtyFive -> f.field("openInvoiceAgeingBucket.threeSixtyFive.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString()))
                     oneEightyPlus -> f.field("openInvoiceAgeingBucket.oneEightyPlus.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString()))
+                    threeSixtyFivePlus -> f.field("openInvoiceAgeingBucket.threeSixtyFivePlus.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString()))
                 }
                 f
             }.build()
