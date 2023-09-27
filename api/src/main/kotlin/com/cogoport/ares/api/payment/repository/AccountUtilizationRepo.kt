@@ -117,10 +117,10 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
   LEFT JOIN payments p ON au.document_value = p.payment_num_value
     AND p.deleted_at is null 
     AND p.payment_document_status != 'DELETED'
-    WHERE (:query IS NULL OR au.document_value LIKE :query 
-            OR p.sage_ref_number LIKE :query)
+    WHERE (:query IS NULL OR au.document_value ILIKE :query 
+            OR p.sage_ref_number ILIKE :query)
         AND au.organization_id = :organizationId
-        AND au.acc_type in ('CTDS', 'REC', 'MISC', 'INTER', 'CONTR', 'OPDIV', 'MTCCV', 'BANK')
+        AND au.acc_type::VARCHAR IN (:accType)
         AND au.acc_mode = 'AR'
         AND au.entity_code = :entityCode
 ) subquery
@@ -143,7 +143,7 @@ ORDER BY
             LIMIT :pageLimit  
         """
     )
-    suspend fun getPaymentByTradePartyMappingId(organizationId: UUID, sortBy: String?, sortType: String?, statusList: List<DocStatus>?, query: String?, entityCode: Int, page: Int, pageLimit: Int): List<CustomerOutstandingPaymentResponse>
+    suspend fun getPaymentByTradePartyMappingId(organizationId: UUID, sortBy: String?, sortType: String?, statusList: List<DocStatus>?, query: String?, entityCode: Int, page: Int, pageLimit: Int, accType: List<AccountType>): List<CustomerOutstandingPaymentResponse>
     @NewSpan
     @Query(
         """
@@ -685,10 +685,10 @@ ORDER BY
 		        LEFT JOIN payments p ON au.document_value = p.payment_num_value
                 AND p.deleted_at is null 
                 AND p.payment_document_status != 'DELETED'
-            WHERE (:query IS NULL OR au.document_value LIKE :query 
-                    OR p.sage_ref_number LIKE :query)
+            WHERE (:query IS NULL OR au.document_value ILIKE :query 
+                    OR p.sage_ref_number ILIKE :query)
                 AND au.organization_id = :organizationId
-                AND au.acc_type in ('CTDS', 'REC', 'MISC', 'INTER', 'CONTR', 'OPDIV', 'MTCCV', 'BANK')
+                AND au.acc_type::VARCHAR IN (:accType)
                 AND au.acc_mode = 'AR'
                 AND au.entity_code = :entityCode
         ) subquery
@@ -696,7 +696,7 @@ ORDER BY
             utilization_status::varchar IN (:statusList)
         """
     )
-    suspend fun getCount(organizationId: UUID, statusList: List<DocStatus>?, query: String?, entityCode: Int): Long
+    suspend fun getCount(organizationId: UUID, statusList: List<DocStatus>?, query: String?, entityCode: Int, accType: List<AccountType>): Long
 
     @NewSpan
     @Query(

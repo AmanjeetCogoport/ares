@@ -21,6 +21,7 @@ import com.cogoport.ares.api.payment.repository.LedgerSummaryRepo
 import com.cogoport.ares.api.payment.repository.UnifiedDBNewRepository
 import com.cogoport.ares.api.payment.service.interfaces.DefaultedBusinessPartnersService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
+import com.cogoport.ares.api.utils.Util
 import com.cogoport.ares.api.utils.Util.Companion.divideNumbers
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
@@ -111,6 +112,9 @@ class OutStandingServiceImpl : OutStandingService {
 
     @Inject
     lateinit var defaultedBusinessPartnersService: DefaultedBusinessPartnersService
+
+    @Inject
+    lateinit var util: Util
 
     @Inject
     lateinit var supplierOrgOutstandingMapper: SupplierOrgOutstandingMapper
@@ -848,13 +852,15 @@ class OutStandingServiceImpl : OutStandingService {
     }
 
     override suspend fun getCustomerOutstandingPaymentDetails(request: CustomerOutstandingPaymentRequest): ResponseList<CustomerOutstandingPaymentResponse?> {
+        val onAccountTypeList = AresConstants.onAccountAROutstandingAccountTypeList
+        val query = util.toQueryString(request.query)
 
         val list: List<CustomerOutstandingPaymentResponse?>
-        list = accountUtilizationRepo.getPaymentByTradePartyMappingId(request.orgId!!, request.sortBy, request.sortType, request.statusList, "%${request.query}%", request.entityCode!!, request.page, request.pageLimit)
+        list = accountUtilizationRepo.getPaymentByTradePartyMappingId(request.orgId!!, request.sortBy, request.sortType, request.statusList, query, request.entityCode!!, request.page, request.pageLimit, onAccountTypeList)
 
         val responseList = ResponseList<CustomerOutstandingPaymentResponse?>()
 
-        val count = accountUtilizationRepo.getCount(request.orgId!!, request.statusList, "%${request.query}%", request.entityCode!!)
+        val count = accountUtilizationRepo.getCount(request.orgId!!, request.statusList, query, request.entityCode!!, onAccountTypeList)
 
         responseList.list = list
         responseList.totalRecords = count
