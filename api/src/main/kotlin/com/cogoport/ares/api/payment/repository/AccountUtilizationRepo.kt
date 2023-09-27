@@ -121,7 +121,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             OR p.sage_ref_number ILIKE :query)
         AND au.organization_id = :organizationId
         AND au.acc_type::VARCHAR IN (:accType)
-        AND au.acc_mode = 'AR'
+        AND au.acc_mode::VARCHAR = :accMode
         AND au.entity_code = :entityCode
 ) subquery
 WHERE
@@ -143,7 +143,7 @@ ORDER BY
             LIMIT :pageLimit  
         """
     )
-    suspend fun getPaymentByTradePartyMappingId(organizationId: UUID, sortBy: String?, sortType: String?, statusList: List<DocStatus>?, query: String?, entityCode: Int, page: Int, pageLimit: Int, accType: List<AccountType>): List<CustomerOutstandingPaymentResponse>
+    suspend fun getPaymentByTradePartyMappingId(accMode: AccMode, organizationId: UUID, sortBy: String?, sortType: String?, statusList: List<DocStatus>?, query: String?, entityCode: Int, page: Int, pageLimit: Int, accType: List<AccountType>): List<CustomerOutstandingPaymentResponse>
     @NewSpan
     @Query(
         """
@@ -689,14 +689,14 @@ ORDER BY
                     OR p.sage_ref_number ILIKE :query)
                 AND au.organization_id = :organizationId
                 AND au.acc_type::VARCHAR IN (:accType)
-                AND au.acc_mode = 'AR'
+                AND au.acc_mode::VARCHAR = :accMode
                 AND au.entity_code = :entityCode
         ) subquery
         WHERE
             utilization_status::varchar IN (:statusList)
         """
     )
-    suspend fun getCount(organizationId: UUID, statusList: List<DocStatus>?, query: String?, entityCode: Int, accType: List<AccountType>): Long
+    suspend fun getCount(accMode: AccMode, organizationId: UUID, statusList: List<DocStatus>?, query: String?, entityCode: Int, accType: List<AccountType>): Long
 
     @NewSpan
     @Query(

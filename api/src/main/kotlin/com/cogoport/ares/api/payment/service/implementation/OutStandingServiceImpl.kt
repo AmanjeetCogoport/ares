@@ -856,11 +856,11 @@ class OutStandingServiceImpl : OutStandingService {
         val query = util.toQueryString(request.query)
 
         val list: List<CustomerOutstandingPaymentResponse?>
-        list = accountUtilizationRepo.getPaymentByTradePartyMappingId(request.orgId!!, request.sortBy, request.sortType, request.statusList, query, request.entityCode!!, request.page, request.pageLimit, onAccountTypeList)
+        list = accountUtilizationRepo.getPaymentByTradePartyMappingId(AccMode.AR, request.orgId!!, request.sortBy, request.sortType, request.statusList, query, request.entityCode!!, request.page, request.pageLimit, onAccountTypeList)
 
         val responseList = ResponseList<CustomerOutstandingPaymentResponse?>()
 
-        val count = accountUtilizationRepo.getCount(request.orgId!!, request.statusList, query, request.entityCode!!, onAccountTypeList)
+        val count = accountUtilizationRepo.getCount(AccMode.AR, request.orgId!!, request.statusList, query, request.entityCode!!, onAccountTypeList)
 
         responseList.list = list
         responseList.totalRecords = count
