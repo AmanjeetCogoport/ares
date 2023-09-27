@@ -82,65 +82,68 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
     @NewSpan
     @Query(
         """ 
-        SELECT
-        *
-        FROM (
-            SELECT
-                au.acc_code,
-                p.sage_ref_number,
-                au.acc_mode,
-                au.amount_curr AS payment_amount,
-                au.amount_loc,
-                au.pay_curr AS utilized_amount,
-                au.pay_loc AS payment_loc,
-                au.created_at,
-                au.currency,
-                au.entity_code,
-                au.led_currency AS ledger_currency,
-                au.organization_name,
-                au.document_no,
-                au.document_value AS payment_number,
-                au.sign_flag,
-                au.transaction_date,
-                au.updated_at,
-                (
-                    CASE WHEN au.pay_curr = 0 THEN
-                        'UNUTILIZED'
-                    WHEN (au.amount_curr - au.pay_curr) > 0 THEN
-                        'PARTIAL_UTILIZED'
-                    ELSE
-                        'UTILIZED'
-                    END
-                ) utilization_status
-            FROM
-                account_utilizations au
-		        JOIN payments p ON au.document_value = p.payment_num_value
-            WHERE (:query IS NULL OR au.document_value LIKE :query 
-                    OR p.sage_ref_number LIKE :query)
-                AND au.organization_id = :organizationId
-                AND au.acc_type in ('REC', 'CTDS')
-                AND au.entity_code = :entityCode
-        ) subquery
-        WHERE
-            utilization_status::varchar IN (:statusList)
-        ORDER BY
-            CASE WHEN :sortBy = 'transactionDate'
-                THEN CASE WHEN :sortType = 'Asc' THEN subquery.transaction_date END
-            END ASC,
-            CASE WHEN :sortBy = 'transactionDate'
-                THEN CASE WHEN :sortType = 'Desc' THEN subquery.transaction_date END
-            END DESC,
-            CASE WHEN :sortBy = 'paymentAmount'
-                THEN CASE WHEN :sortType = 'Asc' THEN subquery.payment_amount END
-            END ASC,
-            CASE WHEN :sortBy = 'paymentAmount'
-                THEN CASE WHEN :sortType = 'Desc' THEN subquery.payment_amount END
-            END DESC
+       SELECT
+       *
+       FROM (
+           SELECT
+               au.acc_code,
+               p.sage_ref_number,
+               au.acc_mode,
+               au.amount_curr AS payment_amount,
+               au.amount_loc,
+               au.pay_curr AS utilized_amount,
+               au.pay_loc AS payment_loc,
+       au.created_at,
+       au.currency,
+       au.entity_code,
+       au.led_currency AS ledger_currency,
+       au.organization_name,
+       au.document_no,
+       au.document_value AS payment_number,
+       au.sign_flag,
+       au.transaction_date,
+       au.updated_at,
+        (
+            CASE WHEN au.pay_curr = 0 THEN
+                'UNUTILIZED'
+            WHEN (au.amount_curr - au.pay_curr) > 0 THEN
+                'PARTIAL_UTILIZED'
+            ELSE
+                'UTILIZED'
+            END
+        ) utilization_status
+    FROM
+        account_utilizations au
+  LEFT JOIN payments p ON au.document_value = p.payment_num_value
+    AND p.deleted_at is null 
+    AND p.payment_document_status != 'DELETED'
+    WHERE (:query IS NULL OR au.document_value ILIKE :query 
+            OR p.sage_ref_number ILIKE :query)
+        AND au.organization_id = :organizationId
+        AND au.acc_type::VARCHAR IN (:accType)
+        AND au.acc_mode::VARCHAR = :accMode
+        AND au.entity_code = :entityCode
+) subquery
+WHERE
+    utilization_status::varchar IN (:statusList)
+ORDER BY
+    CASE WHEN :sortBy = 'transactionDate'
+        THEN CASE WHEN :sortType = 'Asc' THEN subquery.transaction_date END
+    END ASC,
+    CASE WHEN :sortBy = 'transactionDate'
+        THEN CASE WHEN :sortType = 'Desc' THEN subquery.transaction_date END
+    END DESC,
+    CASE WHEN :sortBy = 'paymentAmount'
+        THEN CASE WHEN :sortType = 'Asc' THEN subquery.payment_amount END
+    END ASC,
+    CASE WHEN :sortBy = 'paymentAmount'
+        THEN CASE WHEN :sortType = 'Desc' THEN subquery.payment_amount END
+    END DESC
             OFFSET GREATEST(0, ((:page - 1) * :pageLimit))
             LIMIT :pageLimit  
         """
     )
-    suspend fun getPaymentByTradePartyMappingId(organizationId: UUID, sortBy: String?, sortType: String?, statusList: List<DocStatus>?, query: String?, entityCode: Int, page: Int, pageLimit: Int): List<CustomerOutstandingPaymentResponse>
+    suspend fun getPaymentByTradePartyMappingId(accMode: AccMode, organizationId: UUID, sortBy: String?, sortType: String?, statusList: List<DocStatus>?, query: String?, entityCode: Int, page: Int, pageLimit: Int, accType: List<AccountType>): List<CustomerOutstandingPaymentResponse>
     @NewSpan
     @Query(
         """
@@ -557,7 +560,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                         WHEN (now()::date - transaction_date) BETWEEN 31 AND 60 
                             AND acc_type IN ('REC', 'CTDS') 
                             AND ABS(amount_curr - pay_curr) > 0.001 THEN 1 
-                        WHEN (now()::date - transaction_date) BETWEEN 46 AND 60 
+                        WHEN (now()::date - transaction_date) BETWEEN 31 AND 60 
                             AND acc_type IN ('BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') 
                             AND amount_curr - pay_curr <> 0 THEN 1 
                         ELSE 0 
@@ -679,18 +682,21 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 ) utilization_status
             FROM
                 account_utilizations au
-		        JOIN payments p ON au.document_value = p.payment_num_value
-            WHERE (:query IS NULL OR au.document_value LIKE :query 
-                    OR p.sage_ref_number LIKE :query)
+		        LEFT JOIN payments p ON au.document_value = p.payment_num_value
+                AND p.deleted_at is null 
+                AND p.payment_document_status != 'DELETED'
+            WHERE (:query IS NULL OR au.document_value ILIKE :query 
+                    OR p.sage_ref_number ILIKE :query)
                 AND au.organization_id = :organizationId
-                AND au.acc_type = 'REC'
+                AND au.acc_type::VARCHAR IN (:accType)
+                AND au.acc_mode::VARCHAR = :accMode
                 AND au.entity_code = :entityCode
         ) subquery
         WHERE
             utilization_status::varchar IN (:statusList)
         """
     )
-    suspend fun getCount(organizationId: UUID, statusList: List<DocStatus>?, query: String?, entityCode: Int): Long
+    suspend fun getCount(accMode: AccMode, organizationId: UUID, statusList: List<DocStatus>?, query: String?, entityCode: Int, accType: List<AccountType>): Long
 
     @NewSpan
     @Query(
@@ -762,13 +768,12 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             LEFT JOIN settlements s ON 
                 s.destination_id = au.document_no 
                 AND s.destination_type::varchar = au.acc_type::varchar 
-                AND s.source_type::varchar in ('CTDS','VTDS')
+                AND s.source_type::varchar in ('CTDS','VTDS') AND s.deleted_at is null
             WHERE au.id in (
                 SELECT id from FILTERS
             )
             AND au.deleted_at is null
             AND au.document_status != 'DELETED'::document_status
-            AND s.deleted_at is null
             AND p.deleted_at is null 
             AND au.is_void = false
             AND au.settlement_enabled = true
