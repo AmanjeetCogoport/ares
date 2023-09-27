@@ -2076,6 +2076,7 @@ open class OnAccountServiceImpl : OnAccountService {
         var totalAmount = BigDecimal(0)
         val paymentIds: MutableList<Long> = mutableListOf()
         var exchangeRate = BigDecimal(1.0)
+        val ledgerCurrency = AresConstants.LEDGER_CURRENCY[req.entityCode]
         plutusMessagePublisher.emitUpdateStatus(
             InvoiceStatusUpdateRequest(
                 id = Hashids.encode(req.proformaId!!),
@@ -2086,12 +2087,11 @@ open class OnAccountServiceImpl : OnAccountService {
             )
         )
         req.utrDetails?.forEach { utrDetail ->
-            totalAmount = totalAmount.plus(utrDetail.paidAmount!!)
-            val ledgerCurrency = AresConstants.LEDGER_CURRENCY[req.entityCode]
-            // change payment ledger amount if doesn't matches with profroma
             if (ledgerCurrency != req.currency) {
                 exchangeRate = settlementServiceHelper.getExchangeRate(req.currency!!, proformaRecord?.ledCurrency!!, SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(utrDetail.transactionDate))
             }
+            totalAmount = totalAmount.plus(utrDetail.paidAmount!!)
+            // change payment ledger amount if doesn't matches with profroma
             val signFlag: Short = 1
             var paymentModel = Payment(
                 entityType = req.entityCode,
@@ -2124,42 +2124,41 @@ open class OnAccountServiceImpl : OnAccountService {
             paymentIds.add(paymentId)
         }
         if (req.entityCode != ledgerEntity) {
-            TODO()
-//            val bucketGlcode = parentJVService.getGLCodeMaster(AccMode.AR, entityCode = AresConstants.ENTITY_401, pageLimit = 1,q=null).filter { it.ledAccount == "SGP" }[0].accountCode
-//            val debitGlcode = parentJVService.getGLCodeMaster(AccMode.AR, entityCode = req.entityCode, pageLimit = 1,q=null).filter {
-//                when {
-//                    req.currency == "INR" -> it.ledAccount == "IND"
-//                    req.currency == "USD" -> it.ledAccount == "USD"
-//                    else -> false
-//                }
-//            }[0].accountCode
-//            if (proformaRecord != null) {
-//                settleInterEntity(
-//                    proformaId = proformaRecord.id!!,
-//                    paymentIds = paymentIds!!,
-//                    amount = totalAmount!!,
-//                    currency = req.currency!!,
-//                    ledgerAmount = totalAmount*exchangeRate,
-//                    ledgerCurrency =  proformaRecord.ledCurrency,
-//                    bucketGlcode = bucketGlcode,
-//                    debitGlcode = debitGlcode,
-//                    accMode = AccMode.AR,
-//                    debitEntityCode = req.entityCode!!,
-//                    ledgerEntityCode = AresConstants.ENTITY_401,
-//                    tradePartyDetails = OrgDetail(
-//                        proformaRecord.organizationName!!,
-//                        proformaRecord.organizationId!!,
-//                        req.entityCode, UUID.fromString(AresConstants.ENTITY_ID[req.entityCode])
-//                    ),
-//                    performedBy = req.performedBy!!,
-//                )
-//            }
+            val bucketGlcode = parentJVService.getGLCodeMaster(AccMode.AR, entityCode = AresConstants.ENTITY_401, pageLimit = 1,q=null).filter { it.ledAccount == "SGP" }[0].accountCode
+            val debitGlcode = parentJVService.getGLCodeMaster(AccMode.AR, entityCode = req.entityCode, pageLimit = 1,q=null).filter {
+                when {
+                    req.currency == "INR" -> it.ledAccount == "IND"
+                    req.currency == "USD" -> it.ledAccount == "USD"
+                    else -> false
+                }
+            }[0].accountCode
+            if (proformaRecord != null) {
+                settleInterEntity(
+                    proformaId = proformaRecord.id!!,
+                    paymentIds = paymentIds!!,
+                    amount = totalAmount!!,
+                    currency = req.currency!!,
+                    ledgerAmount = totalAmount*exchangeRate,
+                    ledgerCurrency =  proformaRecord.ledCurrency,
+                    bucketGlcode = bucketGlcode,
+                    debitGlcode = debitGlcode,
+                    accMode = AccMode.AR,
+                    debitEntityCode = req.entityCode!!,
+                    ledgerEntityCode = AresConstants.ENTITY_401,
+                    tradePartyDetails = OrgDetail(
+                        proformaRecord.organizationName!!,
+                        proformaRecord.organizationId!!,
+                        req.entityCode, UUID.fromString(AresConstants.ENTITY_ID[req.entityCode])
+                    ),
+                    performedBy = req.performedBy!!,
+                )
+            }
         } else {
             paymentIds.forEach { paymentId ->
                 if (proformaRecord != null) {
                     aresMessagePublisher.emitSendPaymentDetailsForKnockOff(
                         AutoKnockOffRequest(
-                            sourceId = Hashids.encode(paymentId),
+                            paymentIdAsSourceId = Hashids.encode(paymentId),
                             destinationId = Hashids.encode(proformaRecord.documentNo),
                             sourceType = AccountType.REC.name,
                             destinationType = AccountType.SINV.name,
@@ -2199,9 +2198,9 @@ open class OnAccountServiceImpl : OnAccountService {
                 tradePartyId = null,
                 type = "CREDIT",
                 amount = ledgerAmount,
-                currency = ledgerCurrency,
                 validityDate = Date(),
                 glCode = bucketGlcode.toString(),
+                currency = AresConstants.LEDGER_CURRENCY[ledgerEntityCode]!!
             ),
             JvLineItemRequest(
                 id = null,
@@ -2212,7 +2211,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 tradePartyId = tradePartyDetails.tradePartyId,
                 type = "DEBIT",
                 amount = amount,
-                currency = currency,
+                currency = AresConstants.LEDGER_CURRENCY[debitEntityCode]!!,
                 validityDate = Date(),
                 glCode = debitGlcode.toString(),
             )
@@ -2238,11 +2237,11 @@ open class OnAccountServiceImpl : OnAccountService {
             paymentIds.forEach { paymentId ->
                 aresMessagePublisher.emitSendPaymentDetailsForKnockOff(
                     AutoKnockOffRequest(
-                        sourceId = Hashids.encode(paymentId),
+                        paymentIdAsSourceId = Hashids.encode(paymentId),
                         destinationId = Hashids.encode(jvs.filter { it.jvNum == creditedEntityJv && it.type == "DEBIT" }[0].id!!),
                         createdBy = performedBy,
                         sourceType = AccountType.REC.name,
-                        destinationType = AccountType.valueOf(jvs.filter { it.jvNum == creditedEntityJv && it.type == "DEBIT" }[0].type!!).name
+                        destinationType = AccountType.valueOf(jvs.filter { it.jvNum == creditedEntityJv && it.type == "DEBIT" }[0].category!!).toString()
                     )
                 )
             }
@@ -2250,9 +2249,9 @@ open class OnAccountServiceImpl : OnAccountService {
             // settle credit jv with invoice
             aresMessagePublisher.emitSendPaymentDetailsForKnockOff(
                 AutoKnockOffRequest(
-                    sourceId = Hashids.encode(jvs.filter { it.jvNum == creditedEntityJv && it.type == "CREDIT" }[0].id!!),
+                    paymentIdAsSourceId = Hashids.encode(jvs.filter { it.jvNum == creditedEntityJv && it.type == "CREDIT" }[0].id!!),
                     destinationId = Hashids.encode(proformaId),
-                    sourceType = AccountType.valueOf(jvs.filter { it.jvNum == creditedEntityJv && it.type == "DEBIT" }[0].type!!).name,
+                    sourceType = AccountType.valueOf(jvs.filter { it.jvNum == creditedEntityJv && it.type == "CREDIT" }[0].type!!).name,
                     destinationType = AccountType.SINV.name,
                     createdBy = performedBy
                 )

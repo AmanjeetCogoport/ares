@@ -67,6 +67,7 @@ import com.cogoport.brahma.sage.SageException
 import com.cogoport.brahma.sage.model.request.JVLineItem
 import com.cogoport.brahma.sage.model.request.JVRequest
 import com.cogoport.brahma.sage.model.request.SageResponse
+import com.cogoport.kuber.model.bills.request.LedgerExchangeRateRequest
 import com.cogoport.plutus.model.invoice.SageOrganizationRequest
 import com.cogoport.plutus.model.invoice.SageOrganizationResponse
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -577,7 +578,15 @@ open class ParentJVServiceImpl : ParentJVService {
             if (lineItem.type.isNullOrEmpty() or lineItem.type.isNullOrBlank()) {
                 throw AresException(AresError.ERR_1003, "Type")
             }
-
+            var exchangeRate = request.exchangeRate
+            if(!lineItem.currency.isNullOrEmpty()){
+                exchangeRate = authClient.getLedgerExchangeRate(
+                    LedgerExchangeRateRequest(
+                        cogoEntityId = lineItem.entityId!!,
+                        fromCurrency = lineItem.currency ?: request.currency
+                    )
+                ).ledgerExchangeRate
+            }
             val jvLineItemData = JournalVoucher(
                 id = null,
                 jvNum = parentJvData?.jvNum!!,
@@ -587,10 +596,10 @@ open class ParentJVServiceImpl : ParentJVService {
                 createdBy = request.createdBy,
                 updatedAt = request.createdAt,
                 updatedBy = request.createdBy,
-                currency = request.currency,
-                ledCurrency = request.ledCurrency,
+                currency = lineItem.currency ?: request.currency,
+                ledCurrency = AresConstants.LEDGER_CURRENCY[lineItem.entityCode]!!,
                 amount = lineItem.amount,
-                ledAmount = lineItem.amount.multiply(request.exchangeRate),
+                ledAmount = lineItem.amount.multiply(exchangeRate),
                 description = request.description,
                 entityCode = lineItem.entityCode ?: request.entityCode,
                 entityId = UUID.fromString(AresConstants.ENTITY_ID[lineItem.entityCode]),

@@ -2402,7 +2402,7 @@ open class SettlementServiceImpl : SettlementService {
     override suspend fun settleWithSourceIdAndDestinationId(
         autoKnockOffRequest: AutoKnockOffRequest
     ): List<CheckDocument>? {
-        var sourceDocument = getDocumentData(autoKnockOffRequest.sourceId, autoKnockOffRequest.sourceType!!)
+        var sourceDocument = getDocumentData(autoKnockOffRequest.paymentIdAsSourceId, autoKnockOffRequest.sourceType!!)
         val destinationDocument = getDocumentData(autoKnockOffRequest.destinationId, autoKnockOffRequest.destinationType!!)
         val listOfDocuments = mutableListOf<AccountUtilization>()
         listOfDocuments.add(sourceDocument!!)
