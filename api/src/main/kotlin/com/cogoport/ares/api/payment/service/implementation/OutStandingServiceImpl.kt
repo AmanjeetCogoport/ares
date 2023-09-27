@@ -2,9 +2,12 @@ package com.cogoport.ares.api.payment.service.implementation
 
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.config.OpenSearchConfig
+import com.cogoport.ares.api.common.enums.SequenceSuffix
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
+import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.api.payment.entity.AresDocument
 import com.cogoport.ares.api.payment.entity.CustomerOrgOutstanding
 import com.cogoport.ares.api.payment.entity.CustomerOutstandingAgeing
 import com.cogoport.ares.api.payment.entity.EntityLevelStats
@@ -17,14 +20,18 @@ import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.api.payment.model.response.TopServiceProviders
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
+import com.cogoport.ares.api.payment.repository.AresDocumentRepository
 import com.cogoport.ares.api.payment.repository.LedgerSummaryRepo
 import com.cogoport.ares.api.payment.repository.UnifiedDBNewRepository
 import com.cogoport.ares.api.payment.service.interfaces.DefaultedBusinessPartnersService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
+import com.cogoport.ares.api.settlement.model.ExcelValidationModel
+import com.cogoport.ares.api.utils.ExcelUtils
 import com.cogoport.ares.api.utils.Util
 import com.cogoport.ares.api.utils.Util.Companion.divideNumbers
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
+import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.CallPriorityScores
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.common.TradePartyOutstandingReq
@@ -34,13 +41,16 @@ import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.AgeingBucket
 import com.cogoport.ares.model.payment.AgeingBucketOutstanding
 import com.cogoport.ares.model.payment.CustomerOutstanding
+import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.DueAmount
 import com.cogoport.ares.model.payment.InvoiceStats
 import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
+import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.SupplierOutstandingList
 import com.cogoport.ares.model.payment.SuppliersOutstanding
 import com.cogoport.ares.model.payment.request.AccPayablesOfOrgReq
+import com.cogoport.ares.model.payment.request.BulkUploadRequest
 import com.cogoport.ares.model.payment.request.CustomerMonthlyPaymentRequest
 import com.cogoport.ares.model.payment.request.CustomerOutstandingRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequest
@@ -59,10 +69,13 @@ import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocumentV2
 import com.cogoport.ares.model.payment.response.SupplyAgentV2
 import com.cogoport.ares.model.settlement.SettlementType
+import com.cogoport.brahma.excel.utils.ExcelSheetReader
 import com.cogoport.brahma.opensearch.Client
 import com.cogoport.brahma.opensearch.Configuration
+import com.cogoport.brahma.s3.client.S3Client
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.micronaut.context.annotation.Value
 import io.sentry.Sentry
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -77,6 +90,8 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.Year
+import java.time.format.DateTimeFormatter
+import java.util.Date
 import java.util.UUID
 import kotlin.math.ceil
 import com.cogoport.ares.api.common.AresConstants.PERCENTILES as PERCENTILES
@@ -118,6 +133,18 @@ class OutStandingServiceImpl : OutStandingService {
 
     @Inject
     lateinit var supplierOrgOutstandingMapper: SupplierOrgOutstandingMapper
+
+    @Inject
+    lateinit var sequenceGeneratorImpl: SequenceGeneratorImpl
+
+    @Inject
+    lateinit var aresDocumentRepository: AresDocumentRepository
+
+    @Value("\${aws.s3.bucket}")
+    private lateinit var s3Bucket: String
+
+    @Inject
+    lateinit var s3Client: S3Client
 
     private fun validateInput(request: OutstandingListRequest) {
         try {
@@ -1319,5 +1346,115 @@ class OutStandingServiceImpl : OutStandingService {
         }
 
         return entityLevelStats
+    }
+
+    override suspend fun createRecordInBulk(request: BulkUploadRequest?): String? {
+        val url = request?.fileUrl
+        val aresDocument = AresDocument(
+            documentUrl = url.toString(),
+            documentName = "bulk_acc_util_creation",
+            documentType = "xlsx",
+            uploadedBy = AresConstants.ARES_USER_ID
+        )
+        aresDocumentRepository.save(aresDocument)
+        val fileData = ExcelUtils.downloadExcelFile(url!!)
+        val excelSheetReader = ExcelSheetReader(fileData)
+        val accUtilData = excelSheetReader.read()
+        fileData.delete()
+        val bprs = accUtilData.map { it["bpr"].toString() }
+        val accMode = accUtilData.first()["acc_mode"].toString()
+
+        val accountType = if (accMode == AccMode.AR.name) "importer_exporter" else "service_provider"
+
+        val orgLevelData = unifiedDBNewRepository.getOrgDetails(
+            sageOrgIds = bprs,
+            accType = accountType
+        )
+        val accUtils = mutableListOf<AccountUtilization>()
+        val excelErrorList = mutableListOf<ExcelValidationModel>()
+
+        accUtilData.map {
+            val accType = if (accMode == AccMode.AP.name) {
+                if ((it["ledger_ending_debit_balance"].toString()) != "" && (it["ledger_ending_debit_balance"].toString()).toBigDecimal() != 0.toBigDecimal()) {
+                    AccountType.PAY
+                } else {
+                    AccountType.PINV
+                }
+            } else {
+                if ((it["ledger_ending_debit_balance"].toString()) != "" && (it["ledger_ending_debit_balance"].toString()).toBigDecimal() != 0.toBigDecimal()) {
+                    AccountType.SINV
+                } else {
+                    AccountType.REC
+                }
+            }
+
+            val signFlag = when (accType) {
+                AccountType.PAY -> 1
+                AccountType.SINV -> 1
+                AccountType.PINV -> -1
+                AccountType.REC -> -1
+                else -> throw AresException(AresError.ERR_1009, "AccountType")
+            }
+
+            val docNumber = sequenceGeneratorImpl.getPaymentNumber(SequenceSuffix.CLOSING.prefix)
+            val orgDetail = orgLevelData?.filter { org -> org.bpr.toString() == it["bpr"].toString() }
+            if (!orgDetail.isNullOrEmpty()) {
+                accUtils.add(
+                    AccountUtilization(
+                        id = null,
+                        documentNo = docNumber,
+                        documentValue = SequenceSuffix.CLOSING.prefix + "/" + Utilities.getFinancialYear() + "/" + docNumber,
+                        accCode = if (accMode == AccMode.AR.name) AresModelConstants.AR_ACCOUNT_CODE else AresModelConstants.AP_ACCOUNT_CODE,
+                        accType = AccountType.CLOSING,
+                        accMode = AccMode.valueOf(accMode),
+                        amountCurr = if ((it["ledger_ending_debit_balance"].toString()).toBigDecimal() != 0.toBigDecimal()) (it["ledger_ending_debit_balance"].toString()).toBigDecimal() else (it["ledger_ending_credit_balance"].toString()).toBigDecimal(),
+                        amountLoc = if ((it["ledger_ending_debit_balance"].toString()).toBigDecimal() != 0.toBigDecimal()) (it["ledger_ending_debit_balance"].toString()).toBigDecimal() else (it["ledger_ending_credit_balance"].toString()).toBigDecimal(),
+                        currency = "INR",
+                        ledCurrency = "INR",
+                        category = "ASSET",
+                        documentStatus = DocumentStatus.FINAL,
+                        dueDate = Date(),
+                        transactionDate = Date(),
+                        entityCode = it["entity_code"].toString().toInt(),
+                        migrated = false,
+                        organizationId = orgDetail.first().organizationId,
+                        organizationName = orgDetail.first().businessName,
+                        orgSerialId = orgDetail.first().orgSerialId,
+                        sageOrganizationId = orgDetail.first().bpr,
+                        serviceType = ServiceType.NA.name,
+                        signFlag = signFlag.toShort(),
+                        tradePartyMappingId = null,
+                        taggedOrganizationId = null,
+                        zoneCode = "NORTH"
+                    )
+                )
+            } else {
+                excelErrorList.add(
+                    ExcelValidationModel(
+                        bpr = it["bpr"].toString(),
+                        errorName = "Bpr not found on platform"
+                    )
+                )
+            }
+        }
+
+        accountUtilizationRepo.saveAll(accUtils)
+
+        var excelFileUrl = ""
+
+        if (excelErrorList.isNotEmpty()) {
+            val errorExcelName = "Acc_Util_Error_List" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_hhmmss"))
+            val errorFile = ExcelUtils.writeIntoExcel(excelErrorList, errorExcelName, "Sheet1")
+            excelFileUrl = s3Client.upload(s3Bucket, "$errorExcelName.xlsx", errorFile).toString()
+            val aresDocument = AresDocument(
+                documentUrl = url,
+                documentName = errorExcelName,
+                documentType = "xlsx",
+                uploadedBy = request.uploadedBy
+            )
+            aresDocumentRepository.save(aresDocument)
+        }
+
+        return excelFileUrl
     }
 }

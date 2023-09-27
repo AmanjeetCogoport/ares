@@ -19,6 +19,7 @@ import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
 import com.cogoport.ares.model.payment.SupplierOutstandingList
 import com.cogoport.ares.model.payment.request.AccPayablesOfOrgReq
+import com.cogoport.ares.model.payment.request.BulkUploadRequest
 import com.cogoport.ares.model.payment.request.CustomerMonthlyPaymentRequest
 import com.cogoport.ares.model.payment.request.CustomerOutstandingRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequest
@@ -211,5 +212,10 @@ class OutstandingController {
     suspend fun getEntityLevelStats(@QueryValue("entityCode") entityCode: Int, user: AuthResponse?, httpRequest: HttpRequest<*>): List<EntityLevelStats> {
         val updatedEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: entityCode
         return outStandingService.getEntityLevelStats(updatedEntityCode)
+    }
+
+    @Post("/bulk-upload")
+    suspend fun createRecordInBulk(@Body request: BulkUploadRequest): String? {
+        return outStandingService.createRecordInBulk(request)
     }
 }
