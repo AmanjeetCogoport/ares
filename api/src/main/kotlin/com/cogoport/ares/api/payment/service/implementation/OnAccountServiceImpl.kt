@@ -2067,16 +2067,8 @@ open class OnAccountServiceImpl : OnAccountService {
         return payment
     }
 
-    @Transactional(rollbackOn = [Exception::class, AresException::class])
+//    @Transactional(rollbackOn = [Exception::class, AresException::class])
     override suspend fun saasInvoiceHook(req: SaasInvoiceHookRequest): SaasInvoiceHookResponse {
-        val ledgerEntity = AresConstants.ENTITY_401
-        val proformaRecord = accountUtilizationRepository.findRecord(req.proformaId!!, AccountType.SINV.toString(), AccMode.AR.toString())
-        val bankDetails = authClient.getCogoBank(CogoEntitiesRequest(req.entityCode.toString())).bankList.filter { it.entityCode == req.entityCode }[0].bankDetails?.filter { it.accountNumber == req.bankAccountNumber }?.get(0)
-        val incomingCurrency = proformaRecord?.currency
-        var totalAmount = BigDecimal(0)
-        val paymentIds: MutableList<Long> = mutableListOf()
-        var exchangeRate = BigDecimal(1.0)
-        val ledgerCurrency = AresConstants.LEDGER_CURRENCY[req.entityCode]
         plutusMessagePublisher.emitUpdateStatus(
             InvoiceStatusUpdateRequest(
                 id = Hashids.encode(req.proformaId!!),
@@ -2086,6 +2078,13 @@ open class OnAccountServiceImpl : OnAccountService {
                 performedByUserType = req.performedByUserType
             )
         )
+        val ledgerEntity = AresConstants.ENTITY_401
+        val proformaRecord = accountUtilizationRepository.findRecord(req.proformaId!!, AccountType.SINV.toString(), AccMode.AR.toString())
+        val bankDetails = authClient.getCogoBank(CogoEntitiesRequest(req.entityCode.toString())).bankList.filter { it.entityCode == req.entityCode }[0].bankDetails?.filter { it.accountNumber == req.bankAccountNumber }?.get(0)
+        var totalAmount = BigDecimal(0)
+        val paymentIds: MutableList<Long> = mutableListOf()
+        var exchangeRate = BigDecimal(1.0)
+        val ledgerCurrency = AresConstants.LEDGER_CURRENCY[req.entityCode]
         req.utrDetails?.forEach { utrDetail ->
             if (ledgerCurrency != req.currency) {
                 exchangeRate = settlementServiceHelper.getExchangeRate(req.currency!!, proformaRecord?.ledCurrency!!, SimpleDateFormat(AresConstants.YEAR_DATE_FORMAT).format(utrDetail.transactionDate))
@@ -2103,9 +2102,9 @@ open class OnAccountServiceImpl : OnAccountService {
                 accMode = proformaRecord?.accMode,
                 accCode = proformaRecord?.accCode,
                 signFlag = signFlag,
-                currency = incomingCurrency,
+                currency = req.currency,
                 amount = utrDetail.paidAmount,
-                ledCurrency = proformaRecord?.ledCurrency,
+                ledCurrency = AresConstants.LEDGER_CURRENCY[req.entityCode],
                 ledAmount = utrDetail.paidAmount!!.multiply(exchangeRate),
                 utr = utrDetail.utrNumber,
                 bankAccountNumber = bankDetails?.accountNumber,
@@ -2136,9 +2135,8 @@ open class OnAccountServiceImpl : OnAccountService {
                 settleInterEntity(
                     proformaId = proformaRecord.id!!,
                     paymentIds = paymentIds!!,
-                    amount = totalAmount!!,
+                    amount = proformaRecord.amountCurr!!,
                     currency = req.currency!!,
-                    ledgerAmount = totalAmount*exchangeRate,
                     ledgerCurrency =  proformaRecord.ledCurrency,
                     bucketGlcode = bucketGlcode,
                     debitGlcode = debitGlcode,
@@ -2176,7 +2174,6 @@ open class OnAccountServiceImpl : OnAccountService {
         paymentIds: List<Long>,
         amount: BigDecimal,
         currency: String,
-        ledgerAmount: BigDecimal,
         ledgerCurrency: String,
         bucketGlcode: Int?,
         debitGlcode: Int?,
@@ -2194,13 +2191,13 @@ open class OnAccountServiceImpl : OnAccountService {
                 entityCode = ledgerEntityCode,
                 entityId = UUID.fromString(AresConstants.ENTITY_ID[ledgerEntityCode]),
                 accMode = accMode,
-                tradePartyName = null,
-                tradePartyId = null,
+                tradePartyName = tradePartyDetails.tradePartyName,
+                tradePartyId = tradePartyDetails.tradePartyId,
                 type = "CREDIT",
-                amount = ledgerAmount,
+                amount = amount,
                 validityDate = Date(),
                 glCode = bucketGlcode.toString(),
-                currency = AresConstants.LEDGER_CURRENCY[ledgerEntityCode]!!
+                currency = currency
             ),
             JvLineItemRequest(
                 id = null,
@@ -2211,7 +2208,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 tradePartyId = tradePartyDetails.tradePartyId,
                 type = "DEBIT",
                 amount = amount,
-                currency = AresConstants.LEDGER_CURRENCY[debitEntityCode]!!,
+                currency = currency,
                 validityDate = Date(),
                 glCode = debitGlcode.toString(),
             )
@@ -2238,10 +2235,10 @@ open class OnAccountServiceImpl : OnAccountService {
                 aresMessagePublisher.emitSendPaymentDetailsForKnockOff(
                     AutoKnockOffRequest(
                         paymentIdAsSourceId = Hashids.encode(paymentId),
-                        destinationId = Hashids.encode(jvs.filter { it.jvNum == creditedEntityJv && it.type == "DEBIT" }[0].id!!),
+                        destinationId = Hashids.encode(jvs.filter { it.type == "DEBIT" }[0].id!!),
                         createdBy = performedBy,
                         sourceType = AccountType.REC.name,
-                        destinationType = AccountType.valueOf(jvs.filter { it.jvNum == creditedEntityJv && it.type == "DEBIT" }[0].category!!).toString()
+                        destinationType = AccountType.valueOf(jvs.filter { it.type == "DEBIT" }[0].category!!).toString()
                     )
                 )
             }
@@ -2249,9 +2246,9 @@ open class OnAccountServiceImpl : OnAccountService {
             // settle credit jv with invoice
             aresMessagePublisher.emitSendPaymentDetailsForKnockOff(
                 AutoKnockOffRequest(
-                    paymentIdAsSourceId = Hashids.encode(jvs.filter { it.jvNum == creditedEntityJv && it.type == "CREDIT" }[0].id!!),
+                    paymentIdAsSourceId = Hashids.encode(jvs.filter { it.type == "CREDIT" }[0].id!!),
                     destinationId = Hashids.encode(proformaId),
-                    sourceType = AccountType.valueOf(jvs.filter { it.jvNum == creditedEntityJv && it.type == "CREDIT" }[0].type!!).name,
+                    sourceType = AccountType.valueOf(jvs.filter {  it.type == "CREDIT" }[0].category!!).name,
                     destinationType = AccountType.SINV.name,
                     createdBy = performedBy
                 )

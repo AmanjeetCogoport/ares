@@ -71,12 +71,12 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
     }
 
     override suspend fun createJvAccUtil(request: JournalVoucher, accMode: AccMode, signFlag: Short, settlementEnabled: Boolean): AccountUtilization {
-        val organization = railsClient.getListOrganizationTradePartyDetails(request.tradePartyId!!)
-
-        if (organization.list.isEmpty()) {
-            throw AresException(AresError.ERR_1530, "")
-        }
-        val orgSerialId = organization.list[0]["serial_id"]!!.toString().toLong()
+//        val organization = railsClient.getListOrganizationTradePartyDetails(request.tradePartyId!!)
+//
+//        if (organization.list.isEmpty()) {
+//            throw AresException(AresError.ERR_1530, "")
+//        }
+//        val orgSerialId = organization.list[0]["serial_id"]!!.toString().toLong()
 
         val accCode = when (accMode == AccMode.AR) {
             true -> AresModelConstants.AR_ACCOUNT_CODE
@@ -87,7 +87,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             id = null,
             documentNo = request.id!!,
             entityCode = request.entityCode!!,
-            orgSerialId = orgSerialId,
+            orgSerialId = 69696,
             sageOrganizationId = null,
             organizationId = request.tradePartyId,
             taggedOrganizationId = null,
