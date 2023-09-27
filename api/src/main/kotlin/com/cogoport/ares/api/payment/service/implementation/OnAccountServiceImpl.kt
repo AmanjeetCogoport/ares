@@ -2117,7 +2117,8 @@ open class OnAccountServiceImpl : OnAccountService {
                 refAccountNo = null,
                 serviceType = null,
                 createdBy = req.performedBy.toString(),
-                updatedBy = req.performedBy.toString()
+                updatedBy = req.performedBy.toString(),
+                paymentDocumentStatus = PaymentDocumentStatus.APPROVED
             )
             val paymentId = createNonSuspensePaymentEntry(paymentModel)
             paymentIds.add(paymentId)
