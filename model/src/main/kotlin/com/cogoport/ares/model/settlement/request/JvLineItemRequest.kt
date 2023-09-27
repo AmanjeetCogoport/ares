@@ -3,7 +3,6 @@ package com.cogoport.ares.model.settlement.request
 import com.cogoport.ares.model.payment.AccMode
 import io.micronaut.core.annotation.Introspected
 import java.math.BigDecimal
-import java.util.Currency
 import java.util.Date
 import java.util.UUID
 import javax.validation.constraints.NotNull

@@ -2124,8 +2124,8 @@ open class OnAccountServiceImpl : OnAccountService {
             paymentIds.add(paymentId)
         }
         if (req.entityCode != ledgerEntity) {
-            val bucketGlcode = parentJVService.getGLCodeMaster(AccMode.AR, entityCode = AresConstants.ENTITY_401, pageLimit = 1,q=null).filter { it.ledAccount == "SGP" }[0].accountCode
-            val debitGlcode = parentJVService.getGLCodeMaster(AccMode.AR, entityCode = req.entityCode, pageLimit = 1,q=null).filter {
+            val bucketGlcode = parentJVService.getGLCodeMaster(AccMode.AR, entityCode = AresConstants.ENTITY_401, pageLimit = 1, q = null).filter { it.ledAccount == "SGP" }[0].accountCode
+            val debitGlcode = parentJVService.getGLCodeMaster(AccMode.AR, entityCode = req.entityCode, pageLimit = 1, q = null).filter {
                 when {
                     req.currency == "INR" -> it.ledAccount == "IND"
                     req.currency == "USD" -> it.ledAccount == "USD"
@@ -2138,7 +2138,7 @@ open class OnAccountServiceImpl : OnAccountService {
                     paymentIds = paymentIds!!,
                     amount = proformaRecord.amountCurr!!,
                     currency = req.currency!!,
-                    ledgerCurrency =  proformaRecord.ledCurrency,
+                    ledgerCurrency = proformaRecord.ledCurrency,
                     bucketGlcode = bucketGlcode,
                     debitGlcode = debitGlcode,
                     accMode = AccMode.AR,
@@ -2249,7 +2249,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 AutoKnockOffRequest(
                     paymentIdAsSourceId = Hashids.encode(jvs.filter { it.type == "CREDIT" }[0].id!!),
                     destinationId = Hashids.encode(proformaId),
-                    sourceType = AccountType.valueOf(jvs.filter {  it.type == "CREDIT" }[0].category!!).name,
+                    sourceType = AccountType.valueOf(jvs.filter { it.type == "CREDIT" }[0].category!!).name,
                     destinationType = AccountType.SINV.name,
                     createdBy = performedBy
                 )

@@ -599,7 +599,7 @@ open class ParentJVServiceImpl : ParentJVService {
                 throw AresException(AresError.ERR_1003, "Type")
             }
             var exchangeRate = request.exchangeRate
-            if(!lineItem.currency.isNullOrEmpty()){
+            if (!lineItem.currency.isNullOrEmpty()) {
                 exchangeRate = authClient.getLedgerExchangeRate(
                     LedgerExchangeRateRequest(
                         cogoEntityId = lineItem.entityId!!,
