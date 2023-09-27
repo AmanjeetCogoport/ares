@@ -36,7 +36,7 @@ class DashboardHelper {
     }
 
     fun getDailyOutstanding(): DailySalesOutstanding {
-        val monthList = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
+        val monthList = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC")
         return DailySalesOutstanding(
             dsoResponse = monthList.map {
                 DsoResponse(
@@ -49,7 +49,7 @@ class DashboardHelper {
     }
 
     fun getQuarterlyOutstanding(): QuarterlyOutstanding {
-        val quarterList = listOf("JAN - MAR", "APR - JUN", "JUL - SEPT", "OCT - DEC")
+        val quarterList = listOf("JAN - MAR", "APR - JUN", "JUL - SEP", "OCT - DEC")
         return QuarterlyOutstanding(
             list = quarterList.map {
                 QsoResponse(
