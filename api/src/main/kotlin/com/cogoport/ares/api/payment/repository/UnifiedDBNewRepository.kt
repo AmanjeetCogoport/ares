@@ -501,7 +501,7 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
 
     @NewSpan
     @Query(
-        """select b.bank_name, b.account_number from plutus.invoices i
+        """select b.bank_name, b.account_number, b.beneficiary_name, b.ifsc_code, b.swift_code from plutus.invoices i
                 left join plutus.addresses a on i.id = a.invoice_id and organization_type = 'SELLER'
                 left join plutus.bank_details b on a.id = b.address_id
                 where i.id = :invoiceId

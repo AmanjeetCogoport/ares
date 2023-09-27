@@ -8,4 +8,7 @@ import io.micronaut.data.annotation.MappedEntity
 data class EmailBankDetails(
     var bankName: String? = null,
     var accountNumber: String? = null,
+    var beneficiaryName: String? = null,
+    var ifscCode: String? = null,
+    var swiftCode: String? = null,
 )
