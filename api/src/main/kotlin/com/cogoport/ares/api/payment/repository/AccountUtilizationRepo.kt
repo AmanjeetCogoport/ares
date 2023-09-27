@@ -712,6 +712,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 AND deleted_at is null
                 AND settlement_enabled = true
                 AND ((:docValues) is null or document_value in (:docValues))
+                AND ((:docNumbers) is null or document_no in (:docNumbers))
             ORDER BY transaction_date DESC, id
             LIMIT :limit
             OFFSET :offset
@@ -824,7 +825,8 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
         sortBy: String?,
         sortType: String?,
         documentPaymentStatus: String?,
-        docValues: List<String>?
+        docValues: List<String>?,
+        docNumbers: List<Long>?
     ): List<Document?>
 
     @NewSpan
@@ -847,6 +849,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     AND document_status != 'DELETED'::document_status
                     AND settlement_enabled = true
                     AND ((:docValues) is null or document_value in (:docValues))
+                    AND ((:docNumbers) is null or document_no in (:docNumbers))
                     AND 
                     (
                         :documentPaymentStatus is null OR 
@@ -869,7 +872,8 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
         endDate: Timestamp?,
         query: String?,
         documentPaymentStatus: String?,
-        docValues: List<String>?
+        docValues: List<String>?,
+        docNumbers: List<Long>?
     ): Long?
 
     @NewSpan

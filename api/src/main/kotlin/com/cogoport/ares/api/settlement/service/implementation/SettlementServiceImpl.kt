@@ -646,7 +646,8 @@ open class SettlementServiceImpl : SettlementService {
                 request.sortBy,
                 request.sortType,
                 request.documentPaymentStatus,
-                request.docValues
+                request.docValues,
+                request.docNumbers
             )
         if (documentEntity.isEmpty()) return ResponseList()
 
@@ -661,7 +662,8 @@ open class SettlementServiceImpl : SettlementService {
                 request.endDate,
                 query,
                 request.documentPaymentStatus,
-                request.docValues
+                request.docValues,
+                request.docNumbers
             )
         } else {
             0L
@@ -2423,7 +2425,7 @@ open class SettlementServiceImpl : SettlementService {
 
         val docValues: List<String> = listOfDocuments.map { it.documentValue!! }
 
-        val documents = getDocumentList(SettlementDocumentRequest(docValues = docValues, countRequired = false))
+        val documents = getDocumentList(SettlementDocumentRequest(docValues = docValues, countRequired = false, docNumbers = listOf(sourceDocumentNo, decodedDestinationId)))
 
         val checkDocumentData = documents.list.map {
             documentConverter.convertDocumentModelToCheckDocument(it!!)

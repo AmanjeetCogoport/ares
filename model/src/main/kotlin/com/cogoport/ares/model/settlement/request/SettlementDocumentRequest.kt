@@ -24,5 +24,6 @@ data class SettlementDocumentRequest(
     val sortBy: String? = "transactionDate",
     val sortType: String? = "Desc",
     val docValues: List<String>? = null,
-    val countRequired: Boolean? = true
+    val countRequired: Boolean? = true,
+    val docNumbers: List<Long>? = null
 )
