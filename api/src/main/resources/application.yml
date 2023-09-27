@@ -95,9 +95,9 @@ sage:
   soapUrl: http://13.126.196.22:8124/soap-generic/syracuse/collaboration/syracuse/CAdxWebServiceXmlCC
   user: admin
   password: admin@2
-  queryClientUrl: https://47tol5ixceub6n2jv7smwnxerm0qgmoq.lambda-url.ap-south-1.on.aws/
-  queryClientPassword: 80D705BDB766333C658206B381C969FE
-  databaseName: 'COGO4'
+  queryClientUrl: https://gozaf35uzpkokesxfgw3g2ribi0hddzk.lambda-url.ap-south-1.on.aws
+  queryClientPassword: KjjzzU2qneGMtzQQyFJ9QwEiPMFYZgut
+  databaseName: 'COGO2'
   loginUrl: ${ SAGE_LOGIN_URL:`http://13.126.196.22/` }
   username: ${ SAGE_REST_API_USER:`rajveer.singh@cogoport.com` }
   userpassword: ${ SAGE_REST_API_PASSWORD:`Abcd@12345` }

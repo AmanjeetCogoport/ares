@@ -4,11 +4,11 @@ import com.cogoport.ares.api.settlement.entity.GlCodeMaster
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
-import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
+import io.micronaut.data.repository.CrudRepository
 import io.micronaut.tracing.annotation.NewSpan
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
-interface GlCodeMasterRepository : CoroutineCrudRepository<GlCodeMaster, Long> {
+interface GlCodeMasterRepository : CrudRepository<GlCodeMaster, Long> {
 
     @NewSpan
     @Query(
@@ -51,4 +51,21 @@ interface GlCodeMasterRepository : CoroutineCrudRepository<GlCodeMaster, Long> {
             """
     )
     fun getDistinctAccType(q: String?, glCode: String?): List<String>
+
+    @NewSpan
+    @Query("""
+        INSERT INTO gl_code_masters (account_code, description, led_account, account_type, class_code, account_class_id, created_by, updated_by, created_at, updated_at)
+    VALUES (:entity.accountCode, :entity.description, :entity.ledAccount, :entity.accountType, :entity.classCode, :entity.accountClassId, :entity.createdBy, :entity.updatedBy, :entity.createdAt, :entity.updatedAt)
+    ON CONFLICT (account_code, led_account)
+    DO UPDATE SET
+        description = EXCLUDED.description,
+        account_type = EXCLUDED.account_type,
+        class_code = EXCLUDED.class_code,
+        account_class_id = EXCLUDED.account_class_id,
+        created_by = EXCLUDED.created_by,
+        updated_by = EXCLUDED.updated_by,
+        created_at = EXCLUDED.created_at,
+        updated_at = EXCLUDED.updated_at;
+    """)
+    suspend fun updateOrInsert(entity : GlCodeMaster) : Any?
 }

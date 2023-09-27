@@ -72,6 +72,9 @@ interface AresMessagePublisher {
     @Binding("ares.migrate.gl.codes")
     suspend fun emitGLCode(req: GlCodeMaster)
 
+    @Binding("ares.upsert.migrate.glcode")
+    suspend fun emitUpsertMigrateGlCode(req: GlCodeMaster)
+
     @Binding("ares.post.jv.to.sage")
     suspend fun emitPostJvToSage(req: PostJVToSageRequest)
 

@@ -27,6 +27,7 @@ import com.cogoport.ares.model.settlement.event.InvoiceBalance
 import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import kotlinx.coroutines.runBlocking
 import javax.transaction.Transactional
 
 @Singleton
@@ -285,7 +286,7 @@ open class PaymentMigrationWrapperImpl(
                 updatedAt = glRecord.updatedAt,
                 accountClassId = null
             )
-            aresMessagePublisher.emitGLCode(glCode)
+            aresMessagePublisher.emitUpsertMigrateGlCode(glCode)
         }
         return glRecords.size
     }
@@ -307,6 +308,26 @@ open class PaymentMigrationWrapperImpl(
             createdAt = request.createdAt
         )
         glCodeMasterRepository.save(glAccount)
+    }
+
+    override suspend fun upsertMigrateGLCode(request: GlCodeMaster) {
+        val classCodeDetails = accountClassRepo.getAccountClass(request.ledAccount, request.classCode)
+        runBlocking {
+            val glAccount = com.cogoport.ares.api.settlement.entity.GlCodeMaster(
+                id = null,
+                accountCode = request.accountCode,
+                description = request.description,
+                ledAccount = request.ledAccount,
+                accountType = request.accountType,
+                classCode = request.classCode,
+                accountClassId = classCodeDetails.id!!,
+                createdBy = request.createdBy,
+                updatedAt = request.updatedAt,
+                updatedBy = request.updatedBy,
+                createdAt = request.createdAt
+            )
+            glCodeMasterRepository.updateOrInsert(glAccount)
+        }
     }
 
     private fun getFormattedJVNums(documentValue: List<String>): String {
