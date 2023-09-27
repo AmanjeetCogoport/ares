@@ -281,7 +281,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         )
     }
 
-    override fun makeJournalVoucherLineItem(
+    override suspend fun makeJournalVoucherLineItem(
         parentMapping: HashMap<String, ParentJournalVoucher>,
         journalVouchers: List<Map<String, Any>>,
         jvBulkFileUploadRequest: JVBulkFileUploadRequest,
@@ -300,7 +300,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                         id = null,
                         jvNum = parentJvData?.jvNum!!,
                         accMode = if (it["acc_mode"].toString().isNotBlank()) AccMode.valueOf(it["acc_mode"].toString()) else AccMode.OTHER,
-                        category = it["category"].toString(),
+                        category = parentJvData.category,
                         createdAt = parentJvData.createdAt,
                         createdBy = jvBulkFileUploadRequest.performedByUserId,
                         updatedAt = parentJvData.createdAt,
@@ -308,7 +308,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
                         currency = parentJvData.currency,
                         ledCurrency = parentJvData.ledCurrency!!,
                         amount = BigDecimal(it["amount"].toString()),
-                        ledAmount = BigDecimal(it["led_amount"].toString()),
+                        ledAmount = BigDecimal(it["amount"].toString()).multiply(parentJvData.exchangeRate),
                         description = parentJvData.description,
                         entityCode = parentJvData.entityCode,
                         entityId = UUID.fromString(AresConstants.ENTITY_ID[parentJvData.entityCode]),
