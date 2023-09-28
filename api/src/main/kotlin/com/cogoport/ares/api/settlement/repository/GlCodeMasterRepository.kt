@@ -4,11 +4,11 @@ import com.cogoport.ares.api.settlement.entity.GlCodeMaster
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
-import io.micronaut.data.repository.CrudRepository
+import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
-interface GlCodeMasterRepository : CrudRepository<GlCodeMaster, Long> {
+interface GlCodeMasterRepository : CoroutineCrudRepository<GlCodeMaster, Long> {
 
     @NewSpan
     @Query(
@@ -51,6 +51,21 @@ interface GlCodeMasterRepository : CrudRepository<GlCodeMaster, Long> {
             """
     )
     fun getDistinctAccType(q: String?, glCode: String?): List<String>
+
+    @NewSpan
+    @Query(
+        """
+            SELECT EXISTS(
+            SELECT 
+            *
+            FROM 
+            gl_code_masters
+            where 
+            account_code::varchar = :glCode
+            )
+            """
+    )
+    fun checkIfGlCodeIsValid(glCode: String?): Boolean
 
     @NewSpan
     @Query(

@@ -44,4 +44,7 @@ interface DocumentMapper {
     fun convertToIncidentModel(document: CheckDocument): com.cogoport.hades.model.incident.request.CheckDocument
 
     fun convertLedgerDetailsToLSPLedgerDocuments(request: List<LedgerDetails>): MutableList<LSPLedgerDocuments>
+
+    @Mapping(target = "settledNostro", expression = "java(java.math.BigDecimal.ZERO)")
+    fun convertDocumentModelToCheckDocument(request: com.cogoport.ares.model.settlement.Document): CheckDocument
 }

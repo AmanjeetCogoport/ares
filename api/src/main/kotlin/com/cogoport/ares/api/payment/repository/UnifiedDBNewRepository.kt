@@ -8,6 +8,7 @@ import com.cogoport.ares.api.payment.entity.SupplierLevelData
 import com.cogoport.ares.model.common.TradePartyOutstandingRes
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.response.CreditDebitBalance
+import com.cogoport.ares.model.settlement.OrgLevelDetails
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -55,7 +56,7 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
             LEFT JOIN grouped_shipment_documents gsd ON gsd.shipment_id::varchar = j.reference_id
             WHERE au.acc_mode = :accMode AND au.organization_id = :organizationId::UUID AND document_status = 'FINAL'
             AND au.transaction_date >= :startDate::DATE AND au.transaction_date <= :endDate::DATE AND au.entity_code IN (:entityCodes)
-            AND au.deleted_at IS NULL AND au.acc_type != 'NEWPR' AND p.deleted_at IS NULL
+            AND au.deleted_at IS NULL AND au.acc_type NOT IN ('NEWPR', 'MTCCV') AND p.deleted_at IS NULL
             ORDER BY transaction_date
         """
     )
@@ -70,7 +71,7 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
             COALESCE(SUM(CASE WHEN au.sign_flag = 1 THEN (au.amount_loc) ELSE 0 END), 0) AS debit
             FROM ares.account_utilizations au 
             WHERE au.acc_mode = :accMode AND au.organization_id = :organizationId::UUID AND document_status = 'FINAL'
-            AND au.entity_code IN (:entityCodes) AND au.deleted_at IS NULL AND au.acc_type != 'NEWPR' AND
+            AND au.entity_code IN (:entityCodes) AND au.deleted_at IS NULL AND au.acc_type NOT IN ('NEWPR', 'MTCCV') AND
             au.transaction_date < :date::DATE
         """
     )
@@ -458,4 +459,20 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
         """
     )
     suspend fun getSupplierDetailData(): List<SupplierLevelData>
+
+    @NewSpan
+    @Query(
+        """
+            SELECT 
+            soim.sage_organization_id as bpr,
+            otpd.id as organization_id,
+            otpd.serial_id as org_serial_id,
+            otpd.legal_business_name as business_name
+            FROM 
+            sage_organization_id_mappings soim 
+            inner join organization_trade_party_details otpd on otpd.serial_id::varchar = soim.trade_party_detail_serial_id::varchar
+            where soim.status = 'active' and otpd.status = 'active' and soim.sage_organization_id in (:sageOrgIds) and soim.account_type = :accType
+        """
+    )
+    suspend fun getOrgDetails(sageOrgIds: List<String>, accType: String?): List<OrgLevelDetails>?
 }

@@ -13,6 +13,7 @@ import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
 import com.cogoport.ares.model.payment.SupplierOutstandingList
 import com.cogoport.ares.model.payment.request.AccPayablesOfOrgReq
+import com.cogoport.ares.model.payment.request.BulkUploadRequest
 import com.cogoport.ares.model.payment.request.CustomerMonthlyPaymentRequest
 import com.cogoport.ares.model.payment.request.CustomerOutstandingRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequest
@@ -74,4 +75,6 @@ interface OutStandingService {
     suspend fun listSupplierDetailsV2(request: SupplierOutstandingRequestV2): ResponseList<SupplierOutstandingDocumentV2?>
 
     suspend fun getEntityLevelStats(entityCode: Int): List<EntityLevelStats>
+
+    suspend fun createRecordInBulk(request: BulkUploadRequest?): String?
 }
