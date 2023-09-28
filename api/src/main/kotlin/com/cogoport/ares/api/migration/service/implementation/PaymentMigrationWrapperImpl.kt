@@ -312,22 +312,25 @@ open class PaymentMigrationWrapperImpl(
 
     override suspend fun upsertMigrateGLCode(request: GlCodeMaster) {
         val classCodeDetails = accountClassRepo.getAccountClass(request.ledAccount, request.classCode)
-        runBlocking {
-            val glAccount = com.cogoport.ares.api.settlement.entity.GlCodeMaster(
-                id = null,
-                accountCode = request.accountCode,
-                description = request.description,
-                ledAccount = request.ledAccount,
-                accountType = request.accountType,
-                classCode = request.classCode,
-                accountClassId = classCodeDetails.id!!,
-                createdBy = request.createdBy,
-                updatedAt = request.updatedAt,
-                updatedBy = request.updatedBy,
-                createdAt = request.createdAt
-            )
-            glCodeMasterRepository.updateOrInsert(glAccount)
-        }
+        var glAccount = com.cogoport.ares.api.settlement.entity.GlCodeMaster(
+            id = null,
+            accountCode = request.accountCode,
+            description = request.description,
+            ledAccount = request.ledAccount,
+            accountType = request.accountType,
+            classCode = request.classCode,
+            accountClassId = classCodeDetails.id!!,
+            createdBy = request.createdBy,
+            updatedAt = request.updatedAt,
+            updatedBy = request.updatedBy,
+            createdAt = request.createdAt
+        )
+        val glCodeMaster = glCodeMasterRepository.isPresent(glAccount.accountCode!!,glAccount.ledAccount!!)
+        if(glCodeMaster == null)
+            glCodeMasterRepository.save(glAccount)
+        else
+            glAccount.id = glCodeMaster!!
+            glCodeMasterRepository.update(glAccount)
     }
 
     private fun getFormattedJVNums(documentValue: List<String>): String {
