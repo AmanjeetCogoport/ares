@@ -7,7 +7,6 @@ import com.cogoport.ares.api.migration.service.interfaces.PaymentMigrationWrappe
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.PaymentStatusSyncMigrationReq
 import com.cogoport.ares.model.common.TdsAmountReq
-import com.cogoport.ares.model.settlement.GlCodeMaster
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -253,10 +252,5 @@ class MigratePaymentsController {
         ids.forEach {
             aresMessagePublisher.emitMigratePaymentAmount(it)
         }
-    }
-
-    @Put("/migrate-gl-code")
-    suspend fun migrateGlcodes(@Body req: GlCodeMaster){
-        paymentMigration.upsertMigrateGLCode(req)
     }
 }

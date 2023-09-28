@@ -27,7 +27,6 @@ import com.cogoport.ares.model.settlement.event.InvoiceBalance
 import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
-import kotlinx.coroutines.runBlocking
 import javax.transaction.Transactional
 
 @Singleton
@@ -325,12 +324,12 @@ open class PaymentMigrationWrapperImpl(
             updatedBy = request.updatedBy,
             createdAt = request.createdAt
         )
-        val glCodeMaster = glCodeMasterRepository.isPresent(glAccount.accountCode!!,glAccount.ledAccount!!)
-        if(glCodeMaster == null)
+        val glCodeMaster = glCodeMasterRepository.isPresent(glAccount.accountCode!!, glAccount.ledAccount!!)
+        if (glCodeMaster == null)
             glCodeMasterRepository.save(glAccount)
         else
             glAccount.id = glCodeMaster!!
-            glCodeMasterRepository.update(glAccount)
+        glCodeMasterRepository.update(glAccount)
     }
 
     private fun getFormattedJVNums(documentValue: List<String>): String {

@@ -53,8 +53,10 @@ interface GlCodeMasterRepository : CrudRepository<GlCodeMaster, Long> {
     fun getDistinctAccType(q: String?, glCode: String?): List<String>
 
     @NewSpan
-    @Query("""
-     SELECT id FROM ares.gl_code_masters where account_code = :accountCode and led_account= :ledAccount
-    """)
-    suspend fun isPresent(accountCode: Int, ledAccount:String) : Long?
+    @Query(
+        """
+     SELECT id FROM gl_code_masters where account_code = :accountCode and led_account= :ledAccount
+    """
+    )
+    suspend fun isPresent(accountCode: Int, ledAccount: String): Long?
 }

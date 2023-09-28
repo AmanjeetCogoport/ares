@@ -193,7 +193,7 @@ class AresMessageConsumer {
         paymentMigrationWrapper.createGLCode(req)
     }
 
-    @Queue("ares-upsert-migrate-gl-codes", prefetch = 1)
+    @Queue("ares-upsert-migrate-glcodes", prefetch = 1)
     fun upsertMigrateGLCode(req: GlCodeMaster) = runBlocking {
         paymentMigrationWrapper.upsertMigrateGLCode(req)
     }
