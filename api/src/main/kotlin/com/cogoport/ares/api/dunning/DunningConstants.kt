@@ -93,5 +93,4 @@ object DunningConstants {
     const val MAX_PAGE_SIZE = 10000
 
     var EMAIL_TEMPLATE_FOR_IRN_GENERATION = "irn_generation_mail"
-
 }

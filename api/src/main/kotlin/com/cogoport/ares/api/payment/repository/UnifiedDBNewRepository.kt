@@ -4,6 +4,7 @@ import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.models.ARLedgerJobDetailsResponse
 import com.cogoport.ares.api.common.models.CreditControllerDetails
 import com.cogoport.ares.api.common.models.EmailBankDetails
+import com.cogoport.ares.api.common.models.EmailDetails
 import com.cogoport.ares.api.common.models.InvoiceDetails
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.LedgerSummary
@@ -558,8 +559,64 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
         """
                 select otp.organization_id from plutus.addresses a
                 join organization_trade_parties otp on a.trade_party_mapping_id = otp.id and a.organization_type = 'BUYER'
-                where a.invoice_id = 'invoiceId'
+                where a.invoice_id = :invoiceId
             """
     )
-    suspend fun getOrganisationId(invoiceId: Long): UUID
+    suspend fun getOrganisationId(invoiceId: Long): String?
+    @NewSpan
+    @Query(
+        """
+                With a as (
+                  select otp.organization_id as organization_id, a.invoice_id as invoice_id from plutus.addresses a
+                  join organization_trade_parties otp on a.trade_party_mapping_id = otp.id and a.organization_type = 'BUYER'
+                  where a.invoice_id = :invoiceId
+                ),
+                b as (
+                    SELECT i.id as invoice_id,
+                    jsonb_agg(jsonb_build_object('credit_controller_name', u.name, 'credit_controller_email', u.email,'credit_controller_mobile_code', u.mobile_country_code,'credit_controller_mobile_number',u.mobile_number)) as credit_controller_details
+                    FROM loki.jobs j 
+                    LEFT JOIN plutus.invoices i ON j.id = i.job_id
+                    LEFT JOIN plutus.addresses a ON a.invoice_id = i.id AND a.organization_type = 'BUYER'
+                    LEFT JOIN organization_trade_parties otp ON a.trade_party_mapping_id = otp.id
+                    LEFT JOIN organization_stakeholders os ON
+                        os. organization_id = otp.organization_id 
+                        AND os.status = 'active' 
+                        AND os.stakeholder_type = 'credit_controller'
+                    LEFT JOIN users u ON u.id = os.stakeholder_id
+                    WHERE i.id = :invoiceId
+                    GROUP by i.id
+                   ),
+               c as (
+                   SELECT array_agg(u.email) as customer_email, i.id as invoice_id
+                    FROM loki.jobs j 
+                    LEFT JOIN plutus.invoices i ON j.id = i.job_id
+                    LEFT JOIN plutus.addresses a ON a.invoice_id = i.id AND a.organization_type = 'BUYER'
+                    LEFT JOIN organization_trade_parties otp ON a.trade_party_mapping_id = otp.id
+                    LEFT JOIN organization_stakeholders os ON os.stakeholder_id = (j.job_details->'salesAgent'->>'id')::uuid 
+                        AND os.organization_id = otp.organization_id 
+                        AND os.status = 'active' 
+                        AND os.stakeholder_type = 'sales_agent'
+                    LEFT JOIN users u ON u.id = os.user_id
+                    WHERE i.id = :invoiceId
+                    GROUP by i.id
+               ),
+               d as (
+                    select invoice_pdf_url, id as invoice_id from plutus.invoices where id = '656466'
+               ), 
+               e as (
+                        select b.bank_name as bank_name, b.account_number as account_number, b.beneficiary_name as beneficiary_name, b.ifsc_code as ifsc_code, b.swift_code as swift_code, i.id as invoice_id from plutus.invoices i
+                        left join plutus.addresses a on i.id = a.invoice_id and organization_type = 'SELLER'
+                        left join plutus.bank_details b on a.id = b.address_id
+                        where i.id = :invoiceId
+               )
+               select
+               a.organization_id, b.credit_controller_details, c.customer_email, d.invoice_pdf_url,
+               e.bank_name, e.account_number, e.beneficiary_name, e.ifsc_code, e.swift_code
+               from a left join b on a.invoice_id = b.invoice_id
+               left join c on c.invoice_id = a.invoice_id
+               left join d on d.invoice_id = a.invoice_id
+               left join e on e.invoice_id = a.invoice_id
+            """
+    )
+    suspend fun getEmailDataForIrnGeneration(invoiceId: Long): EmailDetails
 }
