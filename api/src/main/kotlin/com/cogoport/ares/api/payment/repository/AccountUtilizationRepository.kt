@@ -1330,7 +1330,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             LEFT JOIN payments p ON p.payment_num = au.document_no AND p.payment_num_value = au.document_value
             WHERE au.acc_mode::VARCHAR = :accMode AND au.organization_id = :organizationId::UUID AND document_status = 'FINAL'
             AND au.transaction_date >= :startDate::DATE AND au.transaction_date <= :endDate::DATE AND au.entity_code IN (:entityCodes)
-            AND au.deleted_at IS NULL AND au.acc_type != 'NEWPR' AND p.deleted_at IS NULL
+            AND au.deleted_at IS NULL AND au.acc_type NOT IN ('NEWPR', 'MTCCV') AND p.deleted_at IS NULL
             ORDER BY transaction_date
         """
     )
@@ -1345,7 +1345,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             COALESCE(SUM(CASE WHEN au.sign_flag = 1 THEN (au.amount_loc) ELSE 0 END), 0) AS debit
             FROM account_utilizations au 
             WHERE au.acc_mode::VARCHAR = :accMode AND au.organization_id = :organizationId::UUID AND document_status = 'FINAL'
-            AND au.entity_code IN (:entityCodes) AND au.deleted_at IS NULL AND au.acc_type != 'NEWPR' AND
+            AND au.entity_code IN (:entityCodes) AND au.deleted_at IS NULL AND au.acc_type NOT IN ('NEWPR', 'MTCCV') AND
             au.transaction_date < :date::DATE
         """
     )
