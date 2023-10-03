@@ -31,9 +31,9 @@ netty:
 r2dbc:
   datasources:
     default:
-      url: r2dbc:postgresql://${DB_HOST:127.0.0.1}:${DB_PORT:6432}/${DB_NAME:ares}?preparedStatementCacheQueries=0
-      username: ${DB_USER:mustangs2}
-      password: ${DB_PASSWORD:DI8E64c5clAyWuAz0Tqm4pgeUj12KZ}
+      url: r2dbc:postgresql://${DB_HOST:rds-cluster.stage.cogoport.io}:${DB_PORT:6432}/${DB_NAME:ares}?preparedStatementCacheQueries=0
+      username: ${DB_USER:postgres}
+      password: ${DB_PASSWORD:A942B37CCFAF5A813B1432CAA209A43B9D144E47AD0DE1549C289C253E556CD5}
       dialect: POSTGRES
     dms:
       url: r2dbc:postgresql://${UNIFIEDDB_HOST:`52.66.190.93`}:${UNIFIEDDB_PORT:6432}/${UNIFIEDDB_NAME:dms}?preparedStatementCacheQueries=0
