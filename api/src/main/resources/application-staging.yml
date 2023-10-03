@@ -92,3 +92,6 @@ rabbitmq:
 lsp:
   coming_soon_banner:
     enabled: false
+
+scheduler:
+  enabled: false
