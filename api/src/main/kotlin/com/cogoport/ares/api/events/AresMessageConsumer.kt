@@ -4,7 +4,6 @@ import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.dunning.model.request.CycleExecutionProcessReq
 import com.cogoport.ares.api.dunning.model.request.PaymentReminderReq
 import com.cogoport.ares.api.dunning.service.interfaces.DunningHelperService
-import com.cogoport.ares.api.dunning.service.interfaces.EmailService
 import com.cogoport.ares.api.dunning.service.interfaces.ScheduleService
 import com.cogoport.ares.api.migration.model.JVParentDetails
 import com.cogoport.ares.api.migration.model.JVRecordsScheduler
@@ -43,6 +42,7 @@ import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import com.cogoport.ares.model.settlement.request.PostSettlementRequest
 import com.cogoport.brahma.hashids.Hashids
 import com.cogoport.brahma.rabbitmq.model.RabbitmqEventLogDocument
+import com.cogoport.plutus.model.invoice.request.IrnGenerationEmailRequest
 import com.rabbitmq.client.Envelope
 import io.micronaut.messaging.annotation.MessageBody
 import io.micronaut.rabbitmq.annotation.Queue
@@ -93,9 +93,6 @@ class AresMessageConsumer {
 
     @Inject
     lateinit var dunningHelperService: DunningHelperService
-
-    @Inject
-    lateinit var emailService: EmailService
 
     @Queue("ares-update-supplier-details", prefetch = 1)
     fun updateSupplierOutstanding(request: UpdateSupplierOutstandingRequest) = runBlocking {
@@ -303,7 +300,7 @@ class AresMessageConsumer {
     }
 
     @Queue("ares-send-email-for-irn-generation", prefetch = 1)
-    fun sendEmailForIrnGeneration(invoiceId: Long) = runBlocking {
-        emailService.sendEmailForIrnGeneration(invoiceId)
+    fun sendEmailForIrnGeneration(irnGenerationEmailRequest: IrnGenerationEmailRequest) = runBlocking {
+        scheduleService.sendEmailForIrnGeneration(irnGenerationEmailRequest)
     }
 }

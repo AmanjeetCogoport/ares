@@ -10,9 +10,9 @@ data class CreateCommunicationRequest(
     @JsonProperty("template_name")
     var templateName: String?,
     @JsonProperty("performed_by_user_id")
-    var performedByUserId: UUID? = null,
+    var performedByUserId: UUID?,
     @JsonProperty("performed_by_user_name")
-    var performedByUserName: String? = null,
+    var performedByUserName: String?,
     @JsonProperty("recipient_email")
     var recipientEmail: String?,
     @JsonProperty("sender_email")
