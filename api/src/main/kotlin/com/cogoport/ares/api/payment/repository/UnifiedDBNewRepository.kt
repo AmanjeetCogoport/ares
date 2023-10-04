@@ -5,6 +5,7 @@ import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.LedgerSummary
 import com.cogoport.ares.api.payment.entity.SupplierLevelData
 import com.cogoport.ares.model.common.TradePartyOutstandingRes
+import com.cogoport.ares.model.settlement.OrgLevelDetails
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -399,4 +400,20 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
         """
     )
     suspend fun getSupplierDetailData(): List<SupplierLevelData>
+
+    @NewSpan
+    @Query(
+        """
+            SELECT 
+            soim.sage_organization_id as bpr,
+            otpd.id as organization_id,
+            otpd.serial_id as org_serial_id,
+            otpd.legal_business_name as business_name
+            FROM 
+            sage_organization_id_mappings soim 
+            inner join organization_trade_party_details otpd on otpd.serial_id::varchar = soim.trade_party_detail_serial_id::varchar
+            where soim.status = 'active' and otpd.status = 'active' and soim.sage_organization_id in (:sageOrgIds) and soim.account_type = :accType
+        """
+    )
+    suspend fun getOrgDetails(sageOrgIds: List<String>, accType: String?): List<OrgLevelDetails>?
 }
