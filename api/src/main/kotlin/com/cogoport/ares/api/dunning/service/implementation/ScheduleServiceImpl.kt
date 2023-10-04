@@ -111,7 +111,7 @@ class ScheduleServiceImpl(
             dunningExecutionRepo.updateStatus(executionId, CycleExecutionStatus.COMPLETED.name)
         } catch (err: Exception) {
             dunningExecutionRepo.updateStatus(executionId, CycleExecutionStatus.FAILED.name)
-            logger().error(err.toString())
+            logger().error(err.message)
         }
         // logic for next execution creation
         saveAndScheduleNextDunning(executionDetails!!)
@@ -270,7 +270,7 @@ class ScheduleServiceImpl(
                     emailUsers = try {
                         userList.filter { it.workScopes!!.contains(scopes) } as MutableList<UserData>
                     } catch (err: Exception) {
-                        logger().error(err.toString())
+                        logger().error(err.message)
                         mutableListOf()
                     }
                     if (userList.isNotEmpty()) break
@@ -687,7 +687,7 @@ class ScheduleServiceImpl(
             response = JSONObject(data).getJSONObject("third_party_response").getString("message_id")
         } catch (err: JSONException) {
             response = null
-            logger().info(err.toString())
+            logger().info(err.message)
         }
         return response
     }

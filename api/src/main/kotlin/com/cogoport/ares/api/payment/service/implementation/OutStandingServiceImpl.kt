@@ -375,7 +375,7 @@ class OutStandingServiceImpl : OutStandingService {
                 }
             }
         } catch (error: Exception) {
-            logger().error(error.toString())
+            logger().error(error.message)
             logger().error(error.stackTraceToString())
         }
     }
