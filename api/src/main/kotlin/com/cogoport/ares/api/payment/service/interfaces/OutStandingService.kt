@@ -70,7 +70,7 @@ interface OutStandingService {
 
     suspend fun createLedgerSummary()
 
-    suspend fun getOverallCustomerOutstanding(entityCode: Int): HashMap<String, EntityWiseOutstandingBucket>
+    suspend fun getOverallCustomerOutstanding(entityCodes: String?): MutableMap<String, HashMap<String, EntityWiseOutstandingBucket>>
 
     suspend fun createSupplierDetailsV2()
 

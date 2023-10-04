@@ -133,7 +133,7 @@ class OutstandingController {
     @Get("/by-customer{?request*}")
     suspend fun getCustomerDetails(@Valid request: CustomerOutstandingRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): ResponseList<CustomerOutstandingDocumentResponse?> {
         request.entityCode = if (util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() != null) {
-            listOf(util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt()!!)
+            util.getCogoEntityCode(user?.filters?.get("partner_id"))
         } else {
             request.entityCode
         }
@@ -193,11 +193,15 @@ class OutstandingController {
     @Auth
     @Get("/overall-customer-outstanding")
     suspend fun getOverallCustomerOutstanding(
-        @QueryValue("entityCode") entityCode: Int? = 301,
+        @QueryValue("entityCodes") entityCodes: String? = "301",
         user: AuthResponse?,
         httpRequest: HttpRequest<*>
-    ): HashMap<String, EntityWiseOutstandingBucket>? {
-        val updatedEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: entityCode
+    ): MutableMap<String, HashMap<String, EntityWiseOutstandingBucket>> {
+        val updatedEntityCode = if (util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() != null) {
+            util.getCogoEntityCode(user?.filters?.get("partner_id"))
+        } else {
+            entityCodes
+        }
         return outStandingService.getOverallCustomerOutstanding(updatedEntityCode!!)
     }
 
