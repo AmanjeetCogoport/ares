@@ -585,6 +585,10 @@ class OutStandingServiceImpl : OutStandingService {
                 )
                 getCallPriority(customerOutstanding)
                 Client.addDocument("customer_outstanding_$entity", request.organizationId!!, customerOutstanding, true)
+
+                if (entity in listOf(101, 301)) {
+                    Client.addDocument("customer_outstanding_101_301", request.organizationId!!, customerOutstanding, true)
+                }
             }
         }
     }
@@ -851,6 +855,10 @@ class OutStandingServiceImpl : OutStandingService {
                         )
                         getCallPriority(openSearchData)
                         Client.addDocument("customer_outstanding_$entity", id, openSearchData, true)
+
+                        if (entity in listOf(101, 301)) {
+                            Client.addDocument("customer_outstanding_101_301", id, openSearchData, true)
+                        }
                     }
                 }
             }
@@ -861,7 +869,8 @@ class OutStandingServiceImpl : OutStandingService {
     }
 
     override suspend fun listCustomerDetails(request: CustomerOutstandingRequest): ResponseList<CustomerOutstandingDocumentResponse?> {
-        val index = "customer_outstanding_${request.entityCode}"
+        val entityCode = request.entityCode?.joinToString("_")
+        val index = "customer_outstanding_$entityCode"
 
         val response = OpenSearchClient().listCustomerOutstanding(request, index)
         var list: List<CustomerOutstandingDocumentResponse?> = listOf()
@@ -1456,5 +1465,9 @@ class OutStandingServiceImpl : OutStandingService {
         }
 
         return excelFileUrl
+    }
+
+    override suspend fun getDistinctOrgIds(accMode: AccMode?): List<UUID>? {
+        return accountUtilizationRepo.getDistinctOrgIds(accMode)
     }
 }

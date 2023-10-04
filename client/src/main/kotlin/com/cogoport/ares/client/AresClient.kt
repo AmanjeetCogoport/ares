@@ -3,6 +3,7 @@ package com.cogoport.ares.client
 import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.common.TdsAmountReq
+import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountPayablesFile
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.CustomerStatsRequest
@@ -172,4 +173,7 @@ interface AresClient {
 
     @Post("/payments/accounts/update-csd-payment")
     suspend fun updateCSDPayments(@Valid @Body request: UpdateCSDPaymentRequest)
+
+    @Get("/payments/outstanding/distinct-org")
+    suspend fun getDistinctOrgIds(@QueryValue("accMode") accMode: AccMode?): List<UUID>?
 }
