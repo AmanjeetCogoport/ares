@@ -14,6 +14,7 @@ import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.common.TradePartyOutstandingReq
 import com.cogoport.ares.model.common.TradePartyOutstandingRes
+import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
@@ -48,7 +49,9 @@ import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
 import java.math.BigDecimal
+import java.util.UUID
 import javax.validation.Valid
+import kotlin.collections.HashMap
 
 @Validated
 @Controller("/outstanding")
@@ -129,7 +132,11 @@ class OutstandingController {
     @Auth
     @Get("/by-customer{?request*}")
     suspend fun getCustomerDetails(@Valid request: CustomerOutstandingRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): ResponseList<CustomerOutstandingDocumentResponse?> {
-        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
+        request.entityCode = if (util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() != null) {
+            listOf(util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt()!!)
+        } else {
+            request.entityCode
+        }
         return Response<ResponseList<CustomerOutstandingDocumentResponse?>>().ok(outStandingService.listCustomerDetails(request))
     }
 
@@ -217,5 +224,10 @@ class OutstandingController {
     @Post("/bulk-upload")
     suspend fun createRecordInBulk(@Body request: BulkUploadRequest): String? {
         return outStandingService.createRecordInBulk(request)
+    }
+
+    @Get("/distinct-org")
+    suspend fun getDistinctOrgIds(@QueryValue("accMode") accMode: AccMode?): List<UUID>? {
+        return outStandingService.getDistinctOrgIds(accMode)
     }
 }

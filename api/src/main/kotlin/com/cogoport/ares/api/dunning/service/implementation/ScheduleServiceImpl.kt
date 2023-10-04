@@ -167,7 +167,7 @@ class ScheduleServiceImpl(
             try {
                 val request = CustomerOutstandingRequest(
                     tradePartyDetailId = tradePartyDetailId,
-                    entityCode = entityCode
+                    entityCode = if (entityCode != null) listOf(entityCode) else null
                 )
                 outstandingData = outstandingService.listCustomerDetails(
                     request
