@@ -1905,4 +1905,12 @@ ORDER BY
         documentNos: List<Long>,
         accTypes: List<String?>?
     ): List<AccountUtilization>?
+
+    @NewSpan
+    @Query(
+        """
+            SELECT distinct (organization_id) from account_utilizations where ((:accMode) is null or acc_mode::VARCHAR = :accMode)
+        """
+    )
+    suspend fun getDistinctOrgIds(accMode: AccMode?): List<UUID>?
 }

@@ -16,7 +16,7 @@ data class CustomerOutstandingRequest(
     var organizationSerialId: String? = null,
     var countryId: List<UUID>? = null,
     var companyType: String? = null,
-    var entityCode: Int? = 301,
+    var entityCode: List<Int>? = listOf(301),
     var sortBy: String? = "totalOutstandingLedgerAmount",
     var sortType: String? = "Desc",
     var page: Int? = 1,
