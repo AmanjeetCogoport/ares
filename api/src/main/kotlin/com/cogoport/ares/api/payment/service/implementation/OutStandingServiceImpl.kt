@@ -1241,7 +1241,7 @@ class OutStandingServiceImpl : OutStandingService {
         customerData.totalCallPriorityScore = callPriorityScores.geTotalCallPriority()
     }
 
-    override suspend fun getOverallCustomerOutstanding(entityCodes: String?): MutableMap<String, HashMap<String, EntityWiseOutstandingBucket>> {
+    override suspend fun getOverallCustomerOutstanding(entityCodes: String?): HashMap<String, EntityWiseOutstandingBucket> {
         val entityCodes: List<Int>? = entityCodes?.split("_")?.map { it.toInt() }
         val defaultersOrgIds = defaultedBusinessPartnersService.listTradePartyDetailIds()
         val openInvoiceQueryResponse = accountUtilizationRepo.getEntityWiseOutstandingBucket(entityCodes, listOf(AccountType.SINV, AccountType.SREIMB), listOf(AccMode.AR), defaultersOrgIds)
@@ -1253,10 +1253,9 @@ class OutStandingServiceImpl : OutStandingService {
 
         val onAccountRecQueryResponse = accountUtilizationRepo.getEntityWiseOnAccountBucket(entityCodes, onAccountTypeList, listOf(AccMode.AR), paymentAccountTypeList, jvAccountTypeList, defaultersOrgIds)
 
-        val mapData = mutableMapOf<String, HashMap<String, EntityWiseOutstandingBucket>>()
-
+        val responseMap = HashMap<String, EntityWiseOutstandingBucket>()
         openInvoiceQueryResponse.groupBy { it.ledCurrency }.entries.map { (k, v) ->
-            val responseMap = HashMap<String, EntityWiseOutstandingBucket>()
+
             val creditNoteData = creditNoteQueryResponse.filter { it.ledCurrency == k }
             val onAccountData = onAccountRecQueryResponse.filter { it.ledCurrency == k }
             responseMap["totalOutstandingBucket"] = EntityWiseOutstandingBucket(
@@ -1317,11 +1316,9 @@ class OutStandingServiceImpl : OutStandingService {
                 threeSixtyFivePlusLedAmount = onAccountData.sumOf { it.threeSixtyFivePlusLedAmount },
                 totalLedAmount = onAccountData.sumOf { it.totalLedAmount }
             )
-
-            mapData[v.joinToString("_") { it.entityCode }] = responseMap
         }
 
-        return mapData
+        return responseMap
     }
 
     override suspend fun createSupplierDetailsV2() {
