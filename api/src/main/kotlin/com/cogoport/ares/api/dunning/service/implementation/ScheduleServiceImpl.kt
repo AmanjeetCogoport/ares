@@ -723,14 +723,19 @@ class ScheduleServiceImpl(
         try {
             dunningEmailAuditObject.executionId = request.invoiceId
             dunningEmailAuditObject.isSuccess = false
-            dunningEmailAuditObject.tradePartyDetailId = UUID.fromString(request.organizationId)
+            dunningEmailAuditObject.tradePartyDetailId = UUID.fromString(request.tradePartyDetailId)
 
-            val creditControllerData = organizationStakeholderRepo.getOrganizationStakeholdersUsingOrgId(UUID.fromString(request.organizationId), "CREDIT_CONTROLLER")
-            val salesAgentData = organizationStakeholderRepo.getOrganisationStakeholdersList(UUID.fromString(request.organizationId), "SALES_AGENT")
+            val stakeHoldersData = organizationStakeholderRepo.getOrganisationStakeholdersList(UUID.fromString(request.organizationId))
+            val x = stakeHoldersData
+//            val creditControllerData = organizationStakeholderRepo.getOrganizationStakeholdersUsingOrgId(UUID.fromString(request.organizationId), "CREDIT_CONTROLLER")
+            val creditControllerData = stakeHoldersData.filter { it.organizationStakeholderType == "CREDIT_CONTROLLER" }
+
+//            val salesAgentData = organizationStakeholderRepo.getOrganisationStakeholdersList(UUID.fromString(request.organizationId))
+            val salesAgentData = stakeHoldersData.filter { it.organizationStakeholderType == "SALES_AGENT" }
 
             val salesAgentIds = salesAgentData.map { it.organizationStakeholderId.toString() }
 
-            val creditControllerDetails = authClient.getUsers(GetUserRequest(arrayListOf(creditControllerData?.organizationStakeholderId.toString())))
+            val creditControllerDetails = authClient.getUsers(GetUserRequest(arrayListOf(creditControllerData?.get(0).organizationStakeholderId.toString())))
             val creditController = creditControllerDetails?.get(0)
             val salesAgentDetails = authClient.getUsers(GetUserRequest(ArrayList(salesAgentIds)))
             val salesAgentEmail = salesAgentDetails?.map { it.userEmail }
@@ -751,11 +756,8 @@ class ScheduleServiceImpl(
 
             val variables = getEmailVariablesForIrnGeneration(request, creditController)
 
-            if (salesAgentEmail.isNotEmpty()) {
-                val list = salesAgentEmail.subList(1, salesAgentEmail.size)
-                ccEmailList = list.filterNotNull().toMutableList()
-            }
-
+            val list = salesAgentEmail.subList(1, salesAgentEmail.size)
+            ccEmailList = list.filterNotNull().toMutableList()
             val serviceId = UUID.randomUUID().toString()
             val communicationRequest = CommunicationRequest(
                 recipient = salesAgentEmail[0],
@@ -777,6 +779,8 @@ class ScheduleServiceImpl(
                     throw AresException(AresError.ERR_1001, "mail could not be sent")
                 }
             } catch (err: Exception) {
+                dunningEmailAuditObject.errorReason = err.toString()
+                createDunningAudit(dunningEmailAuditObject)
                 recordFailedThirdPartyApiAudits(request.invoiceId!!, communicationRequest.toString(), err.toString(), "create_communication")
             }
 
