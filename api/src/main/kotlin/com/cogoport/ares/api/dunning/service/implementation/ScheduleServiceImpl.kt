@@ -726,18 +726,19 @@ class ScheduleServiceImpl(
             dunningEmailAuditObject.tradePartyDetailId = UUID.fromString(request.tradePartyDetailId)
 
             val stakeHoldersData = organizationStakeholderRepo.getOrganisationStakeholdersList(UUID.fromString(request.organizationId))
-            val x = stakeHoldersData
-//            val creditControllerData = organizationStakeholderRepo.getOrganizationStakeholdersUsingOrgId(UUID.fromString(request.organizationId), "CREDIT_CONTROLLER")
+
             val creditControllerData = stakeHoldersData.filter { it.organizationStakeholderType == "CREDIT_CONTROLLER" }
 
-//            val salesAgentData = organizationStakeholderRepo.getOrganisationStakeholdersList(UUID.fromString(request.organizationId))
             val salesAgentData = stakeHoldersData.filter { it.organizationStakeholderType == "SALES_AGENT" }
 
             val salesAgentIds = salesAgentData.map { it.organizationStakeholderId.toString() }
 
             val creditControllerDetails = authClient.getUsers(GetUserRequest(arrayListOf(creditControllerData?.get(0).organizationStakeholderId.toString())))
+
             val creditController = creditControllerDetails?.get(0)
+
             val salesAgentDetails = authClient.getUsers(GetUserRequest(ArrayList(salesAgentIds)))
+
             val salesAgentEmail = salesAgentDetails?.map { it.userEmail }
 
             if (salesAgentEmail?.isEmpty()!!) {
@@ -752,6 +753,12 @@ class ScheduleServiceImpl(
                 return
             }
 
+            if (request.accountNumber == null || request.ifscCode == null) {
+                dunningEmailAuditObject.errorReason = "invalid bank details"
+                createDunningAudit(dunningEmailAuditObject)
+                return
+            }
+
             var ccEmailList: MutableList<String>? = mutableListOf()
 
             val variables = getEmailVariablesForIrnGeneration(request, creditController)
@@ -762,7 +769,7 @@ class ScheduleServiceImpl(
             val communicationRequest = CommunicationRequest(
                 recipient = salesAgentEmail[0],
                 type = "email",
-                service = "irn_generation_mail",
+                service = "shipment",
                 serviceId = serviceId,
                 templateName = DunningConstants.EMAIL_TEMPLATE_FOR_IRN_GENERATION,
                 sender = creditController.userEmail,
