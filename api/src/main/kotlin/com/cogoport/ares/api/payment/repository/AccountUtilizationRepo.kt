@@ -720,8 +720,6 @@ ORDER BY
                 AND ((:docValues) is null or document_value in (:docValues))
                 AND ((:docNumbers) is null or document_no in (:docNumbers))
             ORDER BY transaction_date DESC, id
-            LIMIT :limit
-            OFFSET :offset
         )
         SELECT 
             au.id,
@@ -816,6 +814,8 @@ ORDER BY
                     END       
             END 
             Asc
+            LIMIT :limit
+            OFFSET :offset
         """
     )
     suspend fun getDocumentList(
