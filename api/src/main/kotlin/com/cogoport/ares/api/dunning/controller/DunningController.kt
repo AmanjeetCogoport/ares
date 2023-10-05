@@ -204,7 +204,7 @@ class DunningController(
         return dunningService.dunningCardData(entityCode)
     }
 
-    @Post("/send-email")
+    @Post("/send-email-irn-generation")
     suspend fun sendEmail(
         request: IrnGenerationEmailRequest
     ) {

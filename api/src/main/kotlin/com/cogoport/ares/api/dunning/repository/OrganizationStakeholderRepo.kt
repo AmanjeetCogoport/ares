@@ -87,7 +87,7 @@ interface OrganizationStakeholderRepo : CoroutineCrudRepository<OrganizationStak
                 organization_stakeholders
             WHERE
                 organization_id::UUID = :organizationId
-                AND organization_stakeholder_type IN ('CREDIT_CONTROLLER', 'SALES_AGENT')
+                AND organization_stakeholder_type IN ('CREDIT_CONTROLLER', 'SALES_AGENT') AND is_active = TRUE
             """
     )
     suspend fun getOrganisationStakeholdersList(
