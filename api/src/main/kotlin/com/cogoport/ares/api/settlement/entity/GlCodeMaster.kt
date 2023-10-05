@@ -9,7 +9,7 @@ import java.util.UUID
 @MappedEntity(value = "gl_code_masters")
 data class GlCodeMaster(
     @field:Id @GeneratedValue
-    val id: Long?,
+    var id: Long?,
     val accountCode: Int?,
     val description: String?,
     val ledAccount: String?,

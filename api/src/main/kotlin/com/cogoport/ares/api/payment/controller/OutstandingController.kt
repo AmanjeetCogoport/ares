@@ -14,11 +14,13 @@ import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.common.TradePartyOutstandingReq
 import com.cogoport.ares.model.common.TradePartyOutstandingRes
+import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
 import com.cogoport.ares.model.payment.SupplierOutstandingList
 import com.cogoport.ares.model.payment.request.AccPayablesOfOrgReq
+import com.cogoport.ares.model.payment.request.BulkUploadRequest
 import com.cogoport.ares.model.payment.request.CustomerMonthlyPaymentRequest
 import com.cogoport.ares.model.payment.request.CustomerOutstandingRequest
 import com.cogoport.ares.model.payment.request.InvoiceListRequest
@@ -47,7 +49,9 @@ import io.micronaut.http.annotation.QueryValue
 import io.micronaut.validation.Validated
 import jakarta.inject.Inject
 import java.math.BigDecimal
+import java.util.UUID
 import javax.validation.Valid
+import kotlin.collections.HashMap
 
 @Validated
 @Controller("/outstanding")
@@ -128,7 +132,15 @@ class OutstandingController {
     @Auth
     @Get("/by-customer{?request*}")
     suspend fun getCustomerDetails(@Valid request: CustomerOutstandingRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): ResponseList<CustomerOutstandingDocumentResponse?> {
-        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
+        val partnerTaggedEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))
+        request.entityCode = if (partnerTaggedEntityCode?.toInt() != null) {
+            when (partnerTaggedEntityCode) {
+                "101" -> "101_301"
+                else -> partnerTaggedEntityCode
+            }
+        } else {
+            request.entityCode
+        }
         return Response<ResponseList<CustomerOutstandingDocumentResponse?>>().ok(outStandingService.listCustomerDetails(request))
     }
 
@@ -185,11 +197,19 @@ class OutstandingController {
     @Auth
     @Get("/overall-customer-outstanding")
     suspend fun getOverallCustomerOutstanding(
-        @QueryValue("entityCode") entityCode: Int? = 301,
+        @QueryValue("entityCode") entityCode: String? = "101",
         user: AuthResponse?,
         httpRequest: HttpRequest<*>
-    ): HashMap<String, EntityWiseOutstandingBucket>? {
-        val updatedEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: entityCode
+    ): HashMap<String, EntityWiseOutstandingBucket> {
+        val partnerTaggedEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))
+        val updatedEntityCode = if (partnerTaggedEntityCode?.toInt() != null) {
+            when (partnerTaggedEntityCode) {
+                "101" -> "101_301"
+                else -> partnerTaggedEntityCode
+            }
+        } else {
+            entityCode
+        }
         return outStandingService.getOverallCustomerOutstanding(updatedEntityCode!!)
     }
 
@@ -211,5 +231,15 @@ class OutstandingController {
     suspend fun getEntityLevelStats(@QueryValue("entityCode") entityCode: Int, user: AuthResponse?, httpRequest: HttpRequest<*>): List<EntityLevelStats> {
         val updatedEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: entityCode
         return outStandingService.getEntityLevelStats(updatedEntityCode)
+    }
+
+    @Post("/bulk-upload")
+    suspend fun createRecordInBulk(@Body request: BulkUploadRequest): String? {
+        return outStandingService.createRecordInBulk(request)
+    }
+
+    @Get("/distinct-org")
+    suspend fun getDistinctOrgIds(@QueryValue("accMode") accMode: AccMode?): List<UUID>? {
+        return outStandingService.getDistinctOrgIds(accMode)
     }
 }
