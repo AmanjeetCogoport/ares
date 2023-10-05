@@ -712,8 +712,6 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 AND deleted_at is null
                 AND settlement_enabled = true
             ORDER BY transaction_date DESC, id
-            LIMIT :limit
-            OFFSET :offset
         )
         SELECT 
             au.id,
@@ -808,6 +806,8 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     END       
             END 
             Asc
+            LIMIT :limit
+            OFFSET :offset
         """
     )
     suspend fun getDocumentList(
