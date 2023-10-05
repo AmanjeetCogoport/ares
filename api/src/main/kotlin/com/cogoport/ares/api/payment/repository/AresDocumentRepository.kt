@@ -8,7 +8,6 @@ import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
-
 interface AresDocumentRepository : CoroutineCrudRepository<AresDocument, Long> {
 
     @NewSpan
@@ -21,4 +20,12 @@ interface AresDocumentRepository : CoroutineCrudRepository<AresDocument, Long> {
     """
     )
     suspend fun getSupplierOutstandingUrl(reportId: Long): String?
+
+    @NewSpan
+    @Query(
+        """
+            SELECT EXISTS(SELECT * FROM ares_documents WHERE document_url = :documentUrl) 
+        """
+    )
+    suspend fun existsByDocumentUrl(documentUrl: String): Boolean
 }

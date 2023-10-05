@@ -85,6 +85,7 @@ open class SettlementServiceHelper {
             AccountType.CTDS -> getVoucherType(signFlag) + InvoiceType.CTDS.value
             AccountType.VTDS -> getVoucherType(signFlag) + InvoiceType.VTDS.value
             AccountType.SREIMBCN -> getVoucherType(signFlag) + InvoiceType.SREIMBCN.value
+            AccountType.EXP -> getVoucherType(signFlag) + InvoiceType.EXP.value
             else -> throw AresException(AresError.ERR_1009, "accountType $accType")
         }
     }

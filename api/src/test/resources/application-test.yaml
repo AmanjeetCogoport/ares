@@ -29,3 +29,6 @@ rabbitmq:
 
 redis:
   uri: redis://localhost:6379
+
+scheduler:
+  enabled: false

@@ -19,6 +19,7 @@ import com.cogoport.ares.model.settlement.GlCodeMaster
 import com.cogoport.ares.model.settlement.PostJVToSageRequest
 import com.cogoport.ares.model.settlement.PostPaymentToSage
 import com.cogoport.ares.model.settlement.event.UpdateSettlementWhenBillUpdatedEvent
+import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import com.cogoport.ares.model.settlement.request.PostSettlementRequest
 import io.micronaut.messaging.annotation.MessageHeader
 import io.micronaut.rabbitmq.annotation.Binding
@@ -72,6 +73,9 @@ interface AresMessagePublisher {
     @Binding("ares.migrate.gl.codes")
     suspend fun emitGLCode(req: GlCodeMaster)
 
+    @Binding("ares.upsert.migrate.glcodes")
+    suspend fun emitUpsertMigrateGlCode(req: GlCodeMaster)
+
     @Binding("ares.post.jv.to.sage")
     suspend fun emitPostJvToSage(req: PostJVToSageRequest)
 
@@ -118,4 +122,7 @@ interface AresMessagePublisher {
 
     @Binding("ares.migrate.payment.amount")
     suspend fun emitMigratePaymentAmount(id: Long)
+
+    @Binding("ares.send.payment.details.for.autoKnockOff")
+    suspend fun emitSendPaymentDetailsForKnockOff(autoKnockOffRequest: AutoKnockOffRequest)
 }

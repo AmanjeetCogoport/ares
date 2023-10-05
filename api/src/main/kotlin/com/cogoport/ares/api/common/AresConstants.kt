@@ -208,6 +208,7 @@ object AresConstants {
         "sage-jv-migration-admin",
         "migrate-payment-amount",
         "send-email-for-irn-generation",
+        "upsert-migrate-glcodes"
     )
 
     val RETRY_QUEUES = listOf(
@@ -246,6 +247,7 @@ object AresConstants {
         "sage-jv-migration-admin",
         "migrate-payment-amount",
         "send-email-for-irn-generation",
+        "upsert-migrate-glcodes"
     )
 
     const val performedByUserNameForMail = "Business Finance Tech Team"

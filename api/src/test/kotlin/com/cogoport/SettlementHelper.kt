@@ -83,7 +83,7 @@ class SettlementHelper(
             amountLoc = amountLoc,
             category = "ASSET",
             documentStatus = documentStatus,
-            dueDate = SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse("2023-08-08 05:30:00"),
+            dueDate = Date(),
             entityCode = entityCode,
             transactionDate = SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse("2023-08-08 05:30:00"),
             migrated = false,
@@ -297,7 +297,9 @@ class SettlementHelper(
                 migrated = false,
                 deletedAt = null,
                 additionalDetails = JVAdditionalDetails(
-                    utr = parentJvData.description
+                    utr = parentJvData.description,
+                    null,
+                    null
                 )
             )
         }
@@ -382,14 +384,14 @@ class SettlementHelper(
                 ledgerAmount = BigDecimal(100).setScale(4),
                 ledgerBalance = BigDecimal(60).setScale(4),
                 taxableAmount = BigDecimal(0.0000).setScale(4),
-                tds = if (isTdsResponse) BigDecimal(20.0000).setScale(4) else BigDecimal(0.0000),
+                tds = BigDecimal(20.0000).setScale(4),
                 tdsPercentage = null,
-                afterTdsAmount = (if (isTdsResponse) BigDecimal(80.0000) else BigDecimal(100.0000)).setScale(4),
-                allocationAmount = if (isTdsResponse) null else BigDecimal(60.0000).setScale(4),
+                afterTdsAmount = BigDecimal(80.0000).setScale(4),
+                allocationAmount = if (isTdsResponse) null else BigDecimal(40.0000).setScale(4),
                 balanceAfterAllocation = if (isTdsResponse) null else BigDecimal(0.0000),
                 settledAmount = BigDecimal(40.0000).setScale(4),
                 settledAllocation = if (isTdsResponse) null else BigDecimal(0.0000),
-                balanceAmount = (if (isTdsResponse) BigDecimal(40.0000) else BigDecimal(60.0000)).setScale(4),
+                balanceAmount = (if (isTdsResponse) BigDecimal(40.0000) else BigDecimal(40.0000)).setScale(4),
                 currentBalance = BigDecimal(60.0000).setScale(4),
                 status = "Partially Paid",
                 currency = "INR",

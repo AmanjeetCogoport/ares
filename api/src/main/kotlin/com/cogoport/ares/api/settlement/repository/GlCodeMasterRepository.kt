@@ -51,4 +51,27 @@ interface GlCodeMasterRepository : CoroutineCrudRepository<GlCodeMaster, Long> {
             """
     )
     fun getDistinctAccType(q: String?, glCode: String?): List<String>
+
+    @NewSpan
+    @Query(
+        """
+            SELECT EXISTS(
+            SELECT 
+            *
+            FROM 
+            gl_code_masters
+            where 
+            account_code::varchar = :glCode
+            )
+            """
+    )
+    fun checkIfGlCodeIsValid(glCode: String?): Boolean
+
+    @NewSpan
+    @Query(
+        """
+     SELECT id FROM gl_code_masters where account_code = :accountCode and led_account= :ledAccount
+    """
+    )
+    suspend fun isPresent(accountCode: Int, ledAccount: String): Long?
 }

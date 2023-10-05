@@ -25,7 +25,7 @@ class UtilizationUpdateScheduler {
             val date: String? = LocalDate.now().minusDays(1).format(DateTimeFormatter.BASIC_ISO_DATE)
             paymentMigrationWrapper.updateUtilizationAmount(null, null, date)
         } catch (ex: Exception) {
-            logger().error("error while running payment scheduler  $ex")
+            logger().error("error while running payment scheduler  ${ex.message}")
         }
     }
 

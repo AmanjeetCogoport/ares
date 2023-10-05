@@ -1,80 +1,22 @@
 package com.cogoport.ares.api.payment.repository
 
 import com.cogoport.ares.api.common.AresConstants
-import com.cogoport.ares.api.common.models.ARLedgerJobDetailsResponse
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.LedgerSummary
 import com.cogoport.ares.api.payment.entity.SupplierLevelData
 import com.cogoport.ares.model.common.TradePartyOutstandingRes
-import com.cogoport.ares.model.payment.AccMode
-import com.cogoport.ares.model.payment.response.CreditDebitBalance
+import com.cogoport.ares.model.settlement.OrgLevelDetails
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
 import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
 import io.micronaut.transaction.annotation.TransactionalAdvice
-import java.time.LocalDate
 import java.util.UUID
 
 @TransactionalAdvice(AresConstants.UNIFIED)
 @R2dbcRepository(value = AresConstants.UNIFIED, dialect = Dialect.POSTGRES)
 interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, Long> {
-    @NewSpan
-    @Query(
-        """
-          WITH shipment_documents_on_document_level AS
-            (SELECT shipment_id, document_type,
-            CASE WHEN sd.document_type IN ('airway_bill', 'draft_airway_bill', 'bill_of_lading', 'draft_bill_of_lading')
-            THEN (array_agg(COALESCE(sd.data -> 'document_number', sd.data -> 'bl_number')))[1] END AS shipment_document_number,
-            CASE WHEN sd.document_type IN ('house_bill_of_lading', 'draft_house_bill_of_lading', 'house_airway_bill', 'draft_house_airway_bill')
-            THEN (array_agg(COALESCE(sd.data -> 'document_number', sd.data -> 'bl_number')))[1] END AS house_document_number
-            FROM shipment_documents sd WHERE sd.state = 'document_accepted' AND
-            sd.document_type in ('airway_bill', 'draft_airway_bill', 'bill_of_lading', 'draft_bill_of_lading',
-            'house_bill_of_lading', 'draft_house_bill_of_lading', 'house_airway_bill', 'draft_house_airway_bill')
-            GROUP BY shipment_id, document_type),
-          grouped_shipment_documents AS
-            (SELECT shipment_id, (array_remove(array_agg(shipment_document_number), NULL))[1] AS shipment_document_number, (array_remove(array_agg(house_document_number), NULL))[1] AS house_document_number
-            FROM shipment_documents_on_document_level
-            WHERE (shipment_document_number IS NOT NULL OR house_document_number IS NOT NULL)
-            GROUP BY shipment_id)
-          SELECT au.transaction_date::varchar AS transaction_date,
-            au.acc_type as document_type,
-            au.document_value::varchar AS document_number,
-            au.currency as currency,
-            au.amount_curr::varchar AS amount,
-            CASE WHEN au.sign_flag = -1 THEN au.amount_loc ELSE 0 END AS credit,
-            CASE WHEN au.sign_flag = 1 THEN au.amount_loc ELSE 0 END AS debit,
-            p.trans_ref_number AS transaction_ref_number,
-            gsd.shipment_document_number,
-            gsd.house_document_number
-            FROM ares.account_utilizations au
-            LEFT JOIN ares.payments p ON p.payment_num = au.document_no AND p.payment_num_value = au.document_value
-            LEFT JOIN plutus.invoices i ON i.invoice_number = au.document_value::varchar AND i.id = au.document_no
-            LEFT JOIN loki.jobs j ON j.id = i.job_id
-            LEFT JOIN grouped_shipment_documents gsd ON gsd.shipment_id::varchar = j.reference_id
-            WHERE au.acc_mode = :accMode AND au.organization_id = :organizationId::UUID AND document_status = 'FINAL'
-            AND au.transaction_date >= :startDate::DATE AND au.transaction_date <= :endDate::DATE AND au.entity_code IN (:entityCodes)
-            AND au.deleted_at IS NULL AND au.acc_type != 'NEWPR' AND p.deleted_at IS NULL
-            ORDER BY transaction_date
-        """
-    )
-    suspend fun getARLedger(accMode: AccMode, organizationId: String, entityCodes: List<Int>, startDate: LocalDate, endDate: LocalDate): List<ARLedgerJobDetailsResponse>
-
-    @NewSpan
-    @Query(
-        """
-            SELECT
-            (array_agg(led_currency))[1] AS ledger_currency,
-            COALESCE(SUM(CASE WHEN au.sign_flag = -1 THEN (au.amount_loc) ELSE 0 END), 0) AS credit,
-            COALESCE(SUM(CASE WHEN au.sign_flag = 1 THEN (au.amount_loc) ELSE 0 END), 0) AS debit
-            FROM ares.account_utilizations au 
-            WHERE au.acc_mode = :accMode AND au.organization_id = :organizationId::UUID AND document_status = 'FINAL'
-            AND au.entity_code IN (:entityCodes) AND au.deleted_at IS NULL AND au.acc_type != 'NEWPR' AND
-            au.transaction_date < :date::DATE
-        """
-    )
-    suspend fun getOpeningAndClosingLedger(accMode: AccMode, organizationId: String, entityCodes: List<Int>, date: LocalDate?, commonRow: String): CreditDebitBalance
 
     @NewSpan
     @Query(
@@ -102,7 +44,7 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
     @NewSpan
     @Query(
         """
-            select 
+            with z as (select 
             null as id,
             aau.organization_id,
             entity_code,
@@ -220,157 +162,109 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
                     0
                 END) AS credit_note_count,
             COALESCE(sum(
-                CASE WHEN (acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01'
+                CASE WHEN (acc_type::varchar in (:onAccountAccountType) AND aau.transaction_date >= '2023-04-01'
                     and(transaction_date >= now()::date)) THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END), 0) AS on_account_not_due_amount,
             COALESCE(sum(
-                CASE WHEN acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01'
+                CASE WHEN acc_type::varchar in (:onAccountAccountType) AND aau.transaction_date >= '2023-04-01'
                     and (now()::date - transaction_date) >= 0 AND (now()::date - due_date) < 1 THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END), 0) AS on_account_today_amount,        
             COALESCE(sum(
-                CASE WHEN acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01'
+                CASE WHEN acc_type::varchar in (:onAccountAccountType) AND aau.transaction_date >= '2023-04-01'
                     and(now()::date - transaction_date) BETWEEN 1 AND 30 THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END), 0) AS on_account_thirty_amount,
             COALESCE(sum(
-                CASE WHEN acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01'
+                CASE WHEN acc_type::varchar in (:onAccountAccountType) AND aau.transaction_date >= '2023-04-01'
                     and(now()::date - transaction_date) BETWEEN 31 AND 60 THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END), 0) AS on_account_sixty_amount,
             COALESCE(sum(
-                CASE WHEN acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01'
+                CASE WHEN acc_type::varchar in (:onAccountAccountType) AND aau.transaction_date >= '2023-04-01'
                     and(now()::date - transaction_date) BETWEEN 61 AND 90 THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END), 0) AS on_account_ninety_amount,
             COALESCE(sum(
-                CASE WHEN acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01'
+                CASE WHEN acc_type::varchar in (:onAccountAccountType) AND aau.transaction_date >= '2023-04-01'
                     and(now()::date - transaction_date) BETWEEN 91 AND 180 THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END), 0) AS on_account_one_eighty_amount,
             COALESCE(sum(
-                CASE WHEN acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01'
+                CASE WHEN acc_type::varchar in (:onAccountAccountType) AND aau.transaction_date >= '2023-04-01'
                     and(now()::date - transaction_date) BETWEEN 181 AND 365  THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END), 0) AS on_account_three_sixty_five_amount,
             COALESCE(sum(
-                CASE WHEN acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01'
+                CASE WHEN acc_type::varchar in (:onAccountAccountType) AND aau.transaction_date >= '2023-04-01'
                     and(now()::date - transaction_date) > 365 THEN
                     sign_flag * (amount_loc - pay_loc)
                 ELSE
                     0
                 END), 0) AS on_account_three_sixty_five_plus_amount,
             sum(
-                CASE WHEN transaction_date >= now()::date AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01'  AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN transaction_date >= now()::date AND acc_type::varchar in (:onAccountAccountType) AND aau.transaction_date >= '2023-04-01'  AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS on_account_not_due_count,
             sum(
-                CASE WHEN (now()::date - transaction_date) >= 0 AND (now()::date - due_date) < 1 AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01' AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN (now()::date - transaction_date) >= 0 AND (now()::date - due_date) < 1 AND acc_type::varchar in (:onAccountAccountType) AND aau.transaction_date >= '2023-04-01' AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS on_account_today_count,
             sum(
-                CASE WHEN (now()::date - transaction_date) BETWEEN 1 AND 30 AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01' AND  (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN (now()::date - transaction_date) BETWEEN 1 AND 30 AND acc_type::varchar in (:onAccountAccountType) AND aau.transaction_date >= '2023-04-01' AND  (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS on_account_thirty_count,
             sum(
-                CASE WHEN (now()::date - transaction_date) BETWEEN 31 AND 60 AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01' AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN (now()::date - transaction_date) BETWEEN 31 AND 60 AND acc_type::varchar in (:onAccountAccountType) AND aau.transaction_date >= '2023-04-01' AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS on_account_sixty_count,
             sum(
-                CASE WHEN (now()::date - transaction_date) BETWEEN 61 AND 90 AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01' AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN (now()::date - transaction_date) BETWEEN 61 AND 90 AND acc_type::varchar in (:onAccountAccountType) AND aau.transaction_date >= '2023-04-01' AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS on_account_ninety_count,
             sum(
-                CASE WHEN (now()::date - transaction_date) BETWEEN 91 AND 180 AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01' AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN (now()::date - transaction_date) BETWEEN 91 AND 180 AND acc_type::varchar in (:onAccountAccountType) AND aau.transaction_date >= '2023-04-01' AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS on_account_one_eighty_count,
             sum(
-                CASE WHEN (now()::date - transaction_date) BETWEEN 181 AND 365 AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01' AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN (now()::date - transaction_date) BETWEEN 181 AND 365 AND acc_type::varchar in (:onAccountAccountType) AND aau.transaction_date >= '2023-04-01' AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS on_account_three_sixty_five_count,
             sum(
-                CASE WHEN (now()::date - transaction_date) > 365 AND acc_type::varchar in (:onAccountAccountType) AND aau.created_at >= '2023-04-01'  AND (amount_loc - pay_loc) > 0 THEN
+                CASE WHEN (now()::date - transaction_date) > 365 AND acc_type::varchar in (:onAccountAccountType) AND aau.transaction_date >= '2023-04-01'  AND (amount_loc - pay_loc) > 0 THEN
                     1
                 ELSE
                     0
                 END) AS on_account_three_sixty_five_plus_count,
-            COALESCE(sum(
-                CASE WHEN (due_date >= now()::date AND aau.created_at >= '2023-04-01') THEN
-                    sign_flag * (amount_loc - pay_loc)
-                ELSE
-                    0
-                END), 0) AS not_due_outstanding,
-            COALESCE(sum(
-                CASE WHEN (now()::date - due_date) >= 0 AND aau.created_at >= '2023-04-01' AND (now()::date - due_date) < 1 THEN
-                    sign_flag * (amount_loc - pay_loc)
-                ELSE
-                    0
-                END), 0) AS today_outstanding,        
-            COALESCE(sum(
-                CASE WHEN aau.created_at >= '2023-04-01' AND (now()::date - due_date) BETWEEN 1 AND 30 THEN
-                    sign_flag * (amount_loc - pay_loc)
-                ELSE
-                    0
-                END), 0) AS thirty_outstanding,
-            COALESCE(sum(
-                CASE WHEN  aau.created_at >= '2023-04-01' AND (now()::date - due_date) BETWEEN 31 AND 60 THEN
-                    sign_flag * (amount_loc - pay_loc)
-                ELSE
-                    0
-                END), 0) AS sixty_outstanding,
-            COALESCE(sum(
-                CASE WHEN aau.created_at >= '2023-04-01' AND (now()::date - due_date) BETWEEN 61 AND 90 THEN
-                    sign_flag * (amount_loc - pay_loc)
-                ELSE
-                    0
-                END), 0) AS ninety_outstanding,
-            COALESCE(sum(
-                CASE WHEN aau.created_at >= '2023-04-01' AND (now()::date - due_date) BETWEEN 91 AND 180 THEN
-                    sign_flag * (amount_loc - pay_loc)
-                ELSE
-                    0
-                END), 0) AS one_eighty_outstanding,
-            COALESCE(sum(
-                CASE WHEN aau.created_at >= '2023-04-01' AND (now()::date - due_date) BETWEEN 181 AND 365  THEN
-                    sign_flag * (amount_loc - pay_loc)
-                ELSE
-                    0
-                END), 0) AS three_sixty_five_outstanding,
-            COALESCE(sum(
-                CASE WHEN aau.created_at >= '2023-04-01' AND (now()::date - due_date) > 365 THEN
-                    sign_flag * (amount_loc - pay_loc)
-                ELSE
-                    0
-                END), 0) AS three_sixty_five_plus_outstanding,
             COALESCE(sum(
             CASE WHEN aau.created_at >= '2023-04-01' AND acc_type::varchar in (:invoiceAccType) THEN
                 sign_flag * (amount_loc - pay_loc)
@@ -384,12 +278,11 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
                     0
                 END), 0) AS total_credit_note_amount,
             COALESCE(sum(
-            CASE WHEN aau.created_at >= '2023-04-01' AND acc_type::varchar in (:onAccountAccountType) THEN
+            CASE WHEN aau.transaction_date >= '2023-04-01' AND acc_type::varchar in (:onAccountAccountType) THEN
                 sign_flag * (amount_loc - pay_loc)
             ELSE
                 0
             END), 0) AS total_open_on_account_amount,
-        COALESCE(sum(CASE WHEN aau.created_at >= '2023-04-01' then sign_flag * (amount_loc - pay_loc) else 0 end), 0) AS total_outstanding,
         COALESCE(SUM(
             CASE WHEN (acc_type::VARCHAR IN (:invoiceAccType) or acc_type::VARCHAR IN (:creditNoteAccType) AND aau.created_at >= '2023-04-01' ) THEN
               sign_flag * amount_loc
@@ -398,14 +291,14 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
             END
           ), 0) AS total_invoice_amount,
           COALESCE(SUM(
-            CASE WHEN acc_type::VARCHAR IN (:onAccountAccountType) AND aau.created_at >= '2023-04-01' THEN
+            CASE WHEN acc_type::VARCHAR IN (:onAccountAccountType) AND aau.transaction_date >= '2023-04-01' THEN
               sign_flag * amount_loc
             ELSE
               0
             END
           ), 0) AS total_on_account_amount,
           SUM(
-            CASE WHEN acc_type::VARCHAR IN (:onAccountAccountType) AND aau.created_at >= '2023-04-01' THEN
+            CASE WHEN acc_type::VARCHAR IN (:onAccountAccountType) AND aau.transaction_date >= '2023-04-01' THEN
               1
             ELSE
               0
@@ -434,7 +327,19 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
         AND acc_type::VARCHAR IN (:accTypes) and acc_type::VARCHAR != 'NEWPR'
         AND document_status IN ('FINAL')
     GROUP BY 
-        aau.organization_id, entity_code, led_currency, acc_mode, otpd.registration_number, soim.sage_organization_id, cb.closing_balance_debit_2022, cb.closing_balance_credit_2022
+        aau.organization_id, entity_code, led_currency, acc_mode, otpd.registration_number, soim.sage_organization_id, cb.closing_balance_debit_2022, cb.closing_balance_credit_2022)
+        select 
+        z.*,
+        invoice_not_due_amount + on_account_not_due_amount as not_due_outstanding, 
+        on_account_today_amount + invoice_today_amount as today_outstanding,
+        invoice_thirty_amount + on_account_thirty_amount as thirty_outstanding,
+        invoice_sixty_amount + on_account_sixty_amount as sixty_outstanding,
+        invoice_ninety_amount + on_account_ninety_amount as ninety_outstanding, 
+        invoice_one_eighty_amount + on_account_one_eighty_amount as  one_eighty_outstanding,
+        invoice_three_sixty_five_amount + on_account_three_sixty_five_plus_amount as three_sixty_five_outstanding,
+        invoice_three_sixty_five_plus_amount + on_account_three_sixty_five_plus_amount as three_sixty_five_plus_outstanding,
+        total_open_invoice_amount + total_open_on_account_amount AS total_outstanding
+        from z
         """
     )
     suspend fun getLedgerSummaryForAp(
@@ -495,4 +400,20 @@ interface UnifiedDBNewRepository : CoroutineCrudRepository<AccountUtilization, L
         """
     )
     suspend fun getSupplierDetailData(): List<SupplierLevelData>
+
+    @NewSpan
+    @Query(
+        """
+            SELECT 
+            soim.sage_organization_id as bpr,
+            otpd.id as organization_id,
+            otpd.serial_id as org_serial_id,
+            otpd.legal_business_name as business_name
+            FROM 
+            sage_organization_id_mappings soim 
+            inner join organization_trade_party_details otpd on otpd.serial_id::varchar = soim.trade_party_detail_serial_id::varchar
+            where soim.status = 'active' and otpd.status = 'active' and soim.sage_organization_id in (:sageOrgIds) and soim.account_type = :accType
+        """
+    )
+    suspend fun getOrgDetails(sageOrgIds: List<String>, accType: String?): List<OrgLevelDetails>?
 }

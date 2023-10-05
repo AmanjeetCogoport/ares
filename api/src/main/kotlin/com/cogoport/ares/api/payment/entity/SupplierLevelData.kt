@@ -141,5 +141,11 @@ data class SupplierLevelData(
     @JsonProperty("country_code")
     val countryCode: String?,
     @JsonProperty("self_organization_id")
-    val selfOrganizationId: UUID?
+    val selfOrganizationId: UUID?,
+    @JsonProperty("closing_invoice_balance2022")
+    val closingInvoiceBalance2022: BigDecimal?,
+    @JsonProperty("closing_on_account_balance2022")
+    val closingOnAccountBalance2022: BigDecimal?,
+    @JsonProperty("closing_outstanding2022")
+    val closingOutstanding2022: BigDecimal?
 )

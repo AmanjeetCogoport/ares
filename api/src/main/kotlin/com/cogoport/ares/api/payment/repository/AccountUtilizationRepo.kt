@@ -29,6 +29,8 @@ import java.util.UUID
 
 @R2dbcRepository(dialect = Dialect.POSTGRES)
 interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, Long> {
+
+    suspend fun saveAll(accountUtilizations: List<AccountUtilization>): List<AccountUtilization>
     @NewSpan
     @Query(
         """
@@ -80,65 +82,68 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
     @NewSpan
     @Query(
         """ 
-        SELECT
-        *
-        FROM (
-            SELECT
-                au.acc_code,
-                p.sage_ref_number,
-                au.acc_mode,
-                au.amount_curr AS payment_amount,
-                au.amount_loc,
-                au.pay_curr AS utilized_amount,
-                au.pay_loc AS payment_loc,
-                au.created_at,
-                au.currency,
-                au.entity_code,
-                au.led_currency AS ledger_currency,
-                au.organization_name,
-                au.document_no,
-                au.document_value AS payment_number,
-                au.sign_flag,
-                au.transaction_date,
-                au.updated_at,
-                (
-                    CASE WHEN au.pay_curr = 0 THEN
-                        'UNUTILIZED'
-                    WHEN (au.amount_curr - au.pay_curr) > 0 THEN
-                        'PARTIAL_UTILIZED'
-                    ELSE
-                        'UTILIZED'
-                    END
-                ) utilization_status
-            FROM
-                account_utilizations au
-		        JOIN payments p ON au.document_value = p.payment_num_value
-            WHERE (:query IS NULL OR au.document_value LIKE :query 
-                    OR p.sage_ref_number LIKE :query)
-                AND au.organization_id = :organizationId
-                AND au.acc_type in ('REC', 'CTDS')
-                AND au.entity_code = :entityCode
-        ) subquery
-        WHERE
-            utilization_status::varchar IN (:statusList)
-        ORDER BY
-            CASE WHEN :sortBy = 'transactionDate'
-                THEN CASE WHEN :sortType = 'Asc' THEN subquery.transaction_date END
-            END ASC,
-            CASE WHEN :sortBy = 'transactionDate'
-                THEN CASE WHEN :sortType = 'Desc' THEN subquery.transaction_date END
-            END DESC,
-            CASE WHEN :sortBy = 'paymentAmount'
-                THEN CASE WHEN :sortType = 'Asc' THEN subquery.payment_amount END
-            END ASC,
-            CASE WHEN :sortBy = 'paymentAmount'
-                THEN CASE WHEN :sortType = 'Desc' THEN subquery.payment_amount END
-            END DESC
+       SELECT
+       *
+       FROM (
+           SELECT
+               au.acc_code,
+               p.sage_ref_number,
+               au.acc_mode,
+               au.amount_curr AS payment_amount,
+               au.amount_loc,
+               au.pay_curr AS utilized_amount,
+               au.pay_loc AS payment_loc,
+       au.created_at,
+       au.currency,
+       au.entity_code,
+       au.led_currency AS ledger_currency,
+       au.organization_name,
+       au.document_no,
+       au.document_value AS payment_number,
+       au.sign_flag,
+       au.transaction_date,
+       au.updated_at,
+        (
+            CASE WHEN au.pay_curr = 0 THEN
+                'UNUTILIZED'
+            WHEN (au.amount_curr - au.pay_curr) > 0 THEN
+                'PARTIAL_UTILIZED'
+            ELSE
+                'UTILIZED'
+            END
+        ) utilization_status
+    FROM
+        account_utilizations au
+  LEFT JOIN payments p ON au.document_value = p.payment_num_value
+    AND p.deleted_at is null 
+    AND p.payment_document_status != 'DELETED'
+    WHERE (:query IS NULL OR au.document_value ILIKE :query 
+            OR p.sage_ref_number ILIKE :query)
+        AND au.organization_id = :organizationId
+        AND au.acc_type::VARCHAR IN (:accType)
+        AND au.acc_mode::VARCHAR = :accMode
+        AND au.entity_code = :entityCode
+) subquery
+WHERE
+    utilization_status::varchar IN (:statusList)
+ORDER BY
+    CASE WHEN :sortBy = 'transactionDate'
+        THEN CASE WHEN :sortType = 'Asc' THEN subquery.transaction_date END
+    END ASC,
+    CASE WHEN :sortBy = 'transactionDate'
+        THEN CASE WHEN :sortType = 'Desc' THEN subquery.transaction_date END
+    END DESC,
+    CASE WHEN :sortBy = 'paymentAmount'
+        THEN CASE WHEN :sortType = 'Asc' THEN subquery.payment_amount END
+    END ASC,
+    CASE WHEN :sortBy = 'paymentAmount'
+        THEN CASE WHEN :sortType = 'Desc' THEN subquery.payment_amount END
+    END DESC
             OFFSET GREATEST(0, ((:page - 1) * :pageLimit))
             LIMIT :pageLimit  
         """
     )
-    suspend fun getPaymentByTradePartyMappingId(organizationId: UUID, sortBy: String?, sortType: String?, statusList: List<DocStatus>?, query: String?, entityCode: Int, page: Int, pageLimit: Int): List<CustomerOutstandingPaymentResponse>
+    suspend fun getPaymentByTradePartyMappingId(accMode: AccMode, organizationId: UUID, sortBy: String?, sortType: String?, statusList: List<DocStatus>?, query: String?, entityCode: Int, page: Int, pageLimit: Int, accType: List<AccountType>): List<CustomerOutstandingPaymentResponse>
     @NewSpan
     @Query(
         """
@@ -185,7 +190,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     END) AS forty_five_led_amount,
                 sum(
                     CASE WHEN acc_type::varchar IN (:accType)
-                        and(now()::date - due_date) BETWEEN 46 AND 60 THEN
+                        and(now()::date - due_date) BETWEEN 31 AND 60 THEN
                         sign_flag * (amount_loc - pay_loc)
                     ELSE
                         0
@@ -254,7 +259,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     END) AS forty_five_curr_amount,
                 sum(
                     CASE WHEN acc_type::varchar IN (:accType)
-                        and(now()::date - due_date) BETWEEN 46 AND 60 THEN
+                        and(now()::date - due_date) BETWEEN 31 AND 60 THEN
                         sign_flag * (amount_curr - pay_curr)
                     ELSE
                         0
@@ -319,7 +324,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                         0
                     END) AS forty_five_count,
                 sum(
-                    CASE WHEN (now()::date - due_date) BETWEEN 46 AND 60 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
+                    CASE WHEN (now()::date - due_date) BETWEEN 31 AND 60 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
@@ -343,7 +348,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                         0
                     END) AS one_eighty_plus_count,
                 sum(
-                    CASE WHEN (now()::date - due_date) BETWEEN 180 AND 365 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
+                    CASE WHEN (now()::date - due_date) BETWEEN 181 AND 365 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
@@ -402,7 +407,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     END) AS forty_five_led_amount,
                 sum(
                     CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')
-                        and(now()::date - transaction_date) BETWEEN 46 AND 60 THEN
+                        and(now()::date - transaction_date) BETWEEN 31 AND 60 THEN
                         sign_flag * (amount_loc - pay_loc)
                     ELSE
                         0
@@ -471,7 +476,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     END) AS forty_five_curr_amount,
                 sum(
                     CASE WHEN acc_type in ('REC', 'CTDS','BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC')
-                        and(now()::date - transaction_date) BETWEEN 46 AND 60 THEN
+                        and(now()::date - transaction_date) BETWEEN 31 AND 60 THEN
                         sign_flag * (amount_curr - pay_curr)
                     ELSE
                         0
@@ -552,10 +557,10 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 ) AS forty_five_count,
                 SUM(
                     CASE 
-                        WHEN (now()::date - transaction_date) BETWEEN 46 AND 60 
+                        WHEN (now()::date - transaction_date) BETWEEN 31 AND 60 
                             AND acc_type IN ('REC', 'CTDS') 
                             AND ABS(amount_curr - pay_curr) > 0.001 THEN 1 
-                        WHEN (now()::date - transaction_date) BETWEEN 46 AND 60 
+                        WHEN (now()::date - transaction_date) BETWEEN 31 AND 60 
                             AND acc_type IN ('BANK', 'CONTR', 'ROFF', 'MTCCV', 'MISC', 'INTER', 'OPDIV', 'MTC') 
                             AND amount_curr - pay_curr <> 0 THEN 1 
                         ELSE 0 
@@ -677,18 +682,21 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 ) utilization_status
             FROM
                 account_utilizations au
-		        JOIN payments p ON au.document_value = p.payment_num_value
-            WHERE (:query IS NULL OR au.document_value LIKE :query 
-                    OR p.sage_ref_number LIKE :query)
+		        LEFT JOIN payments p ON au.document_value = p.payment_num_value
+                AND p.deleted_at is null 
+                AND p.payment_document_status != 'DELETED'
+            WHERE (:query IS NULL OR au.document_value ILIKE :query 
+                    OR p.sage_ref_number ILIKE :query)
                 AND au.organization_id = :organizationId
-                AND au.acc_type = 'REC'
+                AND au.acc_type::VARCHAR IN (:accType)
+                AND au.acc_mode::VARCHAR = :accMode
                 AND au.entity_code = :entityCode
         ) subquery
         WHERE
             utilization_status::varchar IN (:statusList)
         """
     )
-    suspend fun getCount(organizationId: UUID, statusList: List<DocStatus>?, query: String?, entityCode: Int): Long
+    suspend fun getCount(accMode: AccMode, organizationId: UUID, statusList: List<DocStatus>?, query: String?, entityCode: Int, accType: List<AccountType>): Long
 
     @NewSpan
     @Query(
@@ -697,8 +705,8 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             SELECT id 
             FROM account_utilizations
             WHERE amount_curr <> 0 
-                AND case when acc_type in ('SINV', 'SCN', 'PINV', 'PCN', 'PAY', 'REC', 'VTDS', 'CTDS') THEN (amount_curr - pay_curr) > 1 ELSE (amount_curr - pay_curr) > 0 END 
-                AND organization_id in (:orgId)
+                AND case when acc_type in ('SINV', 'SCN', 'PINV', 'PCN', 'PAY', 'REC', 'VTDS', 'CTDS', 'EXP') THEN (amount_curr - pay_curr) > 1 ELSE (amount_curr - pay_curr) > 0 END 
+                AND (:orgId is null OR organization_id in (:orgId))
                 AND document_status = 'FINAL'
                 AND ((:accType) is null or acc_type::varchar in (:accType))
                 AND (:entityCode is null OR entity_code = :entityCode)
@@ -709,6 +717,8 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 AND document_status != 'DELETED'::document_status
                 AND deleted_at is null
                 AND settlement_enabled = true
+                AND ((:docValues) is null or document_value in (:docValues))
+                AND ((:docNumbers) is null or document_no in (:docNumbers))
             ORDER BY transaction_date DESC, id
             LIMIT :limit
             OFFSET :offset
@@ -736,8 +746,8 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             COALESCE(amount_curr - pay_curr, 0) as balance_amount,
             COALESCE(
                 CASE 
-                WHEN au.acc_mode = 'AP' AND au.created_at < '2023-07-28' 
-                THEN  CASE WHEN au.acc_type = 'PINV' THEN tds_amount else 0 end
+                WHEN au.acc_mode = 'AP' AND au.created_at > '2023-07-28' 
+                THEN  CASE WHEN au.acc_type IN ('PINV', 'EXP') THEN tds_amount else 0 end
                 ELSE 0
                 END, 0
             ) as tds,
@@ -760,13 +770,12 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             LEFT JOIN settlements s ON 
                 s.destination_id = au.document_no 
                 AND s.destination_type::varchar = au.acc_type::varchar 
-                AND s.source_type::varchar in ('CTDS','VTDS')
+                AND s.source_type::varchar in ('CTDS','VTDS') AND s.deleted_at is null
             WHERE au.id in (
                 SELECT id from FILTERS
             )
             AND au.deleted_at is null
             AND au.document_status != 'DELETED'::document_status
-            AND s.deleted_at is null
             AND p.deleted_at is null 
             AND au.is_void = false
             AND au.settlement_enabled = true
@@ -813,7 +822,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
         limit: Int? = null,
         offset: Int? = null,
         accType: List<AccountType>?,
-        orgId: List<UUID>,
+        orgId: List<UUID?>?,
         entityCode: Int?,
         startDate: Timestamp?,
         endDate: Timestamp?,
@@ -821,7 +830,9 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
         accMode: List<String>?,
         sortBy: String?,
         sortType: String?,
-        documentPaymentStatus: String?
+        documentPaymentStatus: String?,
+        docValues: List<String>?,
+        docNumbers: List<Long>?
     ): List<Document?>
 
     @NewSpan
@@ -832,9 +843,9 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 FROM account_utilizations
                 WHERE 
                     amount_curr <> 0 
-                    AND case when acc_type in ('SINV', 'SCN', 'PINV', 'PCN', 'PAY', 'REC', 'VTDS', 'CTDS') THEN (amount_curr - pay_curr) > 1 ELSE (amount_curr - pay_curr) > 0 END
+                    AND case when acc_type in ('SINV', 'SCN', 'PINV', 'PCN', 'PAY', 'REC', 'VTDS', 'CTDS', 'EXP') THEN (amount_curr - pay_curr) > 1 ELSE (amount_curr - pay_curr) > 0 END
                     AND document_status = 'FINAL'
-                    AND organization_id in (:orgId)
+                    AND ((:orgId) is null OR organization_id in (:orgId))
                     AND ((:accType) is null or acc_type::varchar in (:accType))
                     AND (:entityCode is null OR entity_code = :entityCode)
                     AND (:startDate is null OR transaction_date >= :startDate::date)
@@ -843,6 +854,8 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     AND deleted_at is null  and is_void = false
                     AND document_status != 'DELETED'::document_status
                     AND settlement_enabled = true
+                    AND ((:docValues) is null or document_value in (:docValues))
+                    AND ((:docNumbers) is null or document_no in (:docNumbers))
                     AND 
                     (
                         :documentPaymentStatus is null OR 
@@ -857,7 +870,17 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
             )
     """
     )
-    suspend fun getDocumentCount(accType: List<AccountType>?, orgId: List<UUID>, entityCode: Int?, startDate: Timestamp?, endDate: Timestamp?, query: String?, documentPaymentStatus: String?): Long?
+    suspend fun getDocumentCount(
+        accType: List<AccountType>?,
+        orgId: List<UUID?>?,
+        entityCode: Int?,
+        startDate: Timestamp?,
+        endDate: Timestamp?,
+        query: String?,
+        documentPaymentStatus: String?,
+        docValues: List<String>?,
+        docNumbers: List<Long>?
+    ): Long?
 
     @NewSpan
     @Query(
@@ -1540,7 +1563,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     END) AS forty_five_led_amount,
                 sum(
                     CASE WHEN acc_type::varchar IN (:accType)
-                        and(now()::date - due_date) BETWEEN 46 AND 60 THEN
+                        and(now()::date - due_date) BETWEEN 31 AND 60 THEN
                         sign_flag * (amount_loc - pay_loc)
                     ELSE
                         0
@@ -1605,7 +1628,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                         0
                     END) AS forty_five_count,
                 sum(
-                    CASE WHEN (now()::date - due_date) BETWEEN 46 AND 60 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
+                    CASE WHEN (now()::date - due_date) BETWEEN 31 AND 60 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
@@ -1629,7 +1652,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                         0
                     END) AS one_eighty_plus_count,
                 sum(
-                    CASE WHEN (now()::date - due_date) BETWEEN 180 AND 365 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
+                    CASE WHEN (now()::date - due_date) BETWEEN 181 AND 365 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
                         0
@@ -1653,7 +1676,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 AND due_date IS NOT NULL
                 AND document_status = 'FINAL'
                 AND organization_id IS NOT NULL
-                AND entity_code in (:entityCode)
+                AND ((:entityCodes) is null or entity_code in (:entityCodes))
                 AND acc_type::varchar IN (:accType)
                 AND deleted_at IS NULL
                 AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
@@ -1661,7 +1684,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 entity_code, led_currency
             """
     )
-    suspend fun getEntityWiseOutstandingBucket(entityCode: List<Int>, accType: List<AccountType>, accMode: List<AccMode>, defaultersOrgIds: List<UUID>?): EntityWiseOutstandingBucket
+    suspend fun getEntityWiseOutstandingBucket(entityCodes: List<Int>?, accType: List<AccountType>, accMode: List<AccMode>, defaultersOrgIds: List<UUID>?): List<EntityWiseOutstandingBucket>
 
     @NewSpan
     @Query(
@@ -1692,7 +1715,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                     END) AS forty_five_led_amount,
                 sum(
                     CASE WHEN acc_type::varchar IN (:accType)
-                        and(now()::date - transaction_date) BETWEEN 46 AND 60 THEN
+                        and(now()::date - transaction_date) BETWEEN 31 AND 60 THEN
                         sign_flag * (amount_loc - pay_loc)
                     ELSE
                         0
@@ -1773,10 +1796,10 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 ) AS forty_five_count,
                 SUM(
                     CASE 
-                        WHEN (now()::date - transaction_date) BETWEEN 46 AND 60 
+                        WHEN (now()::date - transaction_date) BETWEEN 31 AND 60 
                             AND acc_type::varchar IN (:paymentAccType) 
                             AND ABS(amount_curr - pay_curr) > 0.001 THEN 1 
-                        WHEN (now()::date - transaction_date) BETWEEN 46 AND 60 
+                        WHEN (now()::date - transaction_date) BETWEEN 31 AND 60 
                             AND acc_type::varchar IN (:jvAccType) 
                             AND amount_curr - pay_curr <> 0 THEN 1 
                         ELSE 0 
@@ -1853,7 +1876,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 AND transaction_date IS NOT NULL
                 AND document_status = 'FINAL'
                 AND organization_id IS NOT NULL
-                AND entity_code IN (:entityCode)
+                AND ((:entityCodes) is null or entity_code in (:entityCodes))
                 AND acc_type::varchar IN (:accType)
                 AND deleted_at IS NULL
                 AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
@@ -1861,5 +1884,33 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
                 entity_code, led_currency
         """
     )
-    suspend fun getEntityWiseOnAccountBucket(entityCode: List<Int>, accType: List<AccountType>, accMode: List<AccMode>, paymentAccType: List<AccountType>, jvAccType: List<AccountType>, defaultersOrgIds: List<UUID>?): EntityWiseOutstandingBucket
+    suspend fun getEntityWiseOnAccountBucket(entityCodes: List<Int>?, accType: List<AccountType>, accMode: List<AccMode>, paymentAccType: List<AccountType>, jvAccType: List<AccountType>, defaultersOrgIds: List<UUID>?): List<EntityWiseOutstandingBucket>
+
+    @NewSpan
+    @Query(
+        """
+            select 
+                *
+            from 
+                account_utilizations 
+            where 
+                (document_no in (:documentNos))
+            and document_status != 'DELETED'::document_status
+            and ((:accTypes) is null or acc_type::varchar in (:accTypes)) 
+            and deleted_at is null 
+            and is_void = false
+        """
+    )
+    suspend fun getAccUtilFromDocNumbers(
+        documentNos: List<Long>,
+        accTypes: List<String?>?
+    ): List<AccountUtilization>?
+
+    @NewSpan
+    @Query(
+        """
+            SELECT distinct (organization_id) from account_utilizations where ((:accMode) is null or acc_mode::VARCHAR = :accMode)
+        """
+    )
+    suspend fun getDistinctOrgIds(accMode: AccMode?): List<UUID>?
 }
