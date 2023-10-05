@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.payment.repository
 
+import com.cogoport.ares.api.common.models.ARLedgerJobDetailsResponse
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.CustomerOrgOutstanding
 import com.cogoport.ares.api.payment.entity.OrgOutstanding
@@ -21,6 +22,7 @@ import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.response.AccPayablesOfOrgRes
 import com.cogoport.ares.model.payment.response.AccountPayablesStats
+import com.cogoport.ares.model.payment.response.CreditDebitBalance
 import com.cogoport.ares.model.payment.response.InvoiceListResponse
 import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
 import com.cogoport.ares.model.payment.response.OverallStatsForTradeParty
@@ -34,6 +36,7 @@ import io.micronaut.data.repository.kotlin.CoroutineCrudRepository
 import io.micronaut.tracing.annotation.NewSpan
 import java.math.BigDecimal
 import java.sql.Timestamp
+import java.time.LocalDate
 import java.util.Date
 import java.util.UUID
 
@@ -1309,4 +1312,42 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         entityCodes: List<Int>?,
         destinationTypes: List<SettlementType>?
     ): PaymentHistoryDetails
+
+    @NewSpan
+    @Query(
+        """
+          SELECT au.transaction_date::varchar AS transaction_date,
+            au.acc_type as document_type,
+            au.document_value::varchar AS document_number,
+            au.currency as currency,
+            au.amount_curr::varchar AS amount,
+            CASE WHEN au.sign_flag = -1 THEN au.amount_loc ELSE 0 END AS credit,
+            CASE WHEN au.sign_flag = 1 THEN au.amount_loc ELSE 0 END AS debit,
+            p.trans_ref_number AS transaction_ref_number,
+            '' AS shipment_document_number,
+            '' AS house_document_number
+            FROM account_utilizations au
+            LEFT JOIN payments p ON p.payment_num = au.document_no AND p.payment_num_value = au.document_value
+            WHERE au.acc_mode::VARCHAR = :accMode AND au.organization_id = :organizationId::UUID AND document_status = 'FINAL'
+            AND au.transaction_date >= :startDate::DATE AND au.transaction_date <= :endDate::DATE AND au.entity_code IN (:entityCodes)
+            AND au.deleted_at IS NULL AND au.acc_type NOT IN ('NEWPR', 'MTCCV') AND p.deleted_at IS NULL
+            ORDER BY transaction_date
+        """
+    )
+    suspend fun getARLedger(accMode: AccMode, organizationId: String, entityCodes: List<Int>, startDate: LocalDate, endDate: LocalDate): List<ARLedgerJobDetailsResponse>
+
+    @NewSpan
+    @Query(
+        """
+            SELECT
+            (array_agg(led_currency))[1] AS ledger_currency,
+            COALESCE(SUM(CASE WHEN au.sign_flag = -1 THEN (au.amount_loc) ELSE 0 END), 0) AS credit,
+            COALESCE(SUM(CASE WHEN au.sign_flag = 1 THEN (au.amount_loc) ELSE 0 END), 0) AS debit
+            FROM account_utilizations au 
+            WHERE au.acc_mode::VARCHAR = :accMode AND au.organization_id = :organizationId::UUID AND document_status = 'FINAL'
+            AND au.entity_code IN (:entityCodes) AND au.deleted_at IS NULL AND au.acc_type NOT IN ('NEWPR', 'MTCCV') AND
+            au.transaction_date < :date::DATE
+        """
+    )
+    suspend fun getOpeningAndClosingLedger(accMode: AccMode, organizationId: String, entityCodes: List<Int>, date: LocalDate?): CreditDebitBalance
 }
