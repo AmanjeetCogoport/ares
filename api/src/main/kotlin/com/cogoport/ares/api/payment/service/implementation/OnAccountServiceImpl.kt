@@ -1920,7 +1920,7 @@ open class OnAccountServiceImpl : OnAccountService {
     }
 
     override suspend fun getARLedgerOrganizationAndEntityWise(req: ARLedgerRequest): List<ARLedgerResponse> {
-        val ledgerSelectedDateWise = unifiedDBNewRepository.getARLedger(
+        val ledgerSelectedDateWise = accountUtilizationRepository.getARLedger(
             AccMode.AR,
             req.orgId,
             req.entityCodes!!,
@@ -1928,7 +1928,7 @@ open class OnAccountServiceImpl : OnAccountService {
             req.endDate!!
         )
         var arLedgerResponse = accountUtilizationMapper.convertARLedgerJobDetailsResponseToARLedgerResponse(ledgerSelectedDateWise)
-        val openingLedger = unifiedDBNewRepository.getOpeningAndClosingLedger(AccMode.AR, req.orgId, req.entityCodes!!, req.startDate!!, AresConstants.OPENING_BALANCE)
+        val openingLedger = accountUtilizationRepository.getOpeningAndClosingLedger(AccMode.AR, req.orgId, req.entityCodes!!, req.startDate!!)
         var openingLedgerList: List<ARLedgerResponse> = listOf(
             ARLedgerResponse(
                 transactionDate = "",

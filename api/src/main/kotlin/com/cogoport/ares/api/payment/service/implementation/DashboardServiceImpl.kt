@@ -180,7 +180,7 @@ class DashboardServiceImpl : DashboardService {
         val quarterMapping = mapOf(
             1 to "JAN - MAR",
             2 to "APR - JUN",
-            3 to "JUL - SEPT",
+            3 to "JUL - SEP",
             4 to "OCT - DEC"
         )
 
@@ -238,7 +238,7 @@ class DashboardServiceImpl : DashboardService {
         val year = request.year ?: AresConstants.CURR_YEAR
         val serviceType = request.serviceType
         val companyType = request.companyType
-        val monthList = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
+        val monthList = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC")
 
         val updatedCompanyType = getCompanyType(companyType)
 
@@ -421,7 +421,7 @@ class DashboardServiceImpl : DashboardService {
 
         val updatedCompanyType = getCompanyType(companyType)
 
-        val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
+        val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC")
 
         val monthKey = when (!month.isNullOrEmpty()) {
             true -> months.indexOf(month) + 1
@@ -467,7 +467,7 @@ class DashboardServiceImpl : DashboardService {
 
         val updatedCompanyType = getCompanyType(companyType)
 
-        val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
+        val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC")
 
         val monthKey = when (!month.isNullOrEmpty()) {
             true -> months.indexOf(month) + 1
@@ -694,7 +694,7 @@ class DashboardServiceImpl : DashboardService {
 
         val updatedCompanyType = getCompanyType(companyType)
 
-        val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEPT", "OCT", "NOV", "DEC")
+        val months = listOf("JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC")
 
         var dailySalesStats = mutableListOf<DailySalesStats>()
 
