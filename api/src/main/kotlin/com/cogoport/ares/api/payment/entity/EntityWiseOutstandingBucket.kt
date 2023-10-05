@@ -5,7 +5,7 @@ import java.math.BigDecimal
 
 @MappedEntity
 data class EntityWiseOutstandingBucket(
-    var entityCode: Int,
+    var entityCode: String,
     var ledCurrency: String,
     var notDueLedAmount: BigDecimal,
     var thirtyLedAmount: BigDecimal,

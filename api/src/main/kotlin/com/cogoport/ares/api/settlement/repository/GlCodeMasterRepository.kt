@@ -66,4 +66,12 @@ interface GlCodeMasterRepository : CoroutineCrudRepository<GlCodeMaster, Long> {
             """
     )
     fun checkIfGlCodeIsValid(glCode: String?): Boolean
+
+    @NewSpan
+    @Query(
+        """
+     SELECT id FROM gl_code_masters where account_code = :accountCode and led_account= :ledAccount
+    """
+    )
+    suspend fun isPresent(accountCode: Int, ledAccount: String): Long?
 }
