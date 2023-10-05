@@ -207,6 +207,7 @@ object AresConstants {
         "send-dunning-payment-reminder",
         "sage-jv-migration-admin",
         "migrate-payment-amount",
+        "send-email-for-irn-generation",
         "upsert-migrate-glcodes"
     )
 
@@ -245,6 +246,7 @@ object AresConstants {
         "sage-tds-jv-migration",
         "sage-jv-migration-admin",
         "migrate-payment-amount",
+        "send-email-for-irn-generation",
         "upsert-migrate-glcodes"
     )
 
