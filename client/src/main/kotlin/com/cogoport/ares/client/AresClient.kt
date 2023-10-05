@@ -23,6 +23,7 @@ import com.cogoport.ares.model.payment.request.OnAccountPaymentRequest
 import com.cogoport.ares.model.payment.request.OnAccountTotalAmountRequest
 import com.cogoport.ares.model.payment.request.OrganizationReceivablesRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
+import com.cogoport.ares.model.payment.request.SaasInvoiceHookRequest
 import com.cogoport.ares.model.payment.request.TradePartyStatsRequest
 import com.cogoport.ares.model.payment.response.AccountCollectionResponse
 import com.cogoport.ares.model.payment.response.AccountPayableFileResponse
@@ -37,6 +38,7 @@ import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
 import com.cogoport.ares.model.payment.response.OrgPayableResponse
 import com.cogoport.ares.model.payment.response.OutstandingResponse
 import com.cogoport.ares.model.payment.response.OverallStatsForTradeParty
+import com.cogoport.ares.model.payment.response.SaasInvoiceHookResponse
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
 import com.cogoport.ares.model.settlement.request.ParentJVUpdateRequest
@@ -172,4 +174,7 @@ interface AresClient {
 
     @Post("/payments/accounts/update-csd-payment")
     suspend fun updateCSDPayments(@Valid @Body request: UpdateCSDPaymentRequest)
+
+    @Post("/payments/accounts/saas-invoice-hook")
+    suspend fun saasInvoiceHook(req: SaasInvoiceHookRequest): SaasInvoiceHookResponse
 }

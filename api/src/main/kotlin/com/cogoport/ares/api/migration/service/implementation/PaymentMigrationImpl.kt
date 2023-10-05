@@ -849,7 +849,7 @@ class PaymentMigrationImpl : PaymentMigration {
                 )
             }
         } catch (ex: Exception) {
-            logger().error("$ex")
+            logger().error(ex.message)
             migrationLogService.saveMigrationLogs(
                 null, null, jvParentDetail.jvNum, null, null,
                 null, null, null, null, "Error while storing jv header: ${ex.message}"
@@ -905,7 +905,7 @@ class PaymentMigrationImpl : PaymentMigration {
                     null, null, null
                 )
             } catch (ex: Exception) {
-                logger().error("$ex")
+                logger().error(ex.message)
                 migrationLogService.saveMigrationLogs(
                     null, null, it.sageUniqueId, null, null,
                     null, null, null, null, "Error while stroing line items: ${it.sageUniqueId}"
