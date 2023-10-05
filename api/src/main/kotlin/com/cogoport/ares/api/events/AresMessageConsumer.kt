@@ -193,6 +193,11 @@ class AresMessageConsumer {
         paymentMigrationWrapper.createGLCode(req)
     }
 
+    @Queue("ares-upsert-migrate-glcodes", prefetch = 1)
+    fun upsertMigrateGLCode(req: GlCodeMaster) = runBlocking {
+        paymentMigrationWrapper.upsertMigrateGLCode(req)
+    }
+
     @Queue("ares-post-jv-to-sage", prefetch = 1)
     fun postJVToSage(req: PostJVToSageRequest) = runBlocking {
         parentJVService.postJVToSage(Hashids.decode(req.parentJvId)[0], req.performedBy)
