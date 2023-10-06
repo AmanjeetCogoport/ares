@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.settlement.controller
 
+import com.cogoport.ares.api.common.models.FindRecordByDocumentNo
 import com.cogoport.ares.api.common.service.implementation.Scheduler
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.settlement.entity.Settlement
@@ -186,7 +187,7 @@ class SettlementController {
     }
 
     @Post("/send-utilization-to-debit")
-    suspend fun sendPaymentDataToDebit(@Valid @Body request: AccountUtilization) {
+    suspend fun sendPaymentDataToDebit(@Valid @Body request: FindRecordByDocumentNo) {
         return settlementService.sendInvoiceDataToDebitConsumption(request)
     }
 
