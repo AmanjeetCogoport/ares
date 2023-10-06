@@ -2583,10 +2583,10 @@ open class SettlementServiceImpl : SettlementService {
             thirdPartyApiAuditService.createAudit(
                 ThirdPartyApiAudit(
                     id = null,
-                    apiName = "CreditConsumption",
-                    apiType = "On_Credit",
+                    apiName = "CreditConsumptionDeletion",
+                    apiType = "On Credit",
                     objectId = invoiceId,
-                    objectName = objectName,
+                    objectName = "CREDIT_DELETED",
                     httpResponseCode = "500",
                     requestParams = request.toString(),
                     response = e.message.toString(),
@@ -2600,10 +2600,10 @@ open class SettlementServiceImpl : SettlementService {
         thirdPartyApiAuditService.createAudit(
             ThirdPartyApiAudit(
                 id = null,
-                apiName = "CreditConsumption",
-                apiType = "On_Credit",
+                apiName = "CreditConsumptionDeletion",
+                apiType = "On Credit",
                 objectId = invoiceId,
-                objectName = objectName,
+                objectName = "CREDIT_DELETED",
                 httpResponseCode = "200",
                 requestParams = request.toString(),
                 response = response.toString(),
