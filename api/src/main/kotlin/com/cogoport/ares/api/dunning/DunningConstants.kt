@@ -91,4 +91,6 @@ object DunningConstants {
     const val MAX_DAY_IN_MONTH_FOR_DUNNING: Int = 28
 
     const val MAX_PAGE_SIZE = 10000
+
+    var EMAIL_TEMPLATE_FOR_IRN_GENERATION = "irn_generation_mail"
 }
