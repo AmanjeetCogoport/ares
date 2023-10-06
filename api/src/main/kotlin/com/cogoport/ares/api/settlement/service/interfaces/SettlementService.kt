@@ -1,7 +1,6 @@
 package com.cogoport.ares.api.settlement.service.interfaces
 
 import com.cogoport.ares.api.common.models.FindRecordByDocumentNo
-import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.entity.SettlementListDoc
 import com.cogoport.ares.model.common.ResponseList

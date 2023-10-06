@@ -46,7 +46,6 @@ import com.cogoport.brahma.rabbitmq.model.RabbitmqEventLogDocument
 import com.cogoport.plutus.model.invoice.request.IrnGenerationEmailRequest
 import com.rabbitmq.client.Envelope
 import io.micronaut.messaging.annotation.MessageBody
-import io.micronaut.rabbitmq.annotation.Binding
 import io.micronaut.rabbitmq.annotation.Queue
 import io.micronaut.rabbitmq.annotation.RabbitHeaders
 import io.micronaut.rabbitmq.annotation.RabbitListener

@@ -1411,10 +1411,12 @@ open class SettlementServiceImpl : SettlementService {
                     updatedByUserType = deletedByUserType,
                     tdsPaid = tdsPaid
                 )
-                aresMessagePublisher.emitUnfreezeDebitConsumption(FindRecordByDocumentNo(
-                    documentNo = source.destinationId,
-                    accType = AccountType.valueOf(source.destinationType.name)
-                ))
+                aresMessagePublisher.emitUnfreezeDebitConsumption(
+                    FindRecordByDocumentNo(
+                        documentNo = source.destinationId,
+                        accType = AccountType.valueOf(source.destinationType.name)
+                    )
+                )
             }
         }
         val settlements = settlementRepository.findByIdIn(fetchedDoc.map { it?.id!! })
