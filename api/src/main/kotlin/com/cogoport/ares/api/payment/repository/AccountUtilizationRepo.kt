@@ -716,10 +716,34 @@ ORDER BY
                 AND ((:accMode) is null or acc_mode::varchar in (:accMode))
                 AND document_status != 'DELETED'::document_status
                 AND deleted_at is null
+                AND acc_type != 'NEWPR'
                 AND settlement_enabled = true
                 AND ((:docValues) is null or document_value in (:docValues))
                 AND ((:docNumbers) is null or document_no in (:docNumbers))
-            ORDER BY transaction_date DESC, id
+            ORDER BY
+            CASE WHEN :sortType = 'Desc' THEN
+                    CASE 
+                         WHEN :sortBy = 'transactionDate' THEN EXTRACT(epoch FROM transaction_date)::numeric
+                         WHEN :sortBy ='dueDate' THEN EXTRACT(epoch FROM due_date)::numeric
+                         WHEN :sortBy = 'documentAmount' then amount_curr
+                         WHEN :sortBy = 'paidAmount' then pay_curr
+                         when :sortBy = 'balanceAmount' then COALESCE(amount_curr - pay_curr, 0)
+                         when :sortBy = 'tdsAmount' then tds_amount                         
+                    END  
+            END 
+            Desc,
+            CASE WHEN :sortType = 'Asc' THEN
+                    CASE WHEN :sortBy = 'transactionDate' THEN EXTRACT(epoch FROM transaction_date)::numeric
+                         WHEN :sortBy ='dueDate' THEN EXTRACT(epoch FROM due_date)::numeric
+                         WHEN :sortBy = 'documentAmount' then amount_curr
+                         WHEN :sortBy = 'paidAmount' then pay_curr
+                         when :sortBy = 'balanceAmount' then COALESCE(amount_curr - pay_curr, 0)
+                         when :sortBy = 'tdsAmount' then tds_amount
+                    END       
+            END 
+            Asc
+            LIMIT :limit
+            OFFSET :offset
         )
         SELECT 
             au.id,
@@ -789,33 +813,6 @@ ORDER BY
                     END
                 )
             )
-            ORDER BY
-            CASE WHEN :sortType = 'Desc' THEN
-                    CASE 
-                         WHEN :sortBy = 'transactionDate' THEN EXTRACT(epoch FROM au.transaction_date)::numeric
-                         WHEN :sortBy ='dueDate' THEN EXTRACT(epoch FROM au.due_date)::numeric
-                         WHEN :sortBy = 'documentAmount' then au.amount_curr
-                         WHEN :sortBy = 'paidAmount' then au.pay_curr
-                         when :sortBy = 'balanceAmount' then COALESCE(au.amount_curr - au.pay_curr, 0)
-                         when :sortBy = 'tdsAmount' then au.tds_amount
-                         when :sortBy = 'settledTds' then s.amount
-                         
-                    END  
-            END 
-            Desc,
-            CASE WHEN :sortType = 'Asc' THEN
-                    CASE WHEN :sortBy = 'transactionDate' THEN EXTRACT(epoch FROM au.transaction_date)::numeric
-                         WHEN :sortBy ='dueDate' THEN EXTRACT(epoch FROM au.due_date)::numeric
-                         WHEN :sortBy = 'documentAmount' then au.amount_curr
-                         WHEN :sortBy = 'paidAmount' then au.pay_curr
-                         when :sortBy = 'balanceAmount' then COALESCE(au.amount_curr - au.pay_curr, 0)
-                         when :sortBy = 'tdsAmount' then au.tds_amount
-                         when :sortBy = 'settledTds' then s.amount
-                    END       
-            END 
-            Asc
-            LIMIT :limit
-            OFFSET :offset
         """
     )
     suspend fun getDocumentList(
@@ -856,6 +853,7 @@ ORDER BY
                     AND settlement_enabled = true
                     AND ((:docValues) is null or document_value in (:docValues))
                     AND ((:docNumbers) is null or document_no in (:docNumbers))
+                    AND acc_type != 'NEWPR'
                     AND 
                     (
                         :documentPaymentStatus is null OR 
