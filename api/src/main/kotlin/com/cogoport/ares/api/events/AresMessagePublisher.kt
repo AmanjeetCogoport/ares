@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.events
 
+import com.cogoport.ares.api.common.models.FindRecordByDocumentNo
 import com.cogoport.ares.api.dunning.model.request.CycleExecutionProcessReq
 import com.cogoport.ares.api.dunning.model.request.PaymentReminderReq
 import com.cogoport.ares.api.migration.model.JVParentDetails
@@ -35,6 +36,9 @@ interface AresMessagePublisher {
 
     @Binding("ares.unfreeze.credit.consumption")
     suspend fun emitUnfreezeCreditConsumption(request: Settlement)
+
+    @Binding("ares.unfreeze.debit.consumption")
+    suspend fun emitUnfreezeDebitConsumption(request: FindRecordByDocumentNo)
 
     @Binding("ares.receivables.outstanding.data")
     suspend fun emitOutstandingData(openSearchEvent: OpenSearchEvent)
