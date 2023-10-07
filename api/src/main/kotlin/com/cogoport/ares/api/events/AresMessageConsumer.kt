@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.events
 
 import com.cogoport.ares.api.common.client.AuthClient
+import com.cogoport.ares.api.common.models.FindRecordByDocumentNo
 import com.cogoport.ares.api.dunning.model.request.CycleExecutionProcessReq
 import com.cogoport.ares.api.dunning.model.request.PaymentReminderReq
 import com.cogoport.ares.api.dunning.service.interfaces.DunningHelperService
@@ -112,6 +113,11 @@ class AresMessageConsumer {
     @Queue("ares-unfreeze-credit-consumption", prefetch = 1)
     fun unfreezeCreditConsumption(request: Settlement) = runBlocking {
         settlementService.sendKnockOffDataToCreditConsumption(request)
+    }
+
+    @Queue("ares-unfreeze-debit-consumption", prefetch = 1)
+    fun unfreezeDebitConsumption(request: FindRecordByDocumentNo) = runBlocking {
+        settlementService.sendInvoiceDataToDebitConsumption(request)
     }
 
     @Queue("ares-receivables-outstanding-data", prefetch = 1)

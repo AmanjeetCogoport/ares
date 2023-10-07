@@ -6,6 +6,7 @@ import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.common.enums.IncidentStatus
 import com.cogoport.ares.api.common.enums.SequenceSuffix
+import com.cogoport.ares.api.common.models.FindRecordByDocumentNo
 import com.cogoport.ares.api.common.models.ListOrgStylesRequest
 import com.cogoport.ares.api.common.models.TdsStylesResponse
 import com.cogoport.ares.api.events.AresMessagePublisher
@@ -1410,6 +1411,12 @@ open class SettlementServiceImpl : SettlementService {
                     updatedByUserType = deletedByUserType,
                     tdsPaid = tdsPaid
                 )
+                aresMessagePublisher.emitUnfreezeDebitConsumption(
+                    FindRecordByDocumentNo(
+                        documentNo = source.destinationId,
+                        accType = AccountType.valueOf(source.destinationType.name)
+                    )
+                )
             }
         }
         val settlements = settlementRepository.findByIdIn(fetchedDoc.map { it?.id!! })
@@ -2207,7 +2214,7 @@ open class SettlementServiceImpl : SettlementService {
             )
         val settleDoc = settlementRepository.save(settledDoc)
 
-//        aresMessagePublisher.emitUnfreezeCreditConsumption(settleDoc)
+        aresMessagePublisher.emitUnfreezeCreditConsumption(settleDoc)
 
         auditService.createAudit(
             AuditRequest(
@@ -2531,14 +2538,14 @@ open class SettlementServiceImpl : SettlementService {
         payLaterUtilizationAndKnockOffCall(paymentRequest, request.destinationId, objectName)
     }
 
-    override suspend fun sendInvoiceDataToDebitConsumption(request: AccountUtilization) {
+    override suspend fun sendInvoiceDataToDebitConsumption(request: FindRecordByDocumentNo) {
         val invoiceData = plutusClient.getInvoiceAdditionalByInvoiceId(request.documentNo, "paymentMode")
 
         if ((invoiceData == null) || invoiceData.value.toString().isBlank() || (invoiceData.value != TransactionType.CREDIT.value)) {
             return
         }
 
-        val destinationDocument = accountUtilizationRepository.findRecord(request.documentNo, request.accType.name, request.accMode.name)
+        val destinationDocument = accountUtilizationRepository.findRecord(request.documentNo, request.accType?.name, request.accMode?.name)
 
         val paymentRequest = com.cogoport.plutus.model.invoice.CreditPaymentRequest(
             organizationId = destinationDocument?.taggedOrganizationId,
@@ -2546,9 +2553,9 @@ open class SettlementServiceImpl : SettlementService {
             invoiceDate = invoiceData.invoiceDate.toString(),
             invoiceDueDate = destinationDocument.dueDate.toString(),
             invoiceAmount = destinationDocument.amountLoc,
-            paidAmount = request.payLoc * BigDecimal.valueOf(-1),
+            paidAmount = destinationDocument.payLoc * BigDecimal.valueOf(-1),
             transactionType = TransactionType.DEBIT.value,
-            currency = "INR",
+            currency = destinationDocument.ledCurrency,
             proformaNumber = invoiceData.proformaNumber,
             triggerSource = "knockoff_reverted",
             paymentDate = null,
@@ -2575,18 +2582,31 @@ open class SettlementServiceImpl : SettlementService {
         response = try {
             railsClient.sendInvoicePaymentKnockOff(request)
         } catch (e: Exception) {
-            logger().error(e.toString())
-            e.localizedMessage.toString()
+            thirdPartyApiAuditService.createAudit(
+                ThirdPartyApiAudit(
+                    id = null,
+                    apiName = "CreditConsumptionDeletion",
+                    apiType = "On Credit",
+                    objectId = invoiceId,
+                    objectName = "CREDIT_DELETED",
+                    httpResponseCode = "500",
+                    requestParams = request.toString(),
+                    response = e.message.toString(),
+                    isSuccess = false
+                )
+            )
+            e.message
+            return
         }
 
         thirdPartyApiAuditService.createAudit(
             ThirdPartyApiAudit(
                 id = null,
-                apiName = "CreditConsumption",
-                apiType = "On_Credit",
+                apiName = "CreditConsumptionDeletion",
+                apiType = "On Credit",
                 objectId = invoiceId,
-                objectName = objectName,
-                httpResponseCode = "",
+                objectName = "CREDIT_DELETED",
+                httpResponseCode = "200",
                 requestParams = request.toString(),
                 response = response.toString(),
                 isSuccess = true
