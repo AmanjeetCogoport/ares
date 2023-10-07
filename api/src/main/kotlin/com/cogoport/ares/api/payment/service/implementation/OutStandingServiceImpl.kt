@@ -17,6 +17,7 @@ import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
 import com.cogoport.ares.api.payment.mapper.SupplierOrgOutstandingMapper
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentRequest
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
+import com.cogoport.ares.api.payment.model.requests.OutstandingVisualizationRequest
 import com.cogoport.ares.api.payment.model.response.TopServiceProviders
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
@@ -1512,5 +1513,10 @@ class OutStandingServiceImpl : OutStandingService {
 
     override suspend fun getDistinctOrgIds(accMode: AccMode?): List<UUID>? {
         return accountUtilizationRepo.getDistinctOrgIds(accMode)
+    }
+
+    override suspend fun getOutstandingDataBifurcation(request: OutstandingVisualizationRequest): Any {
+
+        return 1
     }
 }
