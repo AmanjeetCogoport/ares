@@ -45,6 +45,8 @@ import com.cogoport.ares.api.utils.Util
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.AresModelConstants
+import com.cogoport.ares.model.common.ExchangeRateRequest
+import com.cogoport.ares.model.common.ExchangeRateResponseByDate
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
@@ -69,7 +71,6 @@ import com.cogoport.brahma.sage.SageException
 import com.cogoport.brahma.sage.model.request.JVLineItem
 import com.cogoport.brahma.sage.model.request.JVRequest
 import com.cogoport.brahma.sage.model.request.SageResponse
-import com.cogoport.kuber.model.bills.request.LedgerExchangeRateRequest
 import com.cogoport.plutus.model.invoice.SageOrganizationRequest
 import com.cogoport.plutus.model.invoice.SageOrganizationResponse
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -410,6 +411,21 @@ open class ParentJVServiceImpl : ParentJVService {
         if (request.jvLineItems.filter { it.type == "DEBIT" }.sumOf { it.amount } != request.jvLineItems.filter { it.type == "CREDIT" }.sumOf { it.amount }) {
             throw AresException(AresError.ERR_1527, "")
         }
+
+        if (request.jvLineItems.any { it.glCode.isNullOrEmpty() or it.glCode.isNullOrBlank() }) {
+            throw AresException(AresError.ERR_1003, "GL code")
+        }
+        if (request.jvLineItems.any { it.type.isNullOrEmpty() or it.type.isNullOrBlank() }) {
+            throw AresException(AresError.ERR_1003, "Type")
+        }
+
+//        if (request.jvLineItems.any { it.accMode !in listOf(AccMode.AR, AccMode.AP, AccMode.CSD) }){
+//            throw AresException(AresError.ERR_1001, "")
+//        }
+
+        if (request.jvLineItems.any { it.entityCode == null }) {
+            throw AresException(AresError.ERR_1003, "entity code")
+        }
     }
 
     private suspend fun getJvNumber() =
@@ -584,6 +600,7 @@ open class ParentJVServiceImpl : ParentJVService {
     }
 
     private suspend fun creatingLineItemsAndRequestToIncident(request: ParentJournalVoucherRequest, parentJvData: ParentJournalVoucher?, transactionDate: Date?) {
+        val exchangeRates = getExchangeRate(request)
         request.jvLineItems.forEach { lineItem ->
             if (lineItem.tradePartyName.isNullOrEmpty() && lineItem.tradePartyId != null) {
                 val data = railsClient.getListOrganizationTradePartyDetails(lineItem.tradePartyId!!)
@@ -592,21 +609,9 @@ open class ParentJVServiceImpl : ParentJVService {
                 }
             }
 
-            if (lineItem.glCode.isNullOrEmpty() or lineItem.glCode.isNullOrBlank()) {
-                throw AresException(AresError.ERR_1003, "GL code")
-            }
-            if (lineItem.type.isNullOrEmpty() or lineItem.type.isNullOrBlank()) {
-                throw AresException(AresError.ERR_1003, "Type")
-            }
-            var exchangeRate = request.exchangeRate
-            if (!lineItem.currency.isNullOrEmpty()) {
-                exchangeRate = authClient.getLedgerExchangeRate(
-                    LedgerExchangeRateRequest(
-                        cogoEntityId = lineItem.entityId!!,
-                        fromCurrency = lineItem.currency ?: request.currency
-                    )
-                ).ledgerExchangeRate
-            }
+            val ledCurrency = AresConstants.LEDGER_CURRENCY[lineItem.entityCode]!!
+            val exchangeRate = exchangeRates.first { it.fromCurrency == request.currency && it.toCurrency == ledCurrency }.exchangeRate
+
             val jvLineItemData = JournalVoucher(
                 id = null,
                 jvNum = parentJvData?.jvNum!!,
@@ -617,13 +622,13 @@ open class ParentJVServiceImpl : ParentJVService {
                 updatedAt = request.createdAt,
                 updatedBy = request.createdBy,
                 currency = lineItem.currency ?: request.currency,
-                ledCurrency = AresConstants.LEDGER_CURRENCY[lineItem.entityCode]!!,
+                ledCurrency = ledCurrency,
                 amount = lineItem.amount,
                 ledAmount = lineItem.amount.multiply(exchangeRate),
                 description = request.description,
                 entityCode = lineItem.entityCode ?: request.entityCode,
                 entityId = UUID.fromString(AresConstants.ENTITY_ID[lineItem.entityCode]),
-                exchangeRate = request.exchangeRate,
+                exchangeRate = exchangeRate,
                 glCode = lineItem.glCode,
                 parentJvId = parentJvData.id,
                 type = lineItem.type,
@@ -1252,5 +1257,18 @@ open class ParentJVServiceImpl : ParentJVService {
             }
         }
         return organizationTradePartyDetails
+    }
+
+    private suspend fun getExchangeRate(req: ParentJournalVoucherRequest): MutableList<ExchangeRateResponseByDate> {
+        val toCurrencies = req.jvLineItems.map { AresConstants.LEDGER_CURRENCY[it.entityCode] }.distinct()
+        val fromCurrency = listOf(req.currency)
+        val exchangeDate = listOf(SimpleDateFormat("yyyy-MM-dd").format(req.transactionDate))
+        return exchangeClient.getExchangeRates(
+            ExchangeRateRequest(
+                fromCurrency = fromCurrency,
+                toCurrency = toCurrencies.filterNotNull(),
+                transactionDates = exchangeDate
+            )
+        )
     }
 }
