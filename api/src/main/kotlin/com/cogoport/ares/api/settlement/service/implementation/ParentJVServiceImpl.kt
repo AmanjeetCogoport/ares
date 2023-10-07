@@ -406,8 +406,6 @@ open class ParentJVServiceImpl : ParentJVService {
     private fun validateCreateRequest(request: ParentJournalVoucherRequest) {
         if (request.createdBy == null) throw AresException(AresError.ERR_1003, "Created By")
 
-        if (request.jvLineItems.any { it.glCode == null }) throw AresException(AresError.ERR_1003, "GL Code")
-
         if (request.jvLineItems.filter { it.type == "DEBIT" }.sumOf { it.amount } != request.jvLineItems.filter { it.type == "CREDIT" }.sumOf { it.amount }) {
             throw AresException(AresError.ERR_1527, "")
         }
@@ -419,9 +417,9 @@ open class ParentJVServiceImpl : ParentJVService {
             throw AresException(AresError.ERR_1003, "Type")
         }
 
-//        if (request.jvLineItems.any { it.accMode !in listOf(AccMode.AR, AccMode.AP, AccMode.CSD) }){
-//            throw AresException(AresError.ERR_1001, "")
-//        }
+        if (request.jvLineItems.filter { it.accMode != null }.any { it.accMode !in listOf(AccMode.AR, AccMode.AP, AccMode.CSD) }) {
+            throw AresException(AresError.ERR_1553, "For this Account Mode.")
+        }
 
         if (request.jvLineItems.any { it.entityCode == null }) {
             throw AresException(AresError.ERR_1003, "entity code")
