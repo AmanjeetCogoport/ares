@@ -1411,10 +1411,12 @@ open class SettlementServiceImpl : SettlementService {
                     updatedByUserType = deletedByUserType,
                     tdsPaid = tdsPaid
                 )
-                aresMessagePublisher.emitUnfreezeDebitConsumption(FindRecordByDocumentNo(
-                    documentNo = source.destinationId,
-                    accType = AccountType.valueOf(source.destinationType.name)
-                ))
+                aresMessagePublisher.emitUnfreezeDebitConsumption(
+                    FindRecordByDocumentNo(
+                        documentNo = source.destinationId,
+                        accType = AccountType.valueOf(source.destinationType.name)
+                    )
+                )
             }
         }
         val settlements = settlementRepository.findByIdIn(fetchedDoc.map { it?.id!! })
@@ -2583,10 +2585,10 @@ open class SettlementServiceImpl : SettlementService {
             thirdPartyApiAuditService.createAudit(
                 ThirdPartyApiAudit(
                     id = null,
-                    apiName = "CreditConsumption",
-                    apiType = "On_Credit",
+                    apiName = "CreditConsumptionDeletion",
+                    apiType = "On Credit",
                     objectId = invoiceId,
-                    objectName = objectName,
+                    objectName = "CREDIT_DELETED",
                     httpResponseCode = "500",
                     requestParams = request.toString(),
                     response = e.message.toString(),
@@ -2600,10 +2602,10 @@ open class SettlementServiceImpl : SettlementService {
         thirdPartyApiAuditService.createAudit(
             ThirdPartyApiAudit(
                 id = null,
-                apiName = "CreditConsumption",
-                apiType = "On_Credit",
+                apiName = "CreditConsumptionDeletion",
+                apiType = "On Credit",
                 objectId = invoiceId,
-                objectName = objectName,
+                objectName = "CREDIT_DELETED",
                 httpResponseCode = "200",
                 requestParams = request.toString(),
                 response = response.toString(),
