@@ -29,6 +29,7 @@ import io.sentry.Sentry
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.sql.SQLException
 import java.util.UUID
 import javax.transaction.Transactional
@@ -75,7 +76,7 @@ open class TaggedSettlementServiceImpl : TaggedSettlementService {
         if (destinationDocument.accountUtilization == null) {
             throw AresException(AresError.ERR_1503, "")
         }
-        destinationDocument.exchangeRate = destinationDocument.accountUtilization?.amountLoc!!.divide(destinationDocument.accountUtilization?.amountCurr)
+        destinationDocument.exchangeRate = destinationDocument.accountUtilization?.amountLoc!!.divide(destinationDocument.accountUtilization?.amountCurr, 4, RoundingMode.HALF_UP)
 
         val settledSourceDocuments = settlementRepository.getPaymentsCorrespondingDocumentNo(req.taggedDocuments!!)
         if (!req.taggedDocuments.isNullOrEmpty()) {
