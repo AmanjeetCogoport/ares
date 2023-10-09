@@ -209,7 +209,7 @@ object AresConstants {
         "migrate-payment-amount",
         "send-email-for-irn-generation",
         "upsert-migrate-glcodes",
-        "ares-unfreeze-debit-consumption"
+        "unfreeze-debit-consumption"
     )
 
     val RETRY_QUEUES = listOf(
@@ -249,7 +249,7 @@ object AresConstants {
         "migrate-payment-amount",
         "send-email-for-irn-generation",
         "upsert-migrate-glcodes",
-        "ares-unfreeze-debit-consumption"
+        "unfreeze-debit-consumption"
     )
 
     const val performedByUserNameForMail = "Business Finance Tech Team"
