@@ -4,6 +4,7 @@ import com.cogoport.ares.api.payment.entity.EntityLevelStats
 import com.cogoport.ares.api.payment.entity.EntityWiseOutstandingBucket
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentRequest
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
+import com.cogoport.ares.api.payment.model.requests.OutstandingVisualizationRequest
 import com.cogoport.ares.api.payment.model.response.TopServiceProviders
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.common.TradePartyOutstandingReq
@@ -81,4 +82,6 @@ interface OutStandingService {
     suspend fun createRecordInBulk(request: BulkUploadRequest?): String?
 
     suspend fun getDistinctOrgIds(accMode: AccMode?): List<UUID>?
+
+    suspend fun getOutstandingDataBifurcation(request: OutstandingVisualizationRequest): Any
 }
