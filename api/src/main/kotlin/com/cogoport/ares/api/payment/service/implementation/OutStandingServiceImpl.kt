@@ -1044,12 +1044,10 @@ class OutStandingServiceImpl : OutStandingService {
         }
     }
 
-    override suspend fun getTopTenServiceProviders(request: SupplierOutstandingRequest): TopServiceProviders {
-        if (request.flag == "overall") {
-            throw AresException(AresError.ERR_1003, "Entity not found")
-        }
-        val res = listSupplierDetails(request)
-        return TopServiceProviders(list = res.list, currency = AresConstants.LEDGER_CURRENCY.get(request.flag?.toInt()))
+    override suspend fun getTopTenServiceProviders(request: SupplierOutstandingRequestV2): TopServiceProviders {
+
+        val res = listSupplierDetailsV2(request)
+        return TopServiceProviders(list = res.list, currency = AresConstants.LEDGER_CURRENCY.get(request.entityCode))
     }
 
     override suspend fun getPayableOfOrganization(request: AccPayablesOfOrgReq): List<AccPayablesOfOrgRes> {
