@@ -153,8 +153,8 @@ class OutstandingController {
     }
     @Auth
     @Get("/top-ten-service-providers{?request*}")
-    suspend fun getTopTenServiceProviders(@Valid request: SupplierOutstandingRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): TopServiceProviders {
-        request.flag = util.getCogoEntityCode(user?.filters?.get("partner_id")) ?: request.flag
+    suspend fun getTopTenServiceProviders(@Valid request: SupplierOutstandingRequestV2, user: AuthResponse?, httpRequest: HttpRequest<*>): TopServiceProviders {
+        request.entityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
         return outStandingService.getTopTenServiceProviders(request)
     }
 
