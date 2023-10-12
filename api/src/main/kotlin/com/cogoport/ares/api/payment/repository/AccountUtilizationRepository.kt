@@ -1651,7 +1651,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
             ELSE
                 0
             END), 0) AS total_open_credit_note_amount
-    from ares.account_utilizations aau 
+    from account_utilizations aau 
     WHERE 
         acc_mode::VARCHAR = :accMode
         AND deleted_at IS NULL
