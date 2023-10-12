@@ -1524,12 +1524,12 @@ class OutStandingServiceImpl : OutStandingService {
 
     override suspend fun createCustomerDetailsV2(request: CustomerOutstandingDocumentResponseV2) {
         val entityCodes = AresConstants.TAGGED_ENTITY_ID_MAPPINGS[request.cogoEntityId.toString()]
-        Client.deleteByQuery { s ->
-            s.index(AresConstants.CUSTOMER_OUTSTANDING_V2).query { q ->
-                q.matchAll { MatchAllQuery.Builder() }
-            }
-        }
-        val orgOutstanding = unifiedDBNewRepository.getArOutstandingData(
+//        Client.deleteByQuery { s ->
+//            s.index(AresConstants.CUSTOMER_OUTSTANDING_V2).query { q ->
+//                q.matchAll { MatchAllQuery.Builder() }
+//            }
+//        }
+        val orgOutstanding = accountUtilizationRepository.getArOutstandingData(
             entityCodes = listOf(entityCodes),
             orgIds = listOf(UUID.fromString(request.organizationId)),
             accMode = AccMode.AR.name,
