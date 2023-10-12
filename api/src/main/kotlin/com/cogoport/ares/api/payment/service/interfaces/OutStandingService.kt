@@ -25,6 +25,7 @@ import com.cogoport.ares.model.payment.request.SupplierOutstandingRequestV2
 import com.cogoport.ares.model.payment.response.AccPayablesOfOrgRes
 import com.cogoport.ares.model.payment.response.CustomerMonthlyPayment
 import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
+import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponseV2
 import com.cogoport.ares.model.payment.response.PayblesInfoRes
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocumentV2
@@ -83,5 +84,6 @@ interface OutStandingService {
 
     suspend fun getDistinctOrgIds(accMode: AccMode?): List<UUID>?
 
+    suspend fun createCustomerDetailsV2(request: CustomerOutstandingDocumentResponseV2)
     suspend fun getOutstandingDataBifurcation(request: OutstandingVisualizationRequest): Any
 }

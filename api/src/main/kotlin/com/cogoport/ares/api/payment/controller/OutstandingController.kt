@@ -32,6 +32,7 @@ import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.AccPayablesOfOrgRes
 import com.cogoport.ares.model.payment.response.CustomerMonthlyPayment
 import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
+import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponseV2
 import com.cogoport.ares.model.payment.response.PayblesInfoRes
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocumentV2
@@ -249,5 +250,11 @@ class OutstandingController {
     suspend fun getOutstandingDataBifurcation(@Valid request: OutstandingVisualizationRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): Any {
         val updatedEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
         return outStandingService.getOutstandingDataBifurcation(request)
+    }
+
+    @Post("/customer-v2")
+    suspend fun createCustomerDetailsV2(@Valid @Body request: CustomerOutstandingDocumentResponseV2): Response<String> {
+        outStandingService.createCustomerDetailsV2(request)
+        return Response<String>().ok("created", HttpStatus.OK.name)
     }
 }

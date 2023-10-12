@@ -7,6 +7,7 @@ import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.api.payment.entity.ArOutstandingData
 import com.cogoport.ares.api.payment.entity.AresDocument
 import com.cogoport.ares.api.payment.entity.CustomerOrgOutstanding
 import com.cogoport.ares.api.payment.entity.CustomerOutstandingAgeing
@@ -59,10 +60,12 @@ import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequestV2
 import com.cogoport.ares.model.payment.response.AccPayablesOfOrgRes
+import com.cogoport.ares.model.payment.response.AgeingBucketOutstandingV2
 import com.cogoport.ares.model.payment.response.BillOutStandingAgeingResponse
 import com.cogoport.ares.model.payment.response.CustomerInvoiceResponse
 import com.cogoport.ares.model.payment.response.CustomerMonthlyPayment
 import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
+import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponseV2
 import com.cogoport.ares.model.payment.response.OutstandingAgeingResponse
 import com.cogoport.ares.model.payment.response.PayableStatsOpenSearchResponse
 import com.cogoport.ares.model.payment.response.PayblesInfoRes
@@ -1516,7 +1519,266 @@ class OutStandingServiceImpl : OutStandingService {
     }
 
     override suspend fun getOutstandingDataBifurcation(request: OutstandingVisualizationRequest): Any {
-
         return 1
+    }
+
+    override suspend fun createCustomerDetailsV2(request: CustomerOutstandingDocumentResponseV2) {
+        val entityCodes = AresConstants.TAGGED_ENTITY_ID_MAPPINGS[request.cogoEntityId.toString()]
+        Client.deleteByQuery { s ->
+            s.index(AresConstants.CUSTOMER_OUTSTANDING_V2).query { q ->
+                q.matchAll { MatchAllQuery.Builder() }
+            }
+        }
+        val orgOutstanding = unifiedDBNewRepository.getArOutstandingData(
+            entityCodes = listOf(entityCodes),
+            orgIds = listOf(UUID.fromString(request.organizationId)),
+            accMode = AccMode.AR.name,
+            accTypes = listOf(
+                AccountType.SINV.name, AccountType.SCN.name, AccountType.SREIMB.name,
+                AccountType.REC.name, AccountType.CTDS.name, AccountType.OPDIV.name,
+                AccountType.MISC.name, AccountType.BANK.name, AccountType.CONTR.name,
+                AccountType.INTER.name, AccountType.MTC.name, AccountType.MTCCV.name
+            ),
+            invoiceAccType = listOf(AccountType.SINV.name, AccountType.SREIMB.name),
+            creditNoteAccType = listOf(AccountType.SCN.name, AccountType.SREIMBCN.name),
+            onAccountAccountType = listOf(
+                AccountType.REC.name, AccountType.CTDS.name, AccountType.OPDIV.name,
+                AccountType.MISC.name, AccountType.BANK.name, AccountType.CONTR.name,
+                AccountType.INTER.name, AccountType.MTC.name, AccountType.MTCCV.name
+            )
+        )
+
+        orgOutstanding.map { orgData ->
+            val resp = buildCustomerOutstandingResponse(request, orgData)
+            getCallPriorityV2(resp)
+            Client.addDocument(AresConstants.CUSTOMER_OUTSTANDING_V2, "${resp.organizationId}_${resp.entityCode}", resp)
+        }
+    }
+
+    private fun buildCustomerOutstandingResponse(request: CustomerOutstandingDocumentResponseV2, orgOutstanding: ArOutstandingData): CustomerOutstandingDocumentResponseV2 {
+        return CustomerOutstandingDocumentResponseV2(
+            lastUpdatedAt = request.lastUpdatedAt ?: Timestamp.valueOf(LocalDateTime.now()),
+            organizationId = request.organizationId,
+            tradePartyId = request.tradePartyId,
+            businessName = request.businessName,
+            companyType = request.companyType,
+            openInvoiceAgeingBucket = getAgeingBucketData(orgOutstanding, "invoice"),
+            onAccountAgeingBucket = getAgeingBucketData(orgOutstanding, "onAccount"),
+            creditNoteAgeingBucket = getAgeingBucketData(orgOutstanding, "creditNote"),
+            countryCode = request.countryCode,
+            countryId = request.countryId,
+            creditController = request.creditController,
+            creditDays = request.creditDays,
+            kam = request.kam,
+            organizationSerialId = request.organizationSerialId,
+            registrationNumber = request.registrationNumber,
+            sageId = request.sageId,
+            salesAgent = request.salesAgent,
+            tradePartyName = request.tradePartyName,
+            tradePartySerialId = request.tradePartySerialId,
+            tradePartyType = request.tradePartyType,
+            openInvoiceAmount = orgOutstanding.totalOpenInvoiceAmount,
+            creditNoteAmount = orgOutstanding.totalOpenCreditNoteAmount,
+            totalOutstanding = orgOutstanding.totalOutstanding,
+            onAccountAmount = orgOutstanding.totalOpenOnAccountAmount,
+            openInvoiceCount = calculateTotalCount(
+                orgOutstanding.invoiceNotDueCount, orgOutstanding.invoiceThirtyCount,
+                orgOutstanding.invoiceSixtyCount, orgOutstanding.invoiceNinetyCount,
+                orgOutstanding.invoiceOneEightyCount, orgOutstanding.invoiceThreeSixtyFiveCount,
+                orgOutstanding.invoiceThreeSixtyFivePlusCount
+            ),
+            onAccountCount = calculateTotalCount(
+                orgOutstanding.onAccountNotDueCount, orgOutstanding.onAccountThirtyCount,
+                orgOutstanding.onAccountSixtyCount, orgOutstanding.onAccountNinetyCount,
+                orgOutstanding.onAccountOneEightyCount, orgOutstanding.onAccountThreeSixtyFiveCount,
+                orgOutstanding.onAccountThreeSixtyFivePlusCount
+            ),
+            entityCode = orgOutstanding.entityCode,
+            creditNoteCount = calculateTotalCount(
+                orgOutstanding.creditNoteNotDueCount, orgOutstanding.creditNoteThirtyCount,
+                orgOutstanding.creditNoteSixtyCount, orgOutstanding.creditNoteNinetyCount,
+                orgOutstanding.creditNoteOneEightyCount, orgOutstanding.creditNoteThreeSixtyFiveCount,
+                orgOutstanding.creditNoteThreeSixtyFivePlusCount
+            ),
+            taggedState = request.taggedState,
+            cogoEntityId = request.cogoEntityId,
+            portfolioManager = request.portfolioManager
+        )
+    }
+
+    private fun getAgeingBucketData(orgOutstanding: ArOutstandingData, type: String): List<AgeingBucketOutstandingV2> {
+        val ageingBucketMapping: Map<String, Map<String, Any?>> = when (type) {
+            "invoice" -> mapOf(
+                "notDue" to mapOf("amount" to orgOutstanding.invoiceNotDueAmount, "count" to orgOutstanding.invoiceNotDueCount),
+                "thirty" to mapOf("amount" to orgOutstanding.invoiceThirtyAmount, "count" to orgOutstanding.invoiceThirtyCount),
+                "sixty" to mapOf("amount" to orgOutstanding.invoiceSixtyAmount, "count" to orgOutstanding.invoiceSixtyCount),
+                "ninety" to mapOf("amount" to orgOutstanding.invoiceNinetyAmount, "count" to orgOutstanding.invoiceNinetyCount),
+                "oneEighty" to mapOf("amount" to orgOutstanding.invoiceOneEightyAmount, "count" to orgOutstanding.invoiceOneEightyAmount),
+                "threeSixtyFive" to mapOf("amount" to orgOutstanding.invoiceThreeSixtyFiveAmount, "count" to orgOutstanding.invoiceThreeSixtyFiveAmount),
+                "threeSixtyFivePlus" to mapOf("amount" to orgOutstanding.invoiceThreeSixtyFivePlusAmount, "count" to orgOutstanding.invoiceThreeSixtyFivePlusCount)
+            )
+            "onAccount" -> mapOf(
+                "notDue" to mapOf("amount" to orgOutstanding.onAccountNotDueAmount, "count" to orgOutstanding.onAccountNotDueCount),
+                "thirty" to mapOf("amount" to orgOutstanding.onAccountThirtyAmount, "count" to orgOutstanding.onAccountThirtyCount),
+                "sixty" to mapOf("amount" to orgOutstanding.onAccountSixtyAmount, "count" to orgOutstanding.onAccountSixtyCount),
+                "ninety" to mapOf("amount" to orgOutstanding.onAccountNinetyAmount, "count" to orgOutstanding.onAccountNinetyCount),
+                "oneEighty" to mapOf("amount" to orgOutstanding.onAccountOneEightyAmount, "count" to orgOutstanding.onAccountOneEightyAmount),
+                "threeSixtyFive" to mapOf("amount" to orgOutstanding.onAccountThreeSixtyFiveAmount, "count" to orgOutstanding.onAccountThreeSixtyFiveAmount),
+                "threeSixtyFivePlus" to mapOf("amount" to orgOutstanding.onAccountThreeSixtyFivePlusAmount, "count" to orgOutstanding.onAccountThreeSixtyFivePlusCount)
+            )
+            "creditNote" -> mapOf(
+                "notDue" to mapOf("amount" to orgOutstanding.creditNoteNotDueAmount, "count" to orgOutstanding.creditNoteNotDueCount),
+                "thirty" to mapOf("amount" to orgOutstanding.creditNoteThirtyAmount, "count" to orgOutstanding.creditNoteThirtyCount),
+                "sixty" to mapOf("amount" to orgOutstanding.creditNoteSixtyAmount, "count" to orgOutstanding.creditNoteSixtyCount),
+                "ninety" to mapOf("amount" to orgOutstanding.creditNoteNinetyAmount, "count" to orgOutstanding.creditNoteNinetyCount),
+                "oneEighty" to mapOf("amount" to orgOutstanding.creditNoteOneEightyAmount, "count" to orgOutstanding.creditNoteOneEightyAmount),
+                "threeSixtyFive" to mapOf("amount" to orgOutstanding.creditNoteThreeSixtyFiveAmount, "count" to orgOutstanding.creditNoteThreeSixtyFiveAmount),
+                "threeSixtyFivePlus" to mapOf("amount" to orgOutstanding.creditNoteThreeSixtyFivePlusAmount, "count" to orgOutstanding.creditNoteThreeSixtyFivePlusCount)
+            )
+            else -> emptyMap()
+        }
+
+        return ageingBucketMapping.entries.map { (key, value) ->
+            val amountValue = value["amount"].toString().toBigDecimal().setScale(AresConstants.ROUND_OFF_DECIMAL_TO_2, RoundingMode.UP)
+
+            AgeingBucketOutstandingV2(
+                key = key,
+                ledgerAmount = amountValue,
+                ledgerCount = value["count"].toString().toLongOrNull() ?: 0L,
+                ledgerCurrency = orgOutstanding.ledCurrency
+            )
+        }
+    }
+
+    private fun calculateTotalCount(vararg counts: Long): Int {
+        return counts.sum().toInt()
+    }
+
+    private suspend fun getCallPriorityV2(customerData: CustomerOutstandingDocumentResponseV2) {
+        val orgId = UUID.fromString(customerData.organizationId)
+        val callPriorityScores = CallPriorityScores()
+
+        val index = "customer_outstanding_v2"
+        val response = Client.search(
+            { s ->
+                s.index(index)
+                    .size(0)
+                    .aggregations("percentile_agg") { a ->
+                        a.percentiles { p ->
+                            p.field("totalOutstanding")
+                            p.percents(
+                                PERCENTILES
+                            )
+                        }
+                    }
+            },
+            Any::class.java
+        )
+
+        val percentileValues = response?.aggregations()
+            ?.get("percentile_agg")
+            ?.tdigestPercentiles()
+            ?.values()
+            ?.keyed()
+        val totalOutstanding = customerData.totalOutstanding
+        if (totalOutstanding != null &&
+            totalOutstanding.compareTo(0.toBigDecimal()) > 0 &&
+            percentileValues != null
+        ) {
+            callPriorityScores.outstandingScore = when {
+                totalOutstanding >= (percentileValues[PERCENTILES[0].toString()] ?: "0").toBigDecimal() -> 6
+                totalOutstanding >= (percentileValues[PERCENTILES[1].toString()] ?: "0").toBigDecimal() -> 5
+                totalOutstanding >= (percentileValues[PERCENTILES[2].toString()] ?: "0").toBigDecimal() -> 4
+                totalOutstanding >= (percentileValues[PERCENTILES[3].toString()] ?: "0").toBigDecimal() -> 3
+                totalOutstanding >= (percentileValues[PERCENTILES[4].toString()] ?: "0").toBigDecimal() -> 2
+                else -> 1
+            }
+        }
+        val oneEightyPlusCount = customerData.openInvoiceAgeingBucket?.firstOrNull { it.key == "oneEightyPlus" }?.ledgerCount ?: 0
+        val oneEightyCount = customerData.openInvoiceAgeingBucket?.firstOrNull { it.key == "oneEighty" }?.ledgerCount ?: 0
+        val ninetyCount = customerData.openInvoiceAgeingBucket?.firstOrNull { it.key == "ninety" }?.ledgerCount ?: 0
+        val sixtyCount = customerData.openInvoiceAgeingBucket?.firstOrNull { it.key == "sixty" }?.ledgerCount ?: 0
+//        val fortyFiveCount = customerData.openInvoiceAgeingBucket?.get("fortyFive")?.ledgerCount ?: 0
+        val thirtyCount = customerData.openInvoiceAgeingBucket?.firstOrNull { it.key == "thirty" }?.ledgerCount ?: 0
+
+        callPriorityScores.ageingBucketScore = when {
+            oneEightyPlusCount > 0 -> 6
+            oneEightyCount > 0 -> 5
+            ninetyCount > 0 -> 4
+            sixtyCount > 0 -> 3
+//            fortyFiveCount > 0 -> 2
+            thirtyCount > 0 -> 1
+            else -> callPriorityScores.ageingBucketScore
+        }
+
+        val monthlyCounts = accountUtilizationRepository.getMonthlyUtilizationCounts(
+            accMode = AccMode.AR,
+            accTypes = listOf(
+                AccountType.SINV,
+                AccountType.SREIMB,
+                AccountType.SCN,
+                AccountType.SREIMBCN
+            ),
+            entityCodes = listOf(customerData.entityCode!!),
+            organizationId = orgId
+        )
+
+        callPriorityScores.businessContinuityScore = 6 - listOf(
+            monthlyCounts.lastMonth,
+            monthlyCounts.secondLastMonth,
+            monthlyCounts.thirdLastMonth,
+            monthlyCounts.fourthLastMonth,
+            monthlyCounts.fifthLastMonth,
+            monthlyCounts.sixthLastMonth
+        ).count { it > 0 }
+
+        val outstandingData = unifiedDBNewRepository.getTradePartyOutstanding(
+            listOf(orgId),
+            listOf(customerData.entityCode!!)
+        )?.first()
+
+        val overdueAmntPerTotalAmnt = outstandingData?.overdueOpenInvoicesLedAmount?.divideNumbers(
+            outstandingData.openInvoicesLedAmount
+        ) ?: 0.toBigDecimal()
+
+        if (overdueAmntPerTotalAmnt.compareTo(0.toBigDecimal()) > 0) {
+            callPriorityScores.overduePerTotalAmount = when {
+                overdueAmntPerTotalAmnt >= 0.75.toBigDecimal() -> 6
+                overdueAmntPerTotalAmnt >= 0.60.toBigDecimal() -> 5
+                overdueAmntPerTotalAmnt >= 0.45.toBigDecimal() -> 4
+                overdueAmntPerTotalAmnt >= 0.30.toBigDecimal() -> 3
+                overdueAmntPerTotalAmnt >= 0.15.toBigDecimal() -> 2
+                else -> 1
+            }
+        }
+        val paymentHistoryDetails = accountUtilizationRepository.getPaymentHistoryDetails(
+            accMode = AccMode.AR,
+            accTypes = listOf(
+                AccountType.SINV,
+                AccountType.SREIMB,
+            ),
+            entityCodes = listOf(customerData.entityCode!!),
+            organizationId = orgId,
+            destinationTypes = listOf(
+                SettlementType.SINV,
+                SettlementType.SREIMB
+            )
+        )
+
+        val delayedPaymentsPercent: BigDecimal = paymentHistoryDetails.delayedPayments?.toBigDecimal()?.divideNumbers(
+            paymentHistoryDetails.totalPayments?.toBigDecimal() ?: 0.toBigDecimal()
+        ) ?: 0.toBigDecimal()
+
+        if (delayedPaymentsPercent.compareTo(0.toBigDecimal()) > 0) {
+            callPriorityScores.paymentHistoryScore = when {
+                delayedPaymentsPercent >= 0.25.toBigDecimal() -> 6
+                delayedPaymentsPercent >= 0.20.toBigDecimal() -> 5
+                delayedPaymentsPercent >= 0.15.toBigDecimal() -> 4
+                delayedPaymentsPercent >= 0.10.toBigDecimal() -> 3
+                delayedPaymentsPercent >= 0.05.toBigDecimal() -> 2
+                else -> 1
+            }
+        }
+        customerData.totalCallPriorityScore = callPriorityScores.geTotalCallPriority()
     }
 }
