@@ -1803,7 +1803,7 @@ class OutStandingServiceImpl : OutStandingService {
     }
 
     override suspend fun getCustomerData() {
-        val orgIdEntityCodes = unifiedDBNewRepository.getDistinctOrgIds(AccMode.AR)
+        val orgIdEntityCodes = accountUtilizationRepo.getDistinctOrgIds(AccMode.AR)
         orgIdEntityCodes?.map {
             aresMessagePublisher.emitUpdateCustomerDetail(it)
         }
