@@ -2080,7 +2080,6 @@ open class OnAccountServiceImpl : OnAccountService {
         )
         val ledgerEntity = AresConstants.ENTITY_401
         val proformaRecord = accountUtilizationRepository.findRecord(req.proformaId!!, AccountType.SINV.toString(), AccMode.AR.toString())
-        val bankDetails = authClient.getCogoBank(CogoEntitiesRequest(req.entityCode.toString())).bankList.filter { it.entityCode == req.entityCode }[0].bankDetails?.filter { it.accountNumber == req.bankAccountNumber }?.get(0)
         var totalAmount = BigDecimal(0)
         val paymentIds: MutableList<Long> = mutableListOf()
         var exchangeRate = BigDecimal(1.0)
@@ -2107,10 +2106,10 @@ open class OnAccountServiceImpl : OnAccountService {
                 ledCurrency = AresConstants.LEDGER_CURRENCY[req.entityCode],
                 ledAmount = utrDetail.paidAmount!!.multiply(exchangeRate),
                 utr = utrDetail.utrNumber,
-                bankAccountNumber = bankDetails?.accountNumber,
-                bankName = bankDetails?.beneficiaryName,
+                bankAccountNumber = req?.bankAccountNumber,
+                bankName = req?.bankName,
                 performedByUserType = req.performedByUserType,
-                bankId = bankDetails?.id!!,
+                bankId = req?.bankId,
                 transactionDate = utrDetail.transactionDate,
                 paymentNum = null,
                 paymentNumValue = null,

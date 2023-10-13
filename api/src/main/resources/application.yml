@@ -31,9 +31,9 @@ netty:
 r2dbc:
   datasources:
     default:
-      url: r2dbc:postgresql://${DB_HOST:rds-cluster.stage.cogoport.io}:${DB_PORT:6432}/${DB_NAME:ares}?preparedStatementCacheQueries=0
-      username: ${DB_USER:postgres}
-      password: ${DB_PASSWORD:A942B37CCFAF5A813B1432CAA209A43B9D144E47AD0DE1549C289C253E556CD5}
+      url: r2dbc:postgresql://${DB_HOST:localhost}:${DB_PORT:6432}/${DB_NAME:ares}?preparedStatementCacheQueries=0
+      username: ${DB_USER:mustangs2}
+      password: ${DB_PASSWORD:DI8E64c5clAyWuAz0Tqm4pgeUj12KZ}
       dialect: POSTGRES
     dms:
       url: r2dbc:postgresql://${UNIFIEDDB_HOST:`52.66.190.93`}:${UNIFIEDDB_PORT:6432}/${UNIFIEDDB_NAME:dms}?preparedStatementCacheQueries=0
@@ -44,18 +44,18 @@ r2dbc:
 services:
   service:
     - id: bf-rails
-      url: https://api-mustangs1.dev.cogoport.io
+      url: https://api-mustangs2.dev.cogoport.io
       enabledLocally: true
     - auth: bf-rails
-      url: https://api-mustangs1.dev.cogoport.io
+      url: https://api-mustangs2.dev.cogoport.io
       enabledLocally: true
     - id: plutus
-      url: https://api.stage.cogoport.io
+      url: https://api-mustangs2.dev.cogoport.io
       enabledLocally: true
     - id: cogo-care
       url: https://tickets.stage.cogoport.io
       enabledLocally: false
-  staging: https://api.stage.cogoport.io
+  staging: https://api-mustangs2.dev.cogoport.io
   namespace: ${DNS_NAMESPACE:cogoport.stage}
   auth:
     alternateRoute: ${AUTH_ALTERNATE_ROUTE:true}
@@ -66,16 +66,18 @@ jackson:
   date-format: yyyy-MM-dd HH:mm:ss
 
 opensearch:
-  host: ${OPENSEARCH_HOST:search.stage.cogoport.io}
-  user: ${OPENSEARCH_USER:awsadmin}
-  pass: ${OPENSEARCH_PASS:Password@123}
+  host: ${OPENSEARCH_HOST:localhost}
+  user: ${OPENSEARCH_USER:admin}
+  pass: ${OPENSEARCH_PASS:admin}
+  scheme: http
+  port: 9200
 
 sentry:
   enabled: ${SENTRY_ENABLED:false}
   dsn: ${SENTRY_DSN:`https://10e833c953b04f429df6a6c8cae72c13@o435527.ingest.sentry.io/6475007`}
 
 cogoport:
-  api_url: ${COGOPORT_API_URL:https://api-mustangs1.dev.cogoport.io}
+  api_url: ${COGOPORT_API_URL:https://api-mustangs2.dev.cogoport.io}
   bearer_token: '7cff5415-6007-4bab-9f3e-e4a08c11e915'
   bearer_token_new: 90fe8fd9-8760-4e1c-9f74-76c644f52c65
   auth_scope_id: e6efcc61-7e30-4d86-a901-e5d330113205
