@@ -2069,7 +2069,7 @@ open class OnAccountServiceImpl : OnAccountService {
 
 //    @Transactional(rollbackOn = [Exception::class, AresException::class])
     override suspend fun saasInvoiceHook(req: SaasInvoiceHookRequest): SaasInvoiceHookResponse {
-        plutusMessagePublisher.emitUpdateStatus(
+        plutusClient.updateStatus(
             InvoiceStatusUpdateRequest(
                 id = Hashids.encode(req.proformaId!!),
                 status = InvoiceStatus.FINANCE_ACCEPTED,
