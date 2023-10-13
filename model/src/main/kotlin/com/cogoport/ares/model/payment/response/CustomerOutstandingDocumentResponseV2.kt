@@ -40,11 +40,11 @@ data class CustomerOutstandingDocumentResponseV2(
     @JsonProperty("creditDays")
     var creditDays: String?,
     @JsonProperty("openInvoiceAgeingBucket")
-    var openInvoiceAgeingBucket: HashMap<String, AgeingBucketOutstandingV2?>,
+    var openInvoiceAgeingBucket: HashMap<String, AgeingBucketOutstandingV2?>?,
     @JsonProperty("onAccountAgeingBucket")
-    var onAccountAgeingBucket: HashMap<String, AgeingBucketOutstandingV2?>,
+    var onAccountAgeingBucket: HashMap<String, AgeingBucketOutstandingV2?>?,
     @JsonProperty("creditNoteAgeingBucket")
-    var creditNoteAgeingBucket: HashMap<String, AgeingBucketOutstandingV2?>,
+    var creditNoteAgeingBucket: HashMap<String, AgeingBucketOutstandingV2?>?,
     @JsonProperty("entityCode")
     var entityCode: Int?,
     @JsonProperty("lastUpdatedAt")

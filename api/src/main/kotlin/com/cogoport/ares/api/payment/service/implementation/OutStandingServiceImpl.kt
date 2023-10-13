@@ -1673,12 +1673,12 @@ class OutStandingServiceImpl : OutStandingService {
                 else -> 1
             }
         }
-        val oneEightyCount = customerData.openInvoiceAgeingBucket["oneEighty"]?.ledgerCount ?: 0
-        val ninetyCount = customerData.openInvoiceAgeingBucket["ninety"]?.ledgerCount ?: 0
-        val sixtyCount = customerData.openInvoiceAgeingBucket["sixty" ]?.ledgerCount ?: 0
-        val threeSixtyFivePlusCount = customerData.openInvoiceAgeingBucket["threeSixtyFivePlus"]?.ledgerCount ?: 0
-        val threeSixtyFiveCount = customerData.openInvoiceAgeingBucket["threeSixtyFivePlus"]?.ledgerCount ?: 0
-        val thirtyCount = customerData.openInvoiceAgeingBucket["thirty"]?.ledgerCount ?: 0
+        val oneEightyCount = customerData.openInvoiceAgeingBucket?.get("oneEighty")?.ledgerCount ?: 0
+        val ninetyCount = customerData.openInvoiceAgeingBucket?.get("ninety")?.ledgerCount ?: 0
+        val sixtyCount = customerData.openInvoiceAgeingBucket?.get("sixty")?.ledgerCount ?: 0
+        val threeSixtyFivePlusCount = customerData.openInvoiceAgeingBucket?.get("threeSixtyFivePlus")?.ledgerCount ?: 0
+        val threeSixtyFiveCount = customerData.openInvoiceAgeingBucket?.get("threeSixtyFivePlus")?.ledgerCount ?: 0
+        val thirtyCount = customerData.openInvoiceAgeingBucket?.get("thirty")?.ledgerCount ?: 0
 
         callPriorityScores.ageingBucketScore = when {
             threeSixtyFivePlusCount > 0 -> 6
