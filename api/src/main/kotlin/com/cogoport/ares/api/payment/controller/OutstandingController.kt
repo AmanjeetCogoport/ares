@@ -30,6 +30,7 @@ import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequestV2
+import com.cogoport.ares.model.payment.request.UpdateAccountTaggingRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.AccPayablesOfOrgRes
 import com.cogoport.ares.model.payment.response.CustomerMonthlyPayment
@@ -279,5 +280,15 @@ class OutstandingController {
             request.entityCode
         }
         return Response<ResponseList<CustomerOutstandingDocumentResponseV2?>>().ok(outStandingService.listCustomerDetailsV2(request))
+    }
+
+    @Put("/update-account-taggings")
+    suspend fun updateAccountTaggings(@Valid @Body req: UpdateAccountTaggingRequest): Boolean {
+        return outStandingService.updateAccountTaggings(req)
+    }
+
+    @Get("/migrate-customer-data")
+    suspend fun migrateCustomerData() {
+        outStandingService.getCustomerData()
     }
 }

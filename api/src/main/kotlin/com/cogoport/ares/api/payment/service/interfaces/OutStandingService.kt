@@ -22,6 +22,7 @@ import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequestV2
+import com.cogoport.ares.model.payment.request.UpdateAccountTaggingRequest
 import com.cogoport.ares.model.payment.response.AccPayablesOfOrgRes
 import com.cogoport.ares.model.payment.response.CustomerMonthlyPayment
 import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
@@ -91,4 +92,6 @@ interface OutStandingService {
     suspend fun getCustomerData()
 
     suspend fun listCustomerDetailsV2(req: CustomerOutstandingRequest): ResponseList<CustomerOutstandingDocumentResponseV2?>
+
+    suspend fun updateAccountTaggings(req: UpdateAccountTaggingRequest): Boolean
 }

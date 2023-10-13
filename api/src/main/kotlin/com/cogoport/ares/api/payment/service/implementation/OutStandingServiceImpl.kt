@@ -61,6 +61,7 @@ import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequestV2
+import com.cogoport.ares.model.payment.request.UpdateAccountTaggingRequest
 import com.cogoport.ares.model.payment.response.AccPayablesOfOrgRes
 import com.cogoport.ares.model.payment.response.AgeingBucketOutstandingV2
 import com.cogoport.ares.model.payment.response.BillOutStandingAgeingResponse
@@ -1802,7 +1803,7 @@ class OutStandingServiceImpl : OutStandingService {
     }
 
     override suspend fun getCustomerData() {
-        val orgIdEntityCodes = accountUtilizationRepo.getDistinctOrgIds(AccMode.AR)
+        val orgIdEntityCodes = unifiedDBNewRepository.getDistinctOrgIds(AccMode.AR)
         orgIdEntityCodes?.map {
             aresMessagePublisher.emitUpdateCustomerDetail(it)
         }
@@ -1820,7 +1821,23 @@ class OutStandingServiceImpl : OutStandingService {
         responseList.totalRecords = response?.hits()?.total()?.value() ?: 0
         responseList.totalPages = if (responseList.totalRecords!! % request.limit!! == 0.toLong()) (responseList.totalRecords!! / request.limit!!) else (responseList.totalRecords!! / request.limit!!) + 1.toLong()
         responseList.pageNo = request.page!!
-
         return responseList
+    }
+
+    override suspend fun updateAccountTaggings(req: UpdateAccountTaggingRequest): Boolean {
+        val searchResponse = OpenSearchClient().listCustomerOutstandingV2(
+            CustomerOutstandingRequest(
+                tradePartyDetailId = req.organizationId,
+                entityCode = req.entityCode.toString()
+            )
+        )
+
+        if (searchResponse?.hits()?.hits().isNullOrEmpty()) {
+            return false
+        }
+        val customerOutstanding = searchResponse?.hits()?.hits()?.map { it.source() }?.get(0)
+        customerOutstanding?.taggedState = req.taggedState
+        Client.updateDocument(AresConstants.CUSTOMER_OUTSTANDING_V2, "${customerOutstanding?.organizationId}_${customerOutstanding?.entityCode}", customerOutstanding)
+        return true
     }
 }

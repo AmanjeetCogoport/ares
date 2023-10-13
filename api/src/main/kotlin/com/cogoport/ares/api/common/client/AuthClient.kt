@@ -103,6 +103,6 @@ interface AuthClient {
     @Get("/get_ledger_exchange_rate{?request*}")
     suspend fun getLedgerExchangeRate(request: LedgerExchangeRateRequest): LedgerExchangeRateResponse
 
-    @Post("/organization_trade_party_details_hook_to_ares")
+    @Post("/organization/organization_trade_party_details_hook_to_ares")
     suspend fun createOrgDetail(@Body req: HookToAresRequest)
 }
