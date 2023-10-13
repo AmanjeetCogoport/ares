@@ -1682,5 +1682,5 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         orgIds: List<UUID?>?,
         entityCodes: List<Int?>?,
         accMode: String
-    ): List<ArOutstandingData>
+    ): List<ArOutstandingData>?
 }

@@ -14,6 +14,7 @@ import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.SettlementRecord
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigration
 import com.cogoport.ares.api.migration.service.interfaces.PaymentMigrationWrapper
+import com.cogoport.ares.api.payment.entity.OrgIdAndEntityCode
 import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationService
 import com.cogoport.ares.api.payment.service.interfaces.KnockoffService
 import com.cogoport.ares.api.payment.service.interfaces.OnAccountService
@@ -26,6 +27,7 @@ import com.cogoport.ares.api.settlement.service.interfaces.TaggedSettlementServi
 import com.cogoport.ares.model.common.CreateCommunicationRequest
 import com.cogoport.ares.model.dunning.request.SendMailOfAllCommunicationToTradePartyReq
 import com.cogoport.ares.model.payment.AccountUtilizationEvent
+import com.cogoport.ares.model.payment.HookToAresRequest
 import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.ReverseUtrRequest
 import com.cogoport.ares.model.payment.SagePaymentNumMigrationResponse
@@ -313,5 +315,15 @@ class AresMessageConsumer {
     @Queue("ares-send-email-for-irn-generation", prefetch = 1)
     fun sendEmailForIrnGeneration(irnGenerationEmailRequest: IrnGenerationEmailRequest) = runBlocking {
         scheduleService.sendEmailForIrnGeneration(irnGenerationEmailRequest)
+    }
+
+    @Queue("ares-create-org-details")
+    fun createOrgDetails(req: HookToAresRequest) = runBlocking {
+        authClient.createOrgDetail(req)
+    }
+
+    @Queue("ares-update-customer-details-v2")
+    fun updateCustomerDetailsV2(req: OrgIdAndEntityCode) = runBlocking {
+        outstandingService.updateCustomerDetailsV2(req.organizationId!!, req.entityCode)
     }
 }

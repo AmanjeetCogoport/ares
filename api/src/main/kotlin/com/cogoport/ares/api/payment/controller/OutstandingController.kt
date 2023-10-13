@@ -1,6 +1,8 @@
 package com.cogoport.ares.api.payment.controller
 
 import com.cogoport.ares.api.common.service.implementation.Scheduler
+import com.cogoport.ares.api.exception.AresError
+import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.EntityLevelStats
 import com.cogoport.ares.api.payment.entity.EntityWiseOutstandingBucket
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentRequest
@@ -256,5 +258,11 @@ class OutstandingController {
     suspend fun createCustomerDetailsV2(@Valid @Body request: CustomerOutstandingDocumentResponseV2): Response<String> {
         outStandingService.createCustomerDetailsV2(request)
         return Response<String>().ok("created", HttpStatus.OK.name)
+    }
+
+    @Put("/customer-v2")
+    suspend fun updateCustomerDetailsV2(request: UpdateSupplierOutstandingRequest) {
+        if (request.orgId == null) throw AresException(AresError.ERR_1003, "orgId")
+        return outStandingService.updateCustomerDetailsV2(request.orgId!!, request.entityCode)
     }
 }

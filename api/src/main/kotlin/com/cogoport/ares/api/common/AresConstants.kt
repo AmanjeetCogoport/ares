@@ -210,7 +210,9 @@ object AresConstants {
         "migrate-payment-amount",
         "send-email-for-irn-generation",
         "upsert-migrate-glcodes",
-        "unfreeze-debit-consumption"
+        "unfreeze-debit-consumption",
+        "create-org-details",
+        "update-customer-details-v2"
     )
 
     val RETRY_QUEUES = listOf(
@@ -331,4 +333,18 @@ object AresConstants {
     val onAccountAROutstandingAccountTypeList = listOf(AccountType.REC, AccountType.CTDS, AccountType.BANK, AccountType.CONTR, AccountType.ROFF, AccountType.MTCCV, AccountType.MISC, AccountType.INTER, AccountType.OPDIV, AccountType.MTC)
     val paymentAROutstandingAccountTypeList = listOf(AccountType.REC, AccountType.CTDS)
     val jvAROutstandingAccountTypeList = listOf(AccountType.BANK, AccountType.CONTR, AccountType.ROFF, AccountType.MTCCV, AccountType.MISC, AccountType.INTER, AccountType.OPDIV, AccountType.MTC)
+
+    val accTypesForAr = listOf(
+        AccountType.SINV.name, AccountType.SCN.name, AccountType.SREIMB.name,
+        AccountType.REC.name, AccountType.CTDS.name, AccountType.OPDIV.name,
+        AccountType.MISC.name, AccountType.BANK.name, AccountType.CONTR.name,
+        AccountType.INTER.name, AccountType.MTC.name, AccountType.MTCCV.name
+    )
+    val invoiceAccTypeForAr = listOf(AccountType.SINV.name, AccountType.SREIMB.name)
+    val creditNoteAccTypeForAr = listOf(AccountType.SCN.name, AccountType.SREIMBCN.name)
+    val onAccountTypeForAr = listOf(
+        AccountType.REC.name, AccountType.CTDS.name, AccountType.OPDIV.name,
+        AccountType.MISC.name, AccountType.BANK.name, AccountType.CONTR.name,
+        AccountType.INTER.name, AccountType.MTC.name, AccountType.MTCCV.name
+    )
 }

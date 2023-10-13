@@ -21,6 +21,7 @@ import com.cogoport.ares.api.migration.model.SerialIdDetailsRequest
 import com.cogoport.ares.api.migration.model.SerialIdsInput
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.AresDocument
+import com.cogoport.ares.api.payment.entity.OrgIdAndEntityCode
 import com.cogoport.ares.api.payment.entity.PaymentFile
 import com.cogoport.ares.api.payment.mapper.AccUtilizationToPaymentMapper
 import com.cogoport.ares.api.payment.mapper.AccountUtilizationMapper
@@ -476,6 +477,7 @@ open class OnAccountServiceImpl : OnAccountService {
             }
             if (accUtilRes.accMode == AccMode.AR) {
                 aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))
+                aresMessagePublisher.emitUpdateCustomerDetail(OrgIdAndEntityCode(accUtilRes.organizationId!!, accUtilRes.entityCode))
             }
         } catch (ex: Exception) {
             logger().error(ex.stackTraceToString())
@@ -610,6 +612,7 @@ open class OnAccountServiceImpl : OnAccountService {
             // EMITTING RABITMQ MESSAGE TO UPDATE CUSTOMER OUTSTANDING
             if (accUtilRes.accMode == AccMode.AR) {
                 aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilizationEntity.organizationId))
+                aresMessagePublisher.emitUpdateCustomerDetail(OrgIdAndEntityCode(accountUtilizationEntity.organizationId!!, accountUtilizationEntity.entityCode))
             }
         } catch (ex: Exception) {
             logger().error(ex.stackTraceToString())
@@ -727,6 +730,7 @@ open class OnAccountServiceImpl : OnAccountService {
                 // Emitting RabbitMq message to Update Customer Outstanding
                 if (accountUtilization.accMode == AccMode.AR) {
                     aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilization.organizationId))
+                    aresMessagePublisher.emitUpdateCustomerDetail(OrgIdAndEntityCode(accountUtilization.organizationId!!, accountUtilization.entityCode))
                 }
             } catch (ex: Exception) {
                 logger().error(ex.stackTraceToString())

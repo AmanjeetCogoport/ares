@@ -10,6 +10,7 @@ import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.api.payment.entity.OrgIdAndEntityCode
 import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
@@ -333,6 +334,7 @@ open class CpSettlementServiceImpl : CpSettlementService {
         val accUtilObj = accountUtilizationRepository.save(accountUtilization)
         if (accUtilObj.accMode == AccMode.AR) {
             aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilization.organizationId))
+            aresMessagePublisher.emitUpdateCustomerDetail(OrgIdAndEntityCode(accountUtilization.organizationId!!, accountUtilization.entityCode))
         }
 
         auditService.createAudit(

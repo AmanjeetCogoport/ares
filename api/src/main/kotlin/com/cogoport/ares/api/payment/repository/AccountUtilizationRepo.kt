@@ -5,6 +5,7 @@ import com.cogoport.ares.api.dunning.model.response.DunningPayments
 import com.cogoport.ares.api.payment.entity.AccountUtilization
 import com.cogoport.ares.api.payment.entity.CustomerOutstandingAgeing
 import com.cogoport.ares.api.payment.entity.EntityWiseOutstandingBucket
+import com.cogoport.ares.api.payment.entity.OrgIdAndEntityCode
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.api.payment.model.response.DocumentResponse
 import com.cogoport.ares.api.settlement.entity.Document
@@ -1907,8 +1908,11 @@ ORDER BY
     @NewSpan
     @Query(
         """
-            SELECT distinct (organization_id) from account_utilizations where ((:accMode) is null or acc_mode::VARCHAR = :accMode)
+            SELECT 
+            distinct 
+            organization_id, entity_code 
+            from account_utilizations where ((:accMode) is null or acc_mode::VARCHAR = :accMode) and organization_id is not null and entity_code is not null
         """
     )
-    suspend fun getDistinctOrgIds(accMode: AccMode?): List<UUID>?
+    suspend fun getDistinctOrgIds(accMode: AccMode?): List<OrgIdAndEntityCode>?
 }

@@ -86,4 +86,7 @@ interface OutStandingService {
 
     suspend fun createCustomerDetailsV2(request: CustomerOutstandingDocumentResponseV2)
     suspend fun getOutstandingDataBifurcation(request: OutstandingVisualizationRequest): Any
+
+    suspend fun updateCustomerDetailsV2(orgId: UUID, entityCode: Int?)
+    suspend fun getCustomerData()
 }

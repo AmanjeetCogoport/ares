@@ -10,9 +10,11 @@ import com.cogoport.ares.api.migration.model.NewPeriodRecord
 import com.cogoport.ares.api.migration.model.PayLocUpdateRequest
 import com.cogoport.ares.api.migration.model.PaymentRecord
 import com.cogoport.ares.api.migration.model.SettlementRecord
+import com.cogoport.ares.api.payment.entity.OrgIdAndEntityCode
 import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.model.common.CreateCommunicationRequest
 import com.cogoport.ares.model.dunning.request.SendMailOfAllCommunicationToTradePartyReq
+import com.cogoport.ares.model.payment.HookToAresRequest
 import com.cogoport.ares.model.payment.SagePaymentNumMigrationResponse
 import com.cogoport.ares.model.payment.request.OnAccountPaymentRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
@@ -129,4 +131,10 @@ interface AresMessagePublisher {
 
     @Binding("ares.send.payment.details.for.autoKnockOff")
     suspend fun emitSendPaymentDetailsForKnockOff(autoKnockOffRequest: AutoKnockOffRequest)
+
+    @Binding("ares.create.org.details")
+    suspend fun emitCreateOrgDetail(req: HookToAresRequest)
+
+    @Binding("ares.update.customer.details.v2")
+    suspend fun emitUpdateCustomerDetail(req: OrgIdAndEntityCode)
 }

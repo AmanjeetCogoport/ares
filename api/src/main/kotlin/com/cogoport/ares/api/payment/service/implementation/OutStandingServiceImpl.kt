@@ -3,6 +3,7 @@ package com.cogoport.ares.api.payment.service.implementation
 import com.cogoport.ares.api.common.AresConstants
 import com.cogoport.ares.api.common.config.OpenSearchConfig
 import com.cogoport.ares.api.common.enums.SequenceSuffix
+import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
@@ -45,6 +46,7 @@ import com.cogoport.ares.model.payment.AgeingBucketOutstanding
 import com.cogoport.ares.model.payment.CustomerOutstanding
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.DueAmount
+import com.cogoport.ares.model.payment.HookToAresRequest
 import com.cogoport.ares.model.payment.InvoiceStats
 import com.cogoport.ares.model.payment.ListInvoiceResponse
 import com.cogoport.ares.model.payment.OutstandingList
@@ -149,6 +151,9 @@ class OutStandingServiceImpl : OutStandingService {
 
     @Inject
     lateinit var s3Client: S3Client
+
+    @Inject
+    lateinit var aresMessagePublisher: AresMessagePublisher
 
     private fun validateInput(request: OutstandingListRequest) {
         try {
@@ -1515,7 +1520,7 @@ class OutStandingServiceImpl : OutStandingService {
     }
 
     override suspend fun getDistinctOrgIds(accMode: AccMode?): List<UUID>? {
-        return accountUtilizationRepo.getDistinctOrgIds(accMode)
+        return accountUtilizationRepo.getDistinctOrgIds(accMode)?.map { it.organizationId }
     }
 
     override suspend fun getOutstandingDataBifurcation(request: OutstandingVisualizationRequest): Any {
@@ -1524,88 +1529,56 @@ class OutStandingServiceImpl : OutStandingService {
 
     override suspend fun createCustomerDetailsV2(request: CustomerOutstandingDocumentResponseV2) {
         val entityCodes = AresConstants.TAGGED_ENTITY_ID_MAPPINGS[request.cogoEntityId.toString()]
-//        Client.deleteByQuery { s ->
-//            s.index(AresConstants.CUSTOMER_OUTSTANDING_V2).query { q ->
-//                q.matchAll { MatchAllQuery.Builder() }
-//            }
-//        }
+
         val orgOutstanding = accountUtilizationRepository.getArOutstandingData(
             entityCodes = listOf(entityCodes),
             orgIds = listOf(UUID.fromString(request.organizationId)),
             accMode = AccMode.AR.name,
-            accTypes = listOf(
-                AccountType.SINV.name, AccountType.SCN.name, AccountType.SREIMB.name,
-                AccountType.REC.name, AccountType.CTDS.name, AccountType.OPDIV.name,
-                AccountType.MISC.name, AccountType.BANK.name, AccountType.CONTR.name,
-                AccountType.INTER.name, AccountType.MTC.name, AccountType.MTCCV.name
-            ),
-            invoiceAccType = listOf(AccountType.SINV.name, AccountType.SREIMB.name),
-            creditNoteAccType = listOf(AccountType.SCN.name, AccountType.SREIMBCN.name),
-            onAccountAccountType = listOf(
-                AccountType.REC.name, AccountType.CTDS.name, AccountType.OPDIV.name,
-                AccountType.MISC.name, AccountType.BANK.name, AccountType.CONTR.name,
-                AccountType.INTER.name, AccountType.MTC.name, AccountType.MTCCV.name
-            )
+            accTypes = AresConstants.accTypesForAr,
+            invoiceAccType = AresConstants.invoiceAccTypeForAr,
+            creditNoteAccType = AresConstants.creditNoteAccTypeForAr,
+            onAccountAccountType = AresConstants.onAccountTypeForAr
         )
 
-        orgOutstanding.map { orgData ->
-            val resp = buildCustomerOutstandingResponse(request, orgData)
-            getCallPriorityV2(resp)
-            Client.addDocument(AresConstants.CUSTOMER_OUTSTANDING_V2, "${resp.organizationId}_${resp.entityCode}", resp)
+        val orgLevelData = orgOutstanding?.filter { it.organizationId.toString() == request.organizationId && it.entityCode == entityCodes }
+
+        if (!orgLevelData.isNullOrEmpty()) {
+            createOutstandingDetails(request, orgLevelData[0])
         }
-    }
 
-    private fun buildCustomerOutstandingResponse(request: CustomerOutstandingDocumentResponseV2, orgOutstanding: ArOutstandingData): CustomerOutstandingDocumentResponseV2 {
-        return CustomerOutstandingDocumentResponseV2(
-            lastUpdatedAt = request.lastUpdatedAt ?: Timestamp.valueOf(LocalDateTime.now()),
-            organizationId = request.organizationId,
-            tradePartyId = request.tradePartyId,
-            businessName = request.businessName,
-            companyType = request.companyType,
-            openInvoiceAgeingBucket = getAgeingBucketData(orgOutstanding, "invoice"),
-            onAccountAgeingBucket = getAgeingBucketData(orgOutstanding, "onAccount"),
-            creditNoteAgeingBucket = getAgeingBucketData(orgOutstanding, "creditNote"),
-            countryCode = request.countryCode,
-            countryId = request.countryId,
-            creditController = request.creditController,
-            creditDays = request.creditDays,
-            kam = request.kam,
-            organizationSerialId = request.organizationSerialId,
-            registrationNumber = request.registrationNumber,
-            sageId = request.sageId,
-            salesAgent = request.salesAgent,
-            tradePartyName = request.tradePartyName,
-            tradePartySerialId = request.tradePartySerialId,
-            tradePartyType = request.tradePartyType,
-            openInvoiceAmount = orgOutstanding.totalOpenInvoiceAmount,
-            creditNoteAmount = orgOutstanding.totalOpenCreditNoteAmount,
-            totalOutstanding = orgOutstanding.totalOutstanding,
-            onAccountAmount = orgOutstanding.totalOpenOnAccountAmount,
-            openInvoiceCount = calculateTotalCount(
-                orgOutstanding.invoiceNotDueCount, orgOutstanding.invoiceThirtyCount,
-                orgOutstanding.invoiceSixtyCount, orgOutstanding.invoiceNinetyCount,
-                orgOutstanding.invoiceOneEightyCount, orgOutstanding.invoiceThreeSixtyFiveCount,
-                orgOutstanding.invoiceThreeSixtyFivePlusCount
-            ),
-            onAccountCount = calculateTotalCount(
-                orgOutstanding.onAccountNotDueCount, orgOutstanding.onAccountThirtyCount,
-                orgOutstanding.onAccountSixtyCount, orgOutstanding.onAccountNinetyCount,
-                orgOutstanding.onAccountOneEightyCount, orgOutstanding.onAccountThreeSixtyFiveCount,
-                orgOutstanding.onAccountThreeSixtyFivePlusCount
-            ),
-            entityCode = orgOutstanding.entityCode,
-            creditNoteCount = calculateTotalCount(
-                orgOutstanding.creditNoteNotDueCount, orgOutstanding.creditNoteThirtyCount,
-                orgOutstanding.creditNoteSixtyCount, orgOutstanding.creditNoteNinetyCount,
-                orgOutstanding.creditNoteOneEightyCount, orgOutstanding.creditNoteThreeSixtyFiveCount,
-                orgOutstanding.creditNoteThreeSixtyFivePlusCount
-            ),
-            taggedState = request.taggedState,
-            cogoEntityId = request.cogoEntityId,
-            portfolioManager = request.portfolioManager
+        Client.updateDocument(AresConstants.CUSTOMER_OUTSTANDING_V2, "${request.organizationId}_$entityCodes", request)
+    }
+    private suspend fun createOutstandingDetails(customerOutstanding: CustomerOutstandingDocumentResponseV2?, outstanding: ArOutstandingData): CustomerOutstandingDocumentResponseV2 {
+        customerOutstanding?.openInvoiceAgeingBucket = getAgeingBucketData(outstanding, "invoice")
+        customerOutstanding?.onAccountAgeingBucket = getAgeingBucketData(outstanding, "onAccount")
+        customerOutstanding?.creditNoteAgeingBucket = getAgeingBucketData(outstanding, "creditNote")
+        customerOutstanding?.openInvoiceAmount = outstanding.totalOpenInvoiceAmount
+        customerOutstanding?.creditNoteAmount = outstanding.totalOpenCreditNoteAmount
+        customerOutstanding?.totalOutstanding = outstanding.totalOutstanding
+        customerOutstanding?.onAccountAmount = outstanding.totalOpenOnAccountAmount
+        customerOutstanding?.openInvoiceCount = calculateTotalCount(
+            outstanding.invoiceNotDueCount, outstanding.invoiceThirtyCount,
+            outstanding.invoiceSixtyCount, outstanding.invoiceNinetyCount,
+            outstanding.invoiceOneEightyCount, outstanding.invoiceThreeSixtyFiveCount,
+            outstanding.invoiceThreeSixtyFivePlusCount
         )
-    }
+        customerOutstanding?.onAccountCount = calculateTotalCount(
+            outstanding.onAccountNotDueCount, outstanding.onAccountThirtyCount,
+            outstanding.onAccountSixtyCount, outstanding.onAccountNinetyCount,
+            outstanding.onAccountOneEightyCount, outstanding.onAccountThreeSixtyFiveCount,
+            outstanding.onAccountThreeSixtyFivePlusCount
+        )
+        customerOutstanding?.entityCode = AresConstants.TAGGED_ENTITY_ID_MAPPINGS[customerOutstanding?.cogoEntityId.toString()]
+        customerOutstanding?.creditNoteCount = calculateTotalCount(
+            outstanding.creditNoteNotDueCount, outstanding.creditNoteThirtyCount,
+            outstanding.creditNoteSixtyCount, outstanding.creditNoteNinetyCount,
+            outstanding.creditNoteOneEightyCount, outstanding.creditNoteThreeSixtyFiveCount,
+            outstanding.creditNoteThreeSixtyFivePlusCount
+        )
+        getCallPriorityV2(customerOutstanding!!)
 
+        return customerOutstanding
+    }
     private fun getAgeingBucketData(orgOutstanding: ArOutstandingData, type: String): List<AgeingBucketOutstandingV2> {
         val ageingBucketMapping: Map<String, Map<String, Any?>> = when (type) {
             "invoice" -> mapOf(
@@ -1694,19 +1667,19 @@ class OutStandingServiceImpl : OutStandingService {
                 else -> 1
             }
         }
-        val oneEightyPlusCount = customerData.openInvoiceAgeingBucket?.firstOrNull { it.key == "oneEightyPlus" }?.ledgerCount ?: 0
         val oneEightyCount = customerData.openInvoiceAgeingBucket?.firstOrNull { it.key == "oneEighty" }?.ledgerCount ?: 0
         val ninetyCount = customerData.openInvoiceAgeingBucket?.firstOrNull { it.key == "ninety" }?.ledgerCount ?: 0
         val sixtyCount = customerData.openInvoiceAgeingBucket?.firstOrNull { it.key == "sixty" }?.ledgerCount ?: 0
-//        val fortyFiveCount = customerData.openInvoiceAgeingBucket?.get("fortyFive")?.ledgerCount ?: 0
+        val threeSixtyFivePlusCount = customerData.openInvoiceAgeingBucket?.firstOrNull { it.key == "threeSixtyFivePlus" }?.ledgerCount ?: 0
+        val threeSixtyFiveCount = customerData.openInvoiceAgeingBucket?.firstOrNull { it.key == "threeSixtyFivePlus" }?.ledgerCount ?: 0
         val thirtyCount = customerData.openInvoiceAgeingBucket?.firstOrNull { it.key == "thirty" }?.ledgerCount ?: 0
 
         callPriorityScores.ageingBucketScore = when {
-            oneEightyPlusCount > 0 -> 6
-            oneEightyCount > 0 -> 5
-            ninetyCount > 0 -> 4
-            sixtyCount > 0 -> 3
-//            fortyFiveCount > 0 -> 2
+            threeSixtyFivePlusCount > 0 -> 6
+            threeSixtyFiveCount > 0 -> 5
+            oneEightyCount > 0 -> 4
+            ninetyCount > 0 -> 3
+            sixtyCount > 0 -> 2
             thirtyCount > 0 -> 1
             else -> callPriorityScores.ageingBucketScore
         }
@@ -1780,5 +1753,52 @@ class OutStandingServiceImpl : OutStandingService {
             }
         }
         customerData.totalCallPriorityScore = callPriorityScores.geTotalCallPriority()
+    }
+
+    override suspend fun updateCustomerDetailsV2(orgId: UUID, entityCode: Int?) {
+        val searchResponse = Client.search({ s ->
+            s.index("customer_outstanding_v2")
+                .query { q ->
+                    q.match { m -> m.field("_id").query(FieldValue.of("${orgId}_$entityCode")) }
+                }
+        }, CustomerOutstandingDocumentResponseV2::class.java)
+
+        var customerOutstanding: CustomerOutstandingDocumentResponseV2? = null
+
+        if (!searchResponse?.hits()?.hits().isNullOrEmpty()) {
+            customerOutstanding = searchResponse?.hits()?.hits()?.map { it.source() }?.get(0)
+
+            val orgOutstanding = accountUtilizationRepository.getArOutstandingData(
+                entityCodes = listOf(entityCode),
+                orgIds = listOf(orgId),
+                accMode = AccMode.AR.name,
+                accTypes = AresConstants.accTypesForAr,
+                invoiceAccType = AresConstants.invoiceAccTypeForAr,
+                creditNoteAccType = AresConstants.creditNoteAccTypeForAr,
+                onAccountAccountType = AresConstants.onAccountTypeForAr
+            )
+
+            val orgLevelData = orgOutstanding?.filter { it.organizationId == orgId && it.entityCode == entityCode }
+
+            customerOutstanding?.lastUpdatedAt = Timestamp.valueOf(LocalDateTime.now())
+
+            if (!orgLevelData.isNullOrEmpty()) {
+                customerOutstanding = createOutstandingDetails(customerOutstanding, orgLevelData[0])
+                Client.addDocument(AresConstants.CUSTOMER_OUTSTANDING_V2, "${orgId}_$entityCode", customerOutstanding)
+            }
+        } else {
+            aresMessagePublisher.emitCreateOrgDetail(
+                HookToAresRequest(
+                    organizationTradePartyDetailId = orgId
+                )
+            )
+        }
+    }
+
+    override suspend fun getCustomerData() {
+        val orgIdEntityCodes = accountUtilizationRepo.getDistinctOrgIds(AccMode.AR)
+        orgIdEntityCodes?.map {
+            aresMessagePublisher.emitUpdateCustomerDetail(it)
+        }
     }
 }

@@ -5,5 +5,6 @@ import java.util.UUID
 
 @Introspected
 data class UpdateSupplierOutstandingRequest(
-    var orgId: UUID?
+    var orgId: UUID?,
+    var entityCode: Int? = null
 )

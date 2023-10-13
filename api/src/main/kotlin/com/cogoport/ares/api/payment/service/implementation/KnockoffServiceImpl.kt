@@ -8,6 +8,7 @@ import com.cogoport.ares.api.events.KuberMessagePublisher
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.api.payment.entity.OrgIdAndEntityCode
 import com.cogoport.ares.api.payment.entity.Payment
 import com.cogoport.ares.api.payment.entity.PaymentInvoiceMapping
 import com.cogoport.ares.api.payment.mapper.PayableFileToPaymentMapper
@@ -366,6 +367,7 @@ open class KnockoffServiceImpl : KnockoffService {
         try {
             if (accUtilObj.accMode == AccMode.AR) {
                 aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilEntity.organizationId))
+                aresMessagePublisher.emitUpdateCustomerDetail(OrgIdAndEntityCode(accountUtilEntity.organizationId!!, accountUtilEntity.entityCode))
             }
         } catch (e: Exception) {
             logger().error(e.stackTraceToString())
@@ -510,6 +512,7 @@ open class KnockoffServiceImpl : KnockoffService {
         createAudit(AresConstants.ACCOUNT_UTILIZATIONS, accountUtilization.id!!, AresConstants.UPDATE, null, reverseUtrRequest.updatedBy.toString(), reverseUtrRequest.performedByType)
 
         aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountUtilization.organizationId))
+        aresMessagePublisher.emitUpdateCustomerDetail(OrgIdAndEntityCode(accountUtilization.organizationId!!, accountUtilization.entityCode))
 
         kuberMessagePublisher.emitPostRestoreUtr(
             restoreUtrResponse = RestoreUtrResponse(
