@@ -89,4 +89,6 @@ interface OutStandingService {
 
     suspend fun updateCustomerDetailsV2(orgId: UUID, entityCode: Int?)
     suspend fun getCustomerData()
+
+    suspend fun listCustomerDetailsV2(req: CustomerOutstandingRequest): ResponseList<CustomerOutstandingDocumentResponseV2?>
 }

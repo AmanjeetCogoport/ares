@@ -265,4 +265,19 @@ class OutstandingController {
         if (request.orgId == null) throw AresException(AresError.ERR_1003, "orgId")
         return outStandingService.updateCustomerDetailsV2(request.orgId!!, request.entityCode)
     }
+
+    @Auth
+    @Get("/by-customer-v2{?request*}")
+    suspend fun getCustomerDetailsV2(@Valid request: CustomerOutstandingRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): ResponseList<CustomerOutstandingDocumentResponseV2?> {
+        val partnerTaggedEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))
+        request.entityCode = if (partnerTaggedEntityCode?.toInt() != null) {
+            when (partnerTaggedEntityCode) {
+                "101" -> "101_301"
+                else -> partnerTaggedEntityCode
+            }
+        } else {
+            request.entityCode
+        }
+        return Response<ResponseList<CustomerOutstandingDocumentResponseV2?>>().ok(outStandingService.listCustomerDetailsV2(request))
+    }
 }

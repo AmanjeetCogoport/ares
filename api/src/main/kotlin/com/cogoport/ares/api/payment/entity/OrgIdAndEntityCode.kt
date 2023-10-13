@@ -9,5 +9,5 @@ data class OrgIdAndEntityCode(
     @JsonProperty("organization_id")
     val organizationId: UUID,
     @JsonProperty("entity_code")
-    val entityCode: Int,
+    val entityCode: Int
 )

@@ -1579,7 +1579,7 @@ class OutStandingServiceImpl : OutStandingService {
 
         return customerOutstanding
     }
-    private fun getAgeingBucketData(orgOutstanding: ArOutstandingData, type: String): List<AgeingBucketOutstandingV2> {
+    private fun getAgeingBucketData(orgOutstanding: ArOutstandingData, type: String): HashMap<String, AgeingBucketOutstandingV2?> {
         val ageingBucketMapping: Map<String, Map<String, Any?>> = when (type) {
             "invoice" -> mapOf(
                 "notDue" to mapOf("amount" to orgOutstanding.invoiceNotDueAmount, "count" to orgOutstanding.invoiceNotDueCount),
@@ -1611,16 +1611,22 @@ class OutStandingServiceImpl : OutStandingService {
             else -> emptyMap()
         }
 
-        return ageingBucketMapping.entries.map { (key, value) ->
-            val amountValue = value["amount"].toString().toBigDecimal().setScale(AresConstants.ROUND_OFF_DECIMAL_TO_2, RoundingMode.UP)
+        val hashMap = hashMapOf<String, AgeingBucketOutstandingV2?>()
 
-            AgeingBucketOutstandingV2(
-                key = key,
-                ledgerAmount = amountValue,
-                ledgerCount = value["count"].toString().toLongOrNull() ?: 0L,
-                ledgerCurrency = orgOutstanding.ledCurrency
+        ageingBucketMapping.entries.map { (key, value) ->
+            val amountValue = value["amount"].toString().toBigDecimal().setScale(AresConstants.ROUND_OFF_DECIMAL_TO_2, RoundingMode.UP)
+            hashMap.put(
+                key,
+                AgeingBucketOutstandingV2(
+                    key = key,
+                    ledgerAmount = amountValue,
+                    ledgerCount = value["count"].toString().toLongOrNull() ?: 0L,
+                    ledgerCurrency = orgOutstanding.ledCurrency
+                )
             )
         }
+
+        return hashMap
     }
 
     private fun calculateTotalCount(vararg counts: Long): Int {
@@ -1667,12 +1673,12 @@ class OutStandingServiceImpl : OutStandingService {
                 else -> 1
             }
         }
-        val oneEightyCount = customerData.openInvoiceAgeingBucket?.firstOrNull { it.key == "oneEighty" }?.ledgerCount ?: 0
-        val ninetyCount = customerData.openInvoiceAgeingBucket?.firstOrNull { it.key == "ninety" }?.ledgerCount ?: 0
-        val sixtyCount = customerData.openInvoiceAgeingBucket?.firstOrNull { it.key == "sixty" }?.ledgerCount ?: 0
-        val threeSixtyFivePlusCount = customerData.openInvoiceAgeingBucket?.firstOrNull { it.key == "threeSixtyFivePlus" }?.ledgerCount ?: 0
-        val threeSixtyFiveCount = customerData.openInvoiceAgeingBucket?.firstOrNull { it.key == "threeSixtyFivePlus" }?.ledgerCount ?: 0
-        val thirtyCount = customerData.openInvoiceAgeingBucket?.firstOrNull { it.key == "thirty" }?.ledgerCount ?: 0
+        val oneEightyCount = customerData.openInvoiceAgeingBucket["oneEighty"]?.ledgerCount ?: 0
+        val ninetyCount = customerData.openInvoiceAgeingBucket["ninety"]?.ledgerCount ?: 0
+        val sixtyCount = customerData.openInvoiceAgeingBucket["sixty" ]?.ledgerCount ?: 0
+        val threeSixtyFivePlusCount = customerData.openInvoiceAgeingBucket["threeSixtyFivePlus"]?.ledgerCount ?: 0
+        val threeSixtyFiveCount = customerData.openInvoiceAgeingBucket["threeSixtyFivePlus"]?.ledgerCount ?: 0
+        val thirtyCount = customerData.openInvoiceAgeingBucket["thirty"]?.ledgerCount ?: 0
 
         callPriorityScores.ageingBucketScore = when {
             threeSixtyFivePlusCount > 0 -> 6
@@ -1800,5 +1806,21 @@ class OutStandingServiceImpl : OutStandingService {
         orgIdEntityCodes?.map {
             aresMessagePublisher.emitUpdateCustomerDetail(it)
         }
+    }
+
+    override suspend fun listCustomerDetailsV2(request: CustomerOutstandingRequest): ResponseList<CustomerOutstandingDocumentResponseV2?> {
+        val response = OpenSearchClient().listCustomerOutstandingV2(request)
+        var list: List<CustomerOutstandingDocumentResponseV2?> = listOf()
+        if (!response?.hits()?.hits().isNullOrEmpty()) {
+            list = response?.hits()?.hits()?.map { it.source() }!!
+        }
+        val responseList = ResponseList<CustomerOutstandingDocumentResponseV2?>()
+
+        responseList.list = list
+        responseList.totalRecords = response?.hits()?.total()?.value() ?: 0
+        responseList.totalPages = if (responseList.totalRecords!! % request.limit!! == 0.toLong()) (responseList.totalRecords!! / request.limit!!) else (responseList.totalRecords!! / request.limit!!) + 1.toLong()
+        responseList.pageNo = request.page!!
+
+        return responseList
     }
 }
