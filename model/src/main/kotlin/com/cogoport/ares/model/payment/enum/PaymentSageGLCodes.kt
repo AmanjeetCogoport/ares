@@ -9,5 +9,5 @@ enum class PaymentSageGLCodes(val glCode: String, val currency: String, val enti
     RBLC("222001", "INR", 101),
     RBLD("314003", "INR", 101),
     RBLU("222002", "USD", 101),
-    AXISINBBA24("222020", "INR", 301)
+    AXISP("222020", "INR", 301)
 }
