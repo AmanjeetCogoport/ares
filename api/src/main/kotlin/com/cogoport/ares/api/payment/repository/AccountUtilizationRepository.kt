@@ -25,6 +25,7 @@ import com.cogoport.ares.model.payment.response.AccountPayablesStats
 import com.cogoport.ares.model.payment.response.CreditDebitBalance
 import com.cogoport.ares.model.payment.response.InvoiceListResponse
 import com.cogoport.ares.model.payment.response.OnAccountTotalAmountResponse
+import com.cogoport.ares.model.payment.response.OpenInvoiceDetails
 import com.cogoport.ares.model.payment.response.OverallStatsForTradeParty
 import com.cogoport.ares.model.payment.response.StatsForCustomerResponse
 import com.cogoport.ares.model.payment.response.StatsForKamResponse
@@ -1350,4 +1351,28 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun getOpeningAndClosingLedger(accMode: AccMode, organizationId: String, entityCodes: List<Int>, date: LocalDate?): CreditDebitBalance
+
+    @NewSpan
+    @Query(
+        """
+         SELECT 
+            CASE 
+                WHEN amount_curr = pay_curr THEN 'PAID'
+                WHEN pay_curr = 0 THEN 'UNPAID'
+                WHEN amount_curr - pay_curr <> 0 AND pay_curr > 0 THEN 'PARTIAL_PAID'
+            END AS status,
+            document_no, organization_name, document_value, currency,amount_curr, amount_loc, pay_curr, pay_loc, due_date, transaction_date, entity_code, service_type 
+        FROM 
+            account_utilizations 
+        WHERE 
+            organization_id =  :organizationId
+            AND (amount_curr - pay_curr > 0)
+            AND acc_type != 'NEWPR'
+            AND acc_mode = 'AR' 
+            AND document_status = 'FINAL'  
+            AND deleted_at IS NULL
+
+        """
+    )
+    suspend fun getOpenInvoicesDetails(organizationId: UUID): List<OpenInvoiceDetails>
 }

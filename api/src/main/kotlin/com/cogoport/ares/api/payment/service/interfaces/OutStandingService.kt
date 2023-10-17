@@ -81,4 +81,6 @@ interface OutStandingService {
     suspend fun createRecordInBulk(request: BulkUploadRequest?): String?
 
     suspend fun getDistinctOrgIds(accMode: AccMode?): List<UUID>?
+
+    suspend fun getOpenInvoices(organizationId: UUID): String
 }

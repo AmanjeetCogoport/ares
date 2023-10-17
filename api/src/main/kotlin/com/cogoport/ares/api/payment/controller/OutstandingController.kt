@@ -58,6 +58,7 @@ import kotlin.collections.HashMap
 class OutstandingController {
     @Inject
     lateinit var outStandingService: OutStandingService
+
     @Inject
     lateinit var pushToClientService: OpenSearchService
 
@@ -241,5 +242,10 @@ class OutstandingController {
     @Get("/distinct-org")
     suspend fun getDistinctOrgIds(@QueryValue("accMode") accMode: AccMode?): List<UUID>? {
         return outStandingService.getDistinctOrgIds(accMode)
+    }
+
+    @Get("/open-invoices-report")
+    suspend fun getOpenInvoices(organizationId: UUID): String {
+        return outStandingService.getOpenInvoices(organizationId)
     }
 }
