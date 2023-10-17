@@ -47,7 +47,7 @@ data class OutStandingReportDetails(
     var deliveryOrderDocumentNumber: String?,
     @ExcelColumn("Commercial Invoice")
     var commercialInvoice: String?,
-    @ExcelColumn("Airway Bill Date")
+    @ExcelColumn("Airway Bill")
     var airWayBillDate: String?,
     @ExcelColumn("ETA")
     var eta: String?,
