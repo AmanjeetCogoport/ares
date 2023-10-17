@@ -1343,7 +1343,7 @@ open class SettlementServiceImpl : SettlementService {
         }
 
         val fetchedDoc = settlementRepository.findBySourceIdAndSourceType(documentNo, sourceType)
-        if (fetchedDoc.any { it!!.settlementStatus == SettlementStatus.POSTED }) {
+        if (fetchedDoc.any { it!!.settlementStatus == SettlementStatus.POSTED && it.sourceType !in listOf(SettlementType.SECH, SettlementType.PECH) }) {
             throw AresException(AresError.ERR_1544, "")
         }
 
@@ -1412,6 +1412,7 @@ open class SettlementServiceImpl : SettlementService {
                 )
             }
         }
+
         val settlements = settlementRepository.findByIdIn(fetchedDoc.map { it?.id!! })
         settlementRepository.deleteByIdIn(fetchedDoc.map { it?.id!! })
         for (settlementDoc in settlements) {
