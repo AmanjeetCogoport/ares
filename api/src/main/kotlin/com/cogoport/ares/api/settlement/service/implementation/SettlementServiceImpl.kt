@@ -1343,7 +1343,7 @@ open class SettlementServiceImpl : SettlementService {
         }
 
         val fetchedDoc = settlementRepository.findBySourceIdAndSourceType(documentNo, sourceType)
-        if (fetchedDoc.any { it!!.settlementStatus == SettlementStatus.POSTED && it.sourceType  !in listOf( SettlementType.SECH, SettlementType.PECH)}) {
+        if (fetchedDoc.any { it!!.settlementStatus == SettlementStatus.POSTED && it.sourceType !in listOf(SettlementType.SECH, SettlementType.PECH) }) {
             throw AresException(AresError.ERR_1544, "")
         }
 
