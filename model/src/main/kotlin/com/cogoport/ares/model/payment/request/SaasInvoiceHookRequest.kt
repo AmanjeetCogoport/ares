@@ -19,6 +19,7 @@ data class SaasInvoiceHookRequest(
     var bankAccountNumber: String? = null,
     @field: NotNull(message = "Bank Name cannot be null")
     var bankName: String? = null,
+    var bankId: UUID? = null,
     var currency: String? = null,
     var entityCode: Int? = null,
 )
