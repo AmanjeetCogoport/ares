@@ -2,7 +2,7 @@ package com.cogoport.ares.model.payment.response
 
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.data.annotation.MappedEntity
-import java.time.LocalDate
+import java.util.Date
 
 @Introspected
 @MappedEntity
@@ -15,8 +15,8 @@ data class OpenInvoiceDetails(
     var amountLoc: String,
     var payCurr: String,
     var payLoc: String,
-    var dueDate: LocalDate?,
-    var transactionDate: LocalDate?,
+    var dueDate: Date?,
+    var transactionDate: Date?,
     var entityCode: String,
     var serviceType: String,
     var status: String,

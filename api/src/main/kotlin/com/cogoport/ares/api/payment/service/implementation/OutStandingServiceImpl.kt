@@ -97,6 +97,7 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.Period
 import java.time.Year
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.UUID
@@ -1555,13 +1556,17 @@ class OutStandingServiceImpl : OutStandingService {
             uploadedBy = AresConstants.ARES_USER_ID
         )
         aresDocumentRepository.save(aresDocument)
-        return "$baseUrl/payments/invoice/open-invoices-report/${aresDocument.id!!}"
+
+        return url.toString()
+    }
+    fun Date.toLocalDate(): LocalDate {
+        return this.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
     }
 
     private fun getDetailsForExcel(openInvoiceDetails: OpenInvoiceDetails, invoiceDetails: OsReportData?): OutStandingReportDetails {
 
         val daysOverdue = openInvoiceDetails.dueDate?.let {
-            val days = Period.between(it, LocalDate.now()).days
+            val days = Period.between(it.toLocalDate(), Date().toLocalDate()).days
             if (days >= 0) days else 0
         } ?: 0
 
