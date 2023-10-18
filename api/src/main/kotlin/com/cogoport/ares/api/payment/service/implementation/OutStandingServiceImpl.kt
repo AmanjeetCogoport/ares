@@ -1533,8 +1533,9 @@ class OutStandingServiceImpl : OutStandingService {
     }
 
     override suspend fun getOpenInvoices(organizationId: UUID): String {
-        var openInvoiceDetails = accountUtilizationRepository.getOpenInvoicesDetails(organizationId)
-        val invoiceIds: List<Long> = openInvoiceDetails.map { it.documentNo }
+        var openInvoiceDetails = accountUtilizationRepository.getOrgDetails(organizationId)
+        val invoiceIds: List<Long> = openInvoiceDetails.filter { it.accType == "SINV" || it.accType == "SCN" }.map { it.documentNo }
+
         val invoiceDetails: List<OsReportData?> = plutusClient.getOpenInvoiceData(invoiceIds)
         val outStandingReport: MutableList<OutStandingReportDetails?> = mutableListOf()
 
@@ -1573,7 +1574,7 @@ class OutStandingServiceImpl : OutStandingService {
             openInvoiceAmount = (openInvoiceDetails.amountCurr.toBigDecimal() - openInvoiceDetails.payCurr.toBigDecimal()).toString(),
             ledgerAmount = openInvoiceDetails.amountLoc,
             invoiceDate = invoiceDetails?.invoiceDate?.let { SimpleDateFormat("dd-MM-yyyy").format(it) },
-            creditDays = invoiceDetails?.creditDays.toString(),
+                creditDays = invoiceDetails?.creditDays?.toString() ?: "0",
             dueDate = openInvoiceDetails.dueDate.toString(),
             daysOverdue = daysOverdue.toString(),
             status = openInvoiceDetails.status,
@@ -1585,10 +1586,14 @@ class OutStandingServiceImpl : OutStandingService {
             deliveryOrderDocumentNumber = invoiceDetails?.deliveryOrderDocNo,
             jobNumber = invoiceDetails?.jobNumber,
             commercialInvoice = invoiceDetails?.commercialInvoice,
-            airWayBillDate = invoiceDetails?.airWayBillDate,
-            eta = invoiceDetails?.eta?.let { SimpleDateFormat("dd-MM-yyyy HH:mm:ss").format(SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").parse(it)) },
-            etd = invoiceDetails?.etd?.let { SimpleDateFormat("dd-MM-yyyy HH:mm:ss").format(SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").parse(it)) },
-            remarks = null
+            airWayBill = invoiceDetails?.airWayBill,
+            eta = invoiceDetails?.eta?.let { SimpleDateFormat("dd-MM-yyyy").format(SimpleDateFormat("yyyy-MM-dd").parse(it)) },
+            etd = invoiceDetails?.etd?.let { SimpleDateFormat("dd-MM-yyyy").format(SimpleDateFormat("yyyy-MM-dd").parse(it)) },
+            remarks = null,
+            address = invoiceDetails?.address,
+            city = invoiceDetails?.city,
+            pincode = invoiceDetails?.pincode
+
         )
     }
 }

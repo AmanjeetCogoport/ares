@@ -1361,7 +1361,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                 WHEN pay_curr = 0 THEN 'UNPAID'
                 WHEN amount_curr - pay_curr <> 0 AND pay_curr > 0 THEN 'PARTIAL_PAID'
             END AS status,
-            document_no, organization_name, document_value, currency,amount_curr, amount_loc, pay_curr, pay_loc, due_date, transaction_date, entity_code, service_type 
+            document_no, organization_name, document_value, currency,amount_curr, amount_loc, pay_curr, pay_loc, due_date, transaction_date, entity_code, service_type, acc_type 
         FROM 
             account_utilizations 
         WHERE 
@@ -1374,5 +1374,5 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
 
         """
     )
-    suspend fun getOpenInvoicesDetails(organizationId: UUID): List<OpenInvoiceDetails>
+    suspend fun getOrgDetails(organizationId: UUID): List<OpenInvoiceDetails>
 }

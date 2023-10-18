@@ -11,7 +11,7 @@ data class OutStandingReportDetails(
     var organizationName: String?,
     @ExcelColumn("Invoice Number")
     var invoiceNumber: Long?,
-    @ExcelColumn("Shipment ID")
+    @ExcelColumn("SID")
     var jobNumber: String?,
     @ExcelColumn("Entity Code")
     var entityCode: String?,
@@ -37,6 +37,12 @@ data class OutStandingReportDetails(
     var invoiceUrl: String?,
     @ExcelColumn("ServiceType")
     var serviceType: String?,
+    @ExcelColumn("CITY")
+    var city: String?,
+    @ExcelColumn("Pincode")
+    var pincode: String?,
+    @ExcelColumn("Address")
+    var address: String?,
     @ExcelColumn("BL")
     var bl: String?,
     @ExcelColumn("BL Document No.")
@@ -48,7 +54,7 @@ data class OutStandingReportDetails(
     @ExcelColumn("Commercial Invoice")
     var commercialInvoice: String?,
     @ExcelColumn("Airway Bill")
-    var airWayBillDate: String?,
+    var airWayBill: String?,
     @ExcelColumn("ETA")
     var eta: String?,
     @ExcelColumn("ETD")

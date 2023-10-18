@@ -20,4 +20,5 @@ data class OpenInvoiceDetails(
     var entityCode: String,
     var serviceType: String,
     var status: String,
+    var accType: String,
 )
