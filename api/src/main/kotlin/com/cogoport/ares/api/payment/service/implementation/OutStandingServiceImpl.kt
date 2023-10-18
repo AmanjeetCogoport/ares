@@ -1574,7 +1574,7 @@ class OutStandingServiceImpl : OutStandingService {
             openInvoiceAmount = (openInvoiceDetails.amountCurr.toBigDecimal() - openInvoiceDetails.payCurr.toBigDecimal()).toString(),
             ledgerAmount = openInvoiceDetails.amountLoc,
             invoiceDate = invoiceDetails?.invoiceDate?.let { SimpleDateFormat("dd-MM-yyyy").format(it) },
-                creditDays = invoiceDetails?.creditDays?.toString() ?: "0",
+            creditDays = invoiceDetails?.creditDays?.toString() ?: "0",
             dueDate = openInvoiceDetails.dueDate.toString(),
             daysOverdue = daysOverdue.toString(),
             status = openInvoiceDetails.status,
