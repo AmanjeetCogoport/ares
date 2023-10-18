@@ -176,5 +176,5 @@ interface AresClient {
     suspend fun updateCSDPayments(@Valid @Body request: UpdateCSDPaymentRequest)
 
     @Post("/payments/accounts/saas-invoice-hook")
-    suspend fun saasInvoiceHook(req: SaasInvoiceHookRequest): SaasInvoiceHookResponse
+    suspend fun saasInvoiceHook(@Valid @Body req: SaasInvoiceHookRequest): SaasInvoiceHookResponse
 }

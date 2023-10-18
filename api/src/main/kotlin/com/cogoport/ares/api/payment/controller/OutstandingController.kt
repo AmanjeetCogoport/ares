@@ -6,6 +6,7 @@ import com.cogoport.ares.api.payment.entity.EntityWiseOutstandingBucket
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentRequest
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
 import com.cogoport.ares.api.payment.model.OpenSearchRequest
+import com.cogoport.ares.api.payment.model.requests.OutstandingVisualizationRequest
 import com.cogoport.ares.api.payment.model.response.TopServiceProviders
 import com.cogoport.ares.api.payment.service.interfaces.OpenSearchService
 import com.cogoport.ares.api.payment.service.interfaces.OutStandingService
@@ -247,5 +248,12 @@ class OutstandingController {
     @Get("/open-invoices-report")
     suspend fun getOpenInvoices(organizationId: UUID): String {
         return outStandingService.getOpenInvoices(organizationId)
+    }
+
+    @Auth
+    @Get("/outstanding-data-bifurcation")
+    suspend fun getOutstandingDataBifurcation(@Valid request: OutstandingVisualizationRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): Any {
+        val updatedEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
+        return outStandingService.getOutstandingDataBifurcation(request)
     }
 }
