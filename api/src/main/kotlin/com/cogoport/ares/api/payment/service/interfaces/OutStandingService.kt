@@ -84,6 +84,6 @@ interface OutStandingService {
     suspend fun getDistinctOrgIds(accMode: AccMode?): List<UUID>?
 
     suspend fun getOpenInvoices(organizationId: UUID): String
-    
+
     suspend fun getOutstandingDataBifurcation(request: OutstandingVisualizationRequest): Any
 }
