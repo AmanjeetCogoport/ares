@@ -24,6 +24,7 @@ import com.cogoport.ares.model.payment.request.OnAccountTotalAmountRequest
 import com.cogoport.ares.model.payment.request.OrganizationReceivablesRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.request.TradePartyStatsRequest
+import com.cogoport.ares.model.payment.request.UpdateOrganizationDetailAresSideRequest
 import com.cogoport.ares.model.payment.response.AccountCollectionResponse
 import com.cogoport.ares.model.payment.response.AccountPayableFileResponse
 import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
@@ -89,6 +90,12 @@ interface AresClient {
 
     @Post("/payments/accounts/bulk-create")
     suspend fun createBulkOnAccountPayment(@Valid @Body request: MutableList<Payment>): BulkPaymentResponse
+
+    @Post("/update-vendor-trade-party-data")
+    suspend fun updateVendorTradePartyData(
+        @javax.validation.Valid @Body
+        request: UpdateOrganizationDetailAresSideRequest
+    ): MutableMap<String, String>?
 
     @Post("/payments/invoice/add-bulk")
     suspend fun createBulkInvoice(@Valid @Body invoiceRequestList: List<AccUtilizationRequest>): MutableList<CreateInvoiceResponse>

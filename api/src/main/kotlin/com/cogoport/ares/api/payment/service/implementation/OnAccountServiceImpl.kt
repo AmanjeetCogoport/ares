@@ -13,6 +13,7 @@ import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.events.KuberMessagePublisher
 import com.cogoport.ares.api.events.OpenSearchEvent
 import com.cogoport.ares.api.exception.AresError
+import com.cogoport.ares.api.exception.AresError.ERR_1002
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.migration.model.SagePlatformPaymentHeader
@@ -30,6 +31,7 @@ import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.model.PushAccountUtilizationRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.AresDocumentRepository
+import com.cogoport.ares.api.payment.repository.InvoicePayMappingRepository
 import com.cogoport.ares.api.payment.repository.PaymentFileRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBNewRepository
@@ -49,6 +51,7 @@ import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.CreateCommunicationRequest
 import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
 import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.payment.AccMode.AP
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocType
 import com.cogoport.ares.model.payment.DocumentSearchType
@@ -76,6 +79,7 @@ import com.cogoport.ares.model.payment.request.CogoOrganizationRequest
 import com.cogoport.ares.model.payment.request.DeletePaymentRequest
 import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.request.OnAccountTotalAmountRequest
+import com.cogoport.ares.model.payment.request.UpdateOrganizationDetailAresSideRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.ARLedgerResponse
 import com.cogoport.ares.model.payment.response.AccountCollectionResponse
@@ -219,6 +223,9 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Inject
     lateinit var hadesClient: HadesClient
+
+    @Inject
+    lateinit var invoicePayMappingRepository: InvoicePayMappingRepository
 
     @Value("\${server.base-url}") // application-prod.yml path
     private lateinit var baseUrl: String
@@ -2034,5 +2041,67 @@ open class OnAccountServiceImpl : OnAccountService {
         if (payment.paymentDocumentStatus == PaymentDocumentStatus.APPROVED) throw AresException(AresError.ERR_1010, "")
 
         return payment
+    }
+
+    @Transactional
+    override suspend fun updateVendorTradePartyData(
+        request: UpdateOrganizationDetailAresSideRequest
+    ): MutableMap<String, String>? {
+        var response: MutableMap<String, String>? = mutableMapOf()
+
+        response?.put(
+            key = "requestBody",
+            value = ObjectMapper().writeValueAsString(request)
+        )
+
+        try {
+            var accountUtilizationDetail = accountUtilizationRepository.getAccountUtilizationByDocNoAndAccMode(
+                documentNo = request.billId,
+                accMode = AP
+            ) ?: throw AresException(ERR_1002, " account utilization not found.")
+
+            accountUtilizationDetail.organizationId = request.organizationTradePartyDetailId
+            accountUtilizationDetail.organizationName = request.organizationTradePartyName
+            accountUtilizationDetail.taggedOrganizationId = request.organizationId
+            accountUtilizationDetail.tradePartyMappingId = request.organizationTradePartiesId
+            accountUtilizationDetail.orgSerialId = request.organizationTradePartySerialId
+
+            accountUtilizationRepository.update(accountUtilizationDetail)
+
+            response?.put(
+                key = "accountUtilizationDetail",
+                value = ObjectMapper().writeValueAsString(accountUtilizationDetail)
+            )
+
+            val paymentIds = invoicePayMappingRepository.getPaymentInvoiceMappingUsingDocumentNoAndAccountMode(
+                accountMode = AP.name,
+                documentNo = request.billId.toString()
+            )
+
+            val payments = paymentRepository.getPaymentByIds(
+                ids = paymentIds
+            )
+
+            payments.forEach { payment ->
+                payment.organizationId = request.organizationTradePartyDetailId
+                payment.organizationName = request.organizationTradePartyName
+                payment.taggedOrganizationId = request.organizationId
+                payment.orgSerialId = request.organizationTradePartySerialId
+                payment.tradePartyMappingId = request.organizationTradePartiesId
+
+                paymentRepository.update(payment)
+
+                response?.put(
+                    key = "payment => ${payment.id}",
+                    value = ObjectMapper().writeValueAsString(payment)
+                )
+            }
+        } catch (e: Exception) {
+            throw AresException(ERR_1002, ObjectMapper().writeValueAsString(ObjectMapper().writeValueAsString(request) + e))
+        }
+
+        logger().info("***** update vendor trade party data response $response")
+
+        return response
     }
 }

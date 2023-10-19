@@ -31,9 +31,9 @@ netty:
 r2dbc:
   datasources:
     default:
-      url: r2dbc:postgresql://${DB_HOST:rds-cluster.stage.cogoport.io}:${DB_PORT:6432}/${DB_NAME:ares}?preparedStatementCacheQueries=0
-      username: ${DB_USER:postgres}
-      password: ${DB_PASSWORD:A942B37CCFAF5A813B1432CAA209A43B9D144E47AD0DE1549C289C253E556CD5}
+      url: r2dbc:postgresql://${DB_HOST:127.0.0.1}:${DB_PORT:6433}/${DB_NAME:ares}?preparedStatementCacheQueries=0
+      username: ${DB_USER:mustangs2}
+      password: ${DB_PASSWORD:DI8E64c5clAyWuAz0Tqm4pgeUj12KZ}
       dialect: POSTGRES
     dms:
       url: r2dbc:postgresql://${UNIFIEDDB_HOST:`52.66.190.93`}:${UNIFIEDDB_PORT:6432}/${UNIFIEDDB_NAME:dms}?preparedStatementCacheQueries=0
@@ -65,10 +65,17 @@ services:
 jackson:
   date-format: yyyy-MM-dd HH:mm:ss
 
+#opensearch:
+#  host: ${OPENSEARCH_HOST:search.stage.cogoport.io}
+#  user: ${OPENSEARCH_USER:awsadmin}
+#  pass: ${OPENSEARCH_PASS:Password@123}
+
 opensearch:
-  host: ${OPENSEARCH_HOST:search.stage.cogoport.io}
-  user: ${OPENSEARCH_USER:awsadmin}
-  pass: ${OPENSEARCH_PASS:Password@123}
+  host: ${OPENSEARCH_HOST:localhost}
+  user: ${OPENSEARCH_USER:admin}
+  pass: ${OPENSEARCH_PASS:admin}
+  scheme: http
+  port: 9201
 
 sentry:
   enabled: ${SENTRY_ENABLED:false}

@@ -35,4 +35,21 @@ interface InvoicePayMappingRepository : CoroutineCrudRepository<PaymentInvoiceMa
         """
     )
     suspend fun findByPaymentIdFromPaymentInvoiceMapping(paymentId: Long?): Long
+
+    @NewSpan
+    @Query(
+        """
+            SELECT
+                payment_id
+            FROM
+                payment_invoice_mapping
+            WHERE
+                document_no = :documentNo AND 
+                account_mode::varchar = :accountMode 
+        """
+    )
+    suspend fun getPaymentInvoiceMappingUsingDocumentNoAndAccountMode(
+        accountMode: String,
+        documentNo: String
+    ): List<Long>
 }

@@ -1350,4 +1350,21 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun getOpeningAndClosingLedger(accMode: AccMode, organizationId: String, entityCodes: List<Int>, date: LocalDate?): CreditDebitBalance
+
+    @NewSpan
+    @Query(
+        """
+                SELECT
+                    *
+                FROM
+                    account_utilizations
+                WHERE 
+                    document_no = :documentNo
+                AND acc_mode::VARCHAR = :accMode
+            """
+    )
+    suspend fun getAccountUtilizationByDocNoAndAccMode(
+        documentNo: Long,
+        accMode: AccMode
+    ): AccountUtilization?
 }

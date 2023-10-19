@@ -329,4 +329,19 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
         """
     )
     suspend fun findTransRefNumByPaymentNums(paymentNums: List<Long>, accMode: String, orgId: String, paymentCode: String): List<TransRefNumberResponse>
+
+    @NewSpan
+    @Query(
+        """
+            SELECT
+                *
+            FROM 
+                payments
+            WHERE
+                id in (:ids)
+        """
+    )
+    suspend fun getPaymentByIds(
+        ids: List<Long>
+    ): List<Payment>
 }
