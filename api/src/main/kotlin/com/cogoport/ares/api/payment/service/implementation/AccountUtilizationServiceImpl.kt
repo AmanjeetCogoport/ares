@@ -17,6 +17,7 @@ import com.cogoport.ares.api.payment.repository.UnifiedDBRepo
 import com.cogoport.ares.api.payment.service.interfaces.AccountUtilizationService
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
 import com.cogoport.ares.api.settlement.repository.SettlementRepository
+import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.utils.Utilities
 import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.common.models.Messages
@@ -39,6 +40,7 @@ import com.cogoport.ares.model.settlement.event.InvoiceBalance
 import com.cogoport.ares.model.settlement.event.UpdateInvoiceBalanceEvent
 import com.cogoport.ares.model.settlement.event.UpdateSettlementWhenBillUpdatedEvent
 import com.cogoport.brahma.opensearch.Client
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.sentry.Sentry
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
@@ -76,6 +78,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
 
     @Inject
     lateinit var settlementRepository: SettlementRepository
+
+    @Inject
+    lateinit var settlementService: SettlementService
 
     /**
      * @param accUtilizationRequestList
@@ -304,8 +309,12 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
             if (accUtilizationRequest.accMode == AccMode.AP) {
                 aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilizationRequest.organizationId))
             }
+
+            if (updateInvoiceRequest.performSettlement == true) {
+                settlementService.settleWithSourceIdAndDestinationId(updateInvoiceRequest.autoKnockOffRequest!!)
+            }
         } catch (e: Exception) {
-            logger().error(e.stackTraceToString())
+            logger().error(ObjectMapper().writeValueAsString(e))
             Sentry.captureException(e)
         }
         // emitAccUtilizationToDemeter(accUtilizationRequest)

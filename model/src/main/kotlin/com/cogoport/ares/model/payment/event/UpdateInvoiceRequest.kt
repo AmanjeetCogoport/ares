@@ -4,6 +4,7 @@ import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
+import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import io.micronaut.core.annotation.Introspected
 import io.micronaut.core.annotation.ReflectiveAccess
@@ -46,5 +47,7 @@ data class UpdateInvoiceRequest(
     var tdsAmountLoc: BigDecimal? = BigDecimal.ZERO,
     var tdsAmount: BigDecimal? = BigDecimal.ZERO,
     val isVoid: Boolean? = false,
-    var settlementEnabled: Boolean? = false
+    var settlementEnabled: Boolean? = false,
+    var performSettlement: Boolean? = false,
+    var autoKnockOffRequest: AutoKnockOffRequest? = null
 )
