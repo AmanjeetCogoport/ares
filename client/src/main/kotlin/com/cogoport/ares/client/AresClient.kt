@@ -93,9 +93,9 @@ interface AresClient {
     @Post("/payments/accounts/bulk-create")
     suspend fun createBulkOnAccountPayment(@Valid @Body request: MutableList<Payment>): BulkPaymentResponse
 
-    @Post("/update-vendor-trade-party-data")
+    @Post("/payments/accounts/update-vendor-trade-party-data")
     suspend fun updateVendorTradePartyData(
-        @javax.validation.Valid @Body
+        @Valid @Body
         request: UpdateOrganizationDetailAresSideRequest
     ): MutableMap<String, String>?
 
