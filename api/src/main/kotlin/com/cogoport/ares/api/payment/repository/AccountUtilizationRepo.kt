@@ -123,6 +123,7 @@ interface AccountUtilizationRepo : CoroutineCrudRepository<AccountUtilization, L
         AND au.acc_type::VARCHAR IN (:accType)
         AND au.acc_mode::VARCHAR = :accMode
         AND au.entity_code = :entityCode
+        AND au.deleted_at IS NULL
 ) subquery
 WHERE
     utilization_status::varchar IN (:statusList)
@@ -691,6 +692,7 @@ ORDER BY
                 AND au.acc_type::VARCHAR IN (:accType)
                 AND au.acc_mode::VARCHAR = :accMode
                 AND au.entity_code = :entityCode
+                AND au.deleted_at IS NULL
         ) subquery
         WHERE
             utilization_status::varchar IN (:statusList)
