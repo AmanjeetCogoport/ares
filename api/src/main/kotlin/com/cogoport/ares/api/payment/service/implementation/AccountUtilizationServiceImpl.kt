@@ -310,10 +310,9 @@ open class AccountUtilizationServiceImpl : AccountUtilizationService {
                 aresMessagePublisher.emitUpdateSupplierOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilizationRequest.organizationId))
             }
 
-            if (updateInvoiceRequest.performSettlement == true){
+            if (updateInvoiceRequest.performSettlement == true) {
                 settlementService.settleWithSourceIdAndDestinationId(updateInvoiceRequest.autoKnockOffRequest!!)
             }
-
         } catch (e: Exception) {
             logger().error(ObjectMapper().writeValueAsString(e))
             Sentry.captureException(e)
