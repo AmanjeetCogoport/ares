@@ -78,9 +78,11 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
         }
         val orgSerialId = organization.list[0]["serial_id"]!!.toString().toLong()
 
-        val accCode = when (accMode == AccMode.AR) {
-            true -> AresModelConstants.AR_ACCOUNT_CODE
-            else -> AresModelConstants.AP_ACCOUNT_CODE
+        val accCode = when (accMode) {
+            AccMode.AR -> AresModelConstants.AR_ACCOUNT_CODE
+            AccMode.AP -> AresModelConstants.AP_ACCOUNT_CODE
+            AccMode.CSD -> AresModelConstants.CSD_ACCOUNT_CODE
+            else -> null
         }
 
         val accountAccUtilizationRequest = AccountUtilization(
@@ -112,7 +114,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
             category = null,
             createdAt = Timestamp.from(Instant.now()),
             updatedAt = Timestamp.from(Instant.now()),
-            accCode = accCode,
+            accCode = accCode!!,
             migrated = false,
             settlementEnabled = settlementEnabled,
             isProforma = false

@@ -26,6 +26,8 @@ interface PaymentMigrationWrapper {
 
     suspend fun createGLCode(request: GlCodeMaster)
 
+    suspend fun upsertMigrateGLCode(request: GlCodeMaster)
+
     suspend fun migrateNewPR(startDate: String, endDate: String, bpr: String?, accMode: String)
 
     suspend fun migrateJVUtilization(startDate: String?, endDate: String?, jvNums: List<String>?): Int

@@ -3,10 +3,12 @@ package com.cogoport.ares.api.dunning.service.implementation
 import com.cogoport.ares.api.common.AresConstants.ENTITY_101
 import com.cogoport.ares.api.common.AresConstants.LEDGER_CURRENCY
 import com.cogoport.ares.api.common.AresConstants.TAGGED_ENTITY_ID_MAPPINGS
+import com.cogoport.ares.api.common.client.AuthClient
 import com.cogoport.ares.api.common.client.CogoCareClient
 import com.cogoport.ares.api.common.client.RailsClient
 import com.cogoport.ares.api.common.enums.TokenObjectTypes
 import com.cogoport.ares.api.common.enums.TokenTypes
+import com.cogoport.ares.api.dunning.DunningConstants
 import com.cogoport.ares.api.dunning.DunningConstants.COLLECTION_ACCOUNT_EMAIL
 import com.cogoport.ares.api.dunning.DunningConstants.COLLECTION_ACCOUNT_NAME
 import com.cogoport.ares.api.dunning.DunningConstants.DUNNING_BALANCE_CONFIRMATION_MAIL_TEMPLATE
@@ -33,6 +35,7 @@ import com.cogoport.ares.api.dunning.repository.DunningCycleExecutionRepo
 import com.cogoport.ares.api.dunning.repository.DunningCycleRepo
 import com.cogoport.ares.api.dunning.repository.DunningEmailAuditRepo
 import com.cogoport.ares.api.dunning.repository.MasterExceptionRepo
+import com.cogoport.ares.api.dunning.repository.OrganizationStakeholderRepo
 import com.cogoport.ares.api.dunning.service.interfaces.DunningService
 import com.cogoport.ares.api.dunning.service.interfaces.ScheduleService
 import com.cogoport.ares.api.events.AresMessagePublisher
@@ -58,6 +61,9 @@ import com.cogoport.ares.model.payment.response.SupplyAgent
 import com.cogoport.ares.model.settlement.ListOrganizationTradePartyDetailsResponse
 import com.cogoport.brahma.hashids.Hashids
 import com.cogoport.plutus.client.PlutusClient
+import com.cogoport.plutus.model.invoice.GetUserRequest
+import com.cogoport.plutus.model.invoice.GetUserResponse
+import com.cogoport.plutus.model.invoice.request.IrnGenerationEmailRequest
 import com.cogoport.plutus.model.invoice.response.DunningPdfs
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.micronaut.context.annotation.Value
@@ -91,7 +97,9 @@ class ScheduleServiceImpl(
     private val aresMessagePublisher: AresMessagePublisher,
     private val thirdPartyApiAuditService: ThirdPartyApiAuditService,
     private val cogoCareClient: CogoCareClient,
-    private val aresTokenRepo: AresTokenRepo
+    private val aresTokenRepo: AresTokenRepo,
+    private val organizationStakeholderRepo: OrganizationStakeholderRepo,
+    private val authClient: AuthClient
 ) : ScheduleService {
 
     @Value("\${cogoport.org_base_url}")
@@ -111,7 +119,7 @@ class ScheduleServiceImpl(
             dunningExecutionRepo.updateStatus(executionId, CycleExecutionStatus.COMPLETED.name)
         } catch (err: Exception) {
             dunningExecutionRepo.updateStatus(executionId, CycleExecutionStatus.FAILED.name)
-            logger().error(err.toString())
+            logger().error(err.message)
         }
         // logic for next execution creation
         saveAndScheduleNextDunning(executionDetails!!)
@@ -167,7 +175,7 @@ class ScheduleServiceImpl(
             try {
                 val request = CustomerOutstandingRequest(
                     tradePartyDetailId = tradePartyDetailId,
-                    entityCode = entityCode
+                    entityCode = entityCode.toString()
                 )
                 outstandingData = outstandingService.listCustomerDetails(
                     request
@@ -270,7 +278,7 @@ class ScheduleServiceImpl(
                     emailUsers = try {
                         userList.filter { it.workScopes!!.contains(scopes) } as MutableList<UserData>
                     } catch (err: Exception) {
-                        logger().error(err.toString())
+                        logger().error(err.message)
                         mutableListOf()
                     }
                     if (userList.isNotEmpty()) break
@@ -687,7 +695,7 @@ class ScheduleServiceImpl(
             response = JSONObject(data).getJSONObject("third_party_response").getString("message_id")
         } catch (err: JSONException) {
             response = null
-            logger().info(err.toString())
+            logger().info(err.message)
         }
         return response
     }
@@ -710,6 +718,112 @@ class ScheduleServiceImpl(
             "<a href = $paymentUrl><span style = 'color:white;text-decoration:none;margin-left:15px;'>Make Payment</span></a></div>"
     }
 
+    override suspend fun sendEmailForIrnGeneration(request: IrnGenerationEmailRequest) {
+        val dunningEmailAuditObject = DunningEmailAudit(id = null)
+        try {
+            dunningEmailAuditObject.executionId = request.invoiceId
+            dunningEmailAuditObject.isSuccess = false
+            dunningEmailAuditObject.tradePartyDetailId = UUID.fromString(request.tradePartyDetailId)
+
+            val stakeHoldersData = organizationStakeholderRepo.getOrganisationStakeholdersList(UUID.fromString(request.organizationId))
+
+            val creditControllerData = stakeHoldersData.filter { it.organizationStakeholderType == "CREDIT_CONTROLLER" }
+
+            val salesAgentData = stakeHoldersData.filter { it.organizationStakeholderType == "SALES_AGENT" }
+
+            val salesAgentIds = salesAgentData.map { it.organizationStakeholderId.toString() }
+
+            val creditControllerDetails = authClient.getUsers(GetUserRequest(arrayListOf(creditControllerData?.get(0).organizationStakeholderId.toString())))
+
+            val creditController = creditControllerDetails?.get(0)
+
+            val salesAgentDetails = authClient.getUsers(GetUserRequest(ArrayList(salesAgentIds)))
+
+            val salesAgentEmail = salesAgentDetails?.map { it.userEmail }
+
+            if (salesAgentEmail?.isEmpty()!!) {
+                dunningEmailAuditObject.errorReason = "recipient email not found"
+                createDunningAudit(dunningEmailAuditObject)
+                return
+            }
+
+            if (creditController?.userEmail == null) {
+                dunningEmailAuditObject.errorReason = "sender email not found"
+                createDunningAudit(dunningEmailAuditObject)
+                return
+            }
+
+            if (request.accountNumber == null || request.ifscCode == null) {
+                dunningEmailAuditObject.errorReason = "invalid bank details"
+                createDunningAudit(dunningEmailAuditObject)
+                return
+            }
+
+            var ccEmailList: MutableList<String>? = mutableListOf()
+
+            val variables = getEmailVariablesForIrnGeneration(request, creditController)
+
+            val list = salesAgentEmail.subList(1, salesAgentEmail.size)
+            ccEmailList = list.filterNotNull().toMutableList()
+            val serviceId = UUID.randomUUID().toString()
+            val communicationRequest = CommunicationRequest(
+                recipient = salesAgentEmail[0],
+                type = "email",
+                service = "shipment",
+                serviceId = serviceId,
+                templateName = DunningConstants.EMAIL_TEMPLATE_FOR_IRN_GENERATION,
+                sender = creditController.userEmail,
+                ccMails = ccEmailList,
+                organizationId = request.organizationId,
+                notifyOnBounce = true,
+                replyToMessageId = null,
+                variables = variables
+            )
+            var communicationResponse: CommunicationResp? = null
+            try {
+                communicationResponse = railsClient.createCommunication(communicationRequest)
+                if (communicationResponse?.id == null) {
+                    throw AresException(AresError.ERR_1001, "mail could not be sent")
+                }
+            } catch (err: Exception) {
+                dunningEmailAuditObject.errorReason = err.toString()
+                createDunningAudit(dunningEmailAuditObject)
+                recordFailedThirdPartyApiAudits(request.invoiceId!!, communicationRequest.toString(), err.toString(), "create_communication")
+            }
+
+            try {
+                dunningEmailAuditObject.isSuccess = true
+                dunningEmailAuditObject.communicationId = UUID.fromString(communicationResponse?.id)
+                createDunningAudit(dunningEmailAuditObject)
+            } catch (err: Exception) {
+                logger().info("mail sent to user ${salesAgentEmail[0]} and customer ${request.organizationId} and invoice ${request.invoiceId} but after operation could not happend with communicationId ${communicationResponse?.id} because $err")
+            }
+        } catch (err: Exception) {
+            dunningEmailAuditObject.communicationId = null
+            dunningEmailAuditObject.isSuccess = false
+            dunningEmailAuditObject.errorReason = "dunning could'nt process $err"
+            createDunningAudit(dunningEmailAuditObject)
+        }
+    }
+
+    private fun getEmailVariablesForIrnGeneration(
+        request: IrnGenerationEmailRequest,
+        creditController: GetUserResponse,
+    ): CommunicationVariables {
+        return CommunicationVariables(
+            bankName = request.bankName,
+            accountNumber = request.accountNumber,
+            creditControllerName = creditController.userName,
+            creditControllerMobileNumber = creditController.mobileNumber,
+            creditControllerMobileCode = creditController.mobileCountryCode,
+            creditControllerEmail = creditController.userEmail,
+            beneficiaryName = request.beneficiaryName,
+            ifscCode = request.ifscCode,
+            swiftCode = request.swiftCode,
+            invoiceUrl = request.invoicePdfUrl
+        )
+    }
+
     private suspend fun createDunningAudit(dunningEmailAuditObj: DunningEmailAudit): Long {
         dunningEmailAuditObj.createdAt = null
         val dunningEmailAudit = dunningEmailAuditRepo.save(
@@ -717,6 +831,7 @@ class ScheduleServiceImpl(
         )
         return dunningEmailAudit.id!!
     }
+
     private suspend fun recordFailedThirdPartyApiAudits(executionId: Long, request: String, response: String, apiName: String) {
         thirdPartyApiAuditService.createAudit(
             ThirdPartyApiAudit(

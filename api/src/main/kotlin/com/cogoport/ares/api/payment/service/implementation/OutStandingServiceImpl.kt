@@ -17,6 +17,7 @@ import com.cogoport.ares.api.payment.mapper.OutstandingAgeingMapper
 import com.cogoport.ares.api.payment.mapper.SupplierOrgOutstandingMapper
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentRequest
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentResponse
+import com.cogoport.ares.api.payment.model.requests.OutstandingVisualizationRequest
 import com.cogoport.ares.api.payment.model.response.TopServiceProviders
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepo
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
@@ -62,6 +63,8 @@ import com.cogoport.ares.model.payment.response.BillOutStandingAgeingResponse
 import com.cogoport.ares.model.payment.response.CustomerInvoiceResponse
 import com.cogoport.ares.model.payment.response.CustomerMonthlyPayment
 import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
+import com.cogoport.ares.model.payment.response.OpenInvoiceDetails
+import com.cogoport.ares.model.payment.response.OutStandingReportDetails
 import com.cogoport.ares.model.payment.response.OutstandingAgeingResponse
 import com.cogoport.ares.model.payment.response.PayableStatsOpenSearchResponse
 import com.cogoport.ares.model.payment.response.PayblesInfoRes
@@ -73,6 +76,8 @@ import com.cogoport.brahma.excel.utils.ExcelSheetReader
 import com.cogoport.brahma.opensearch.Client
 import com.cogoport.brahma.opensearch.Configuration
 import com.cogoport.brahma.s3.client.S3Client
+import com.cogoport.plutus.client.PlutusClient
+import com.cogoport.plutus.model.invoice.response.OsReportData
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.micronaut.context.annotation.Value
@@ -86,10 +91,13 @@ import org.opensearch.client.opensearch.core.SearchResponse
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.sql.Timestamp
+import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.Period
 import java.time.Year
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.UUID
@@ -143,8 +151,14 @@ class OutStandingServiceImpl : OutStandingService {
     @Value("\${aws.s3.bucket}")
     private lateinit var s3Bucket: String
 
+    @Value("\${server.base-url}")
+    private lateinit var baseUrl: String
+
     @Inject
     lateinit var s3Client: S3Client
+
+    @Inject
+    lateinit var plutusClient: PlutusClient
 
     private fun validateInput(request: OutstandingListRequest) {
         try {
@@ -375,7 +389,7 @@ class OutStandingServiceImpl : OutStandingService {
                 }
             }
         } catch (error: Exception) {
-            logger().error(error.toString())
+            logger().error(error.message)
             logger().error(error.stackTraceToString())
         }
     }
@@ -585,6 +599,10 @@ class OutStandingServiceImpl : OutStandingService {
                 )
                 getCallPriority(customerOutstanding)
                 Client.addDocument("customer_outstanding_$entity", request.organizationId!!, customerOutstanding, true)
+
+                if (entity in listOf(101, 301)) {
+                    Client.addDocument("customer_outstanding_101_301", request.organizationId!!, customerOutstanding, true)
+                }
             }
         }
     }
@@ -851,6 +869,10 @@ class OutStandingServiceImpl : OutStandingService {
                         )
                         getCallPriority(openSearchData)
                         Client.addDocument("customer_outstanding_$entity", id, openSearchData, true)
+
+                        if (entity in listOf(101, 301)) {
+                            Client.addDocument("customer_outstanding_101_301", id, openSearchData, true)
+                        }
                     }
                 }
             }
@@ -861,7 +883,8 @@ class OutStandingServiceImpl : OutStandingService {
     }
 
     override suspend fun listCustomerDetails(request: CustomerOutstandingRequest): ResponseList<CustomerOutstandingDocumentResponse?> {
-        val index = "customer_outstanding_${request.entityCode}"
+        val entityCode = request.entityCode
+        val index = "customer_outstanding_$entityCode"
 
         val response = OpenSearchClient().listCustomerOutstanding(request, index)
         var list: List<CustomerOutstandingDocumentResponse?> = listOf()
@@ -1044,12 +1067,10 @@ class OutStandingServiceImpl : OutStandingService {
         }
     }
 
-    override suspend fun getTopTenServiceProviders(request: SupplierOutstandingRequest): TopServiceProviders {
-        if (request.flag == "overall") {
-            throw AresException(AresError.ERR_1003, "Entity not found")
-        }
-        val res = listSupplierDetails(request)
-        return TopServiceProviders(list = res.list, currency = AresConstants.LEDGER_CURRENCY.get(request.flag?.toInt()))
+    override suspend fun getTopTenServiceProviders(request: SupplierOutstandingRequestV2): TopServiceProviders {
+
+        val res = listSupplierDetailsV2(request)
+        return TopServiceProviders(list = res.list, currency = AresConstants.LEDGER_CURRENCY.get(request.entityCode))
     }
 
     override suspend fun getPayableOfOrganization(request: AccPayablesOfOrgReq): List<AccPayablesOfOrgRes> {
@@ -1232,37 +1253,82 @@ class OutStandingServiceImpl : OutStandingService {
         customerData.totalCallPriorityScore = callPriorityScores.geTotalCallPriority()
     }
 
-    override suspend fun getOverallCustomerOutstanding(entityCode: Int): HashMap<String, EntityWiseOutstandingBucket> {
+    override suspend fun getOverallCustomerOutstanding(entityCodes: String?): HashMap<String, EntityWiseOutstandingBucket> {
+        val entityCodes: List<Int>? = entityCodes?.split("_")?.map { it.toInt() }
         val defaultersOrgIds = defaultedBusinessPartnersService.listTradePartyDetailIds()
-        val openInvoiceQueryResponse = accountUtilizationRepo.getEntityWiseOutstandingBucket(listOf(entityCode), listOf(AccountType.SINV, AccountType.SREIMB), listOf(AccMode.AR), defaultersOrgIds)
-        val creditNoteQueryResponse = accountUtilizationRepo.getEntityWiseOutstandingBucket(listOf(entityCode), listOf(AccountType.SCN, AccountType.SREIMBCN), listOf(AccMode.AR), defaultersOrgIds)
+        val openInvoiceQueryResponse = accountUtilizationRepo.getEntityWiseOutstandingBucket(entityCodes, listOf(AccountType.SINV, AccountType.SREIMB), listOf(AccMode.AR), defaultersOrgIds)
+        val creditNoteQueryResponse = accountUtilizationRepo.getEntityWiseOutstandingBucket(entityCodes, listOf(AccountType.SCN, AccountType.SREIMBCN), listOf(AccMode.AR), defaultersOrgIds)
 
         val onAccountTypeList = AresConstants.onAccountAROutstandingAccountTypeList
         val paymentAccountTypeList = AresConstants.paymentAROutstandingAccountTypeList
         val jvAccountTypeList = AresConstants.jvAROutstandingAccountTypeList
 
-        val onAccountRecQueryResponse = accountUtilizationRepo.getEntityWiseOnAccountBucket(listOf(entityCode), onAccountTypeList, listOf(AccMode.AR), paymentAccountTypeList, jvAccountTypeList, defaultersOrgIds)
-
-        val totalOutstandingBucket = EntityWiseOutstandingBucket(
-            entityCode = openInvoiceQueryResponse.entityCode,
-            ledCurrency = openInvoiceQueryResponse.ledCurrency,
-            notDueLedAmount = openInvoiceQueryResponse.notDueLedAmount.plus(creditNoteQueryResponse.notDueLedAmount).plus(onAccountRecQueryResponse.notDueLedAmount),
-            thirtyLedAmount = openInvoiceQueryResponse.thirtyLedAmount.plus(creditNoteQueryResponse.thirtyLedAmount).plus(onAccountRecQueryResponse.thirtyLedAmount),
-            fortyFiveLedAmount = openInvoiceQueryResponse.fortyFiveLedAmount.plus(creditNoteQueryResponse.fortyFiveLedAmount).plus(onAccountRecQueryResponse.fortyFiveLedAmount),
-            sixtyLedAmount = openInvoiceQueryResponse.sixtyLedAmount.plus(creditNoteQueryResponse.sixtyLedAmount).plus(onAccountRecQueryResponse.sixtyLedAmount),
-            ninetyLedAmount = openInvoiceQueryResponse.ninetyLedAmount.plus(creditNoteQueryResponse.ninetyLedAmount).plus(onAccountRecQueryResponse.ninetyLedAmount),
-            oneEightyLedAmount = openInvoiceQueryResponse.oneEightyLedAmount.plus(creditNoteQueryResponse.oneEightyLedAmount).plus(onAccountRecQueryResponse.oneEightyLedAmount),
-            oneEightyPlusLedAmount = openInvoiceQueryResponse.oneEightyPlusLedAmount.plus(creditNoteQueryResponse.oneEightyPlusLedAmount).plus(onAccountRecQueryResponse.oneEightyPlusLedAmount),
-            threeSixtyFiveLedAmount = openInvoiceQueryResponse.threeSixtyFiveLedAmount.plus(creditNoteQueryResponse.threeSixtyFiveLedAmount).plus(onAccountRecQueryResponse.threeSixtyFiveLedAmount),
-            threeSixtyFivePlusLedAmount = openInvoiceQueryResponse.threeSixtyFivePlusLedAmount.plus(creditNoteQueryResponse.threeSixtyFivePlusLedAmount).plus(onAccountRecQueryResponse.threeSixtyFivePlusLedAmount),
-            totalLedAmount = openInvoiceQueryResponse.totalLedAmount.plus(creditNoteQueryResponse.totalLedAmount).plus(onAccountRecQueryResponse.totalLedAmount)
-        )
+        val onAccountRecQueryResponse = accountUtilizationRepo.getEntityWiseOnAccountBucket(entityCodes, onAccountTypeList, listOf(AccMode.AR), paymentAccountTypeList, jvAccountTypeList, defaultersOrgIds)
 
         val responseMap = HashMap<String, EntityWiseOutstandingBucket>()
-        responseMap["openInvoiceBucket"] = openInvoiceQueryResponse
-        responseMap["creditNoteBucket"] = creditNoteQueryResponse
-        responseMap["onAccountBucket"] = onAccountRecQueryResponse
-        responseMap["totalOutstandingBucket"] = totalOutstandingBucket
+        openInvoiceQueryResponse.groupBy { it.ledCurrency }.entries.map { (k, v) ->
+
+            val creditNoteData = creditNoteQueryResponse.filter { it.ledCurrency == k }
+            val onAccountData = onAccountRecQueryResponse.filter { it.ledCurrency == k }
+            responseMap["totalOutstandingBucket"] = EntityWiseOutstandingBucket(
+                entityCode = v.joinToString("_") { it.entityCode },
+                ledCurrency = k,
+                notDueLedAmount = v.sumOf { it.notDueLedAmount }.plus(creditNoteData.sumOf { it.notDueLedAmount }).plus(onAccountData.sumOf { it.notDueLedAmount }),
+                thirtyLedAmount = v.sumOf { it.thirtyLedAmount }.plus(creditNoteData.sumOf { it.thirtyLedAmount }).plus(onAccountData.sumOf { it.thirtyLedAmount }),
+                fortyFiveLedAmount = v.sumOf { it.fortyFiveLedAmount }.plus(creditNoteData.sumOf { it.fortyFiveLedAmount }).plus(onAccountData.sumOf { it.fortyFiveLedAmount }),
+                sixtyLedAmount = v.sumOf { it.sixtyLedAmount }.plus(creditNoteData.sumOf { it.sixtyLedAmount }).plus(onAccountData.sumOf { it.sixtyLedAmount }),
+                ninetyLedAmount = v.sumOf { it.ninetyLedAmount }.plus(creditNoteData.sumOf { it.ninetyLedAmount }).plus(onAccountData.sumOf { it.ninetyLedAmount }),
+                oneEightyLedAmount = v.sumOf { it.oneEightyLedAmount }.plus(creditNoteData.sumOf { it.oneEightyLedAmount }).plus(onAccountData.sumOf { it.oneEightyLedAmount }),
+                oneEightyPlusLedAmount = v.sumOf { it.oneEightyPlusLedAmount }.plus(creditNoteData.sumOf { it.oneEightyPlusLedAmount }).plus(onAccountData.sumOf { it.oneEightyPlusLedAmount }),
+                threeSixtyFiveLedAmount = v.sumOf { it.threeSixtyFiveLedAmount }.plus(creditNoteData.sumOf { it.threeSixtyFiveLedAmount }).plus(onAccountData.sumOf { it.threeSixtyFiveLedAmount }),
+                threeSixtyFivePlusLedAmount = v.sumOf { it.threeSixtyFivePlusLedAmount }.plus(creditNoteData.sumOf { it.threeSixtyFivePlusLedAmount }).plus(onAccountData.sumOf { it.threeSixtyFivePlusLedAmount }),
+                totalLedAmount = v.sumOf { it.totalLedAmount }.plus(creditNoteData.sumOf { it.totalLedAmount }).plus(onAccountData.sumOf { it.totalLedAmount })
+            )
+
+            responseMap["openInvoiceBucket"] = EntityWiseOutstandingBucket(
+                entityCode = v.joinToString("_") { it.entityCode },
+                ledCurrency = k,
+                notDueLedAmount = v.sumOf { it.notDueLedAmount },
+                thirtyLedAmount = v.sumOf { it.thirtyLedAmount }.plus(creditNoteData.sumOf { it.thirtyLedAmount }).plus(onAccountData.sumOf { it.thirtyLedAmount }),
+                fortyFiveLedAmount = v.sumOf { it.fortyFiveLedAmount },
+                sixtyLedAmount = v.sumOf { it.sixtyLedAmount },
+                ninetyLedAmount = v.sumOf { it.ninetyLedAmount },
+                oneEightyLedAmount = v.sumOf { it.oneEightyLedAmount },
+                oneEightyPlusLedAmount = v.sumOf { it.oneEightyPlusLedAmount },
+                threeSixtyFiveLedAmount = v.sumOf { it.threeSixtyFiveLedAmount },
+                threeSixtyFivePlusLedAmount = v.sumOf { it.threeSixtyFivePlusLedAmount },
+                totalLedAmount = v.sumOf { it.totalLedAmount }
+            )
+
+            responseMap["creditNoteBucket"] = EntityWiseOutstandingBucket(
+                entityCode = v.joinToString("_") { it.entityCode },
+                ledCurrency = k,
+                notDueLedAmount = creditNoteData.sumOf { it.notDueLedAmount },
+                thirtyLedAmount = creditNoteData.sumOf { it.thirtyLedAmount },
+                fortyFiveLedAmount = creditNoteData.sumOf { it.fortyFiveLedAmount },
+                sixtyLedAmount = creditNoteData.sumOf { it.sixtyLedAmount },
+                ninetyLedAmount = creditNoteData.sumOf { it.ninetyLedAmount },
+                oneEightyLedAmount = creditNoteData.sumOf { it.oneEightyLedAmount },
+                oneEightyPlusLedAmount = creditNoteData.sumOf { it.oneEightyPlusLedAmount },
+                threeSixtyFiveLedAmount = creditNoteData.sumOf { it.threeSixtyFiveLedAmount },
+                threeSixtyFivePlusLedAmount = creditNoteData.sumOf { it.threeSixtyFivePlusLedAmount },
+                totalLedAmount = creditNoteData.sumOf { it.totalLedAmount }
+            )
+            responseMap["onAccountBucket"] = EntityWiseOutstandingBucket(
+                entityCode = v.joinToString("_") { it.entityCode },
+                ledCurrency = k,
+                notDueLedAmount = onAccountData.sumOf { it.notDueLedAmount },
+                thirtyLedAmount = onAccountData.sumOf { it.thirtyLedAmount },
+                fortyFiveLedAmount = onAccountData.sumOf { it.fortyFiveLedAmount },
+                sixtyLedAmount = onAccountData.sumOf { it.sixtyLedAmount },
+                ninetyLedAmount = onAccountData.sumOf { it.ninetyLedAmount },
+                oneEightyLedAmount = onAccountData.sumOf { it.oneEightyLedAmount },
+                oneEightyPlusLedAmount = onAccountData.sumOf { it.oneEightyPlusLedAmount },
+                threeSixtyFiveLedAmount = onAccountData.sumOf { it.threeSixtyFiveLedAmount },
+                threeSixtyFivePlusLedAmount = onAccountData.sumOf { it.threeSixtyFivePlusLedAmount },
+                totalLedAmount = onAccountData.sumOf { it.totalLedAmount }
+            )
+        }
 
         return responseMap
     }
@@ -1456,5 +1522,83 @@ class OutStandingServiceImpl : OutStandingService {
         }
 
         return excelFileUrl
+    }
+
+    override suspend fun getDistinctOrgIds(accMode: AccMode?): List<UUID>? {
+        return accountUtilizationRepo.getDistinctOrgIds(accMode)
+    }
+
+    override suspend fun getOutstandingDataBifurcation(request: OutstandingVisualizationRequest): Any {
+
+        return 1
+    }
+
+    override suspend fun getOpenInvoices(organizationId: UUID): String {
+        var openInvoiceDetails = accountUtilizationRepository.getOrgDetails(organizationId)
+        val invoiceIds: List<Long> = openInvoiceDetails.filter { it.accType == "SINV" || it.accType == "SCN" }.map { it.documentNo }
+
+        val invoiceDetails: List<OsReportData?> = plutusClient.getOpenInvoiceData(invoiceIds)
+        val outStandingReport: MutableList<OutStandingReportDetails?> = mutableListOf()
+
+        for (invoice in openInvoiceDetails) {
+            val invoiceDetail = invoiceDetails.find { it?.invoiceId == invoice.documentNo }
+            val outStandingReportDetail = getDetailsForExcel(invoice, invoiceDetail)
+            outStandingReport.add(outStandingReportDetail)
+        }
+
+        val excelName = "OS REPORT" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_hhmmss"))
+        val file = ExcelUtils.writeIntoExcel(outStandingReport as List<Any>, excelName, "open invoices report")
+        val url = s3Client.upload(s3Bucket, "$excelName.xlsx", file!!)
+        val aresDocument = AresDocument(
+            documentUrl = url.toString(),
+            documentName = excelName,
+            documentType = "xlsx",
+            uploadedBy = AresConstants.ARES_USER_ID
+        )
+        aresDocumentRepository.save(aresDocument)
+
+        return url.toString()
+    }
+    fun Date.toLocalDate(): LocalDate {
+        return this.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+    }
+
+    private fun getDetailsForExcel(openInvoiceDetails: OpenInvoiceDetails, invoiceDetails: OsReportData?): OutStandingReportDetails {
+
+        val daysOverdue = openInvoiceDetails.dueDate?.let {
+            val days = Period.between(it.toLocalDate(), Date().toLocalDate()).days
+            if (days >= 0) days else 0
+        } ?: 0
+
+        return OutStandingReportDetails(
+            organizationName = openInvoiceDetails.organizationName,
+            invoiceNumber = openInvoiceDetails.documentNo,
+            entityCode = openInvoiceDetails.entityCode,
+            currency = openInvoiceDetails.currency,
+            invoiceAmount = openInvoiceDetails.amountCurr,
+            openInvoiceAmount = (openInvoiceDetails.amountCurr.toBigDecimal() - openInvoiceDetails.payCurr.toBigDecimal()).toString(),
+            ledgerAmount = openInvoiceDetails.amountLoc,
+            invoiceDate = invoiceDetails?.invoiceDate?.let { SimpleDateFormat("dd-MM-yyyy").format(it) },
+            creditDays = invoiceDetails?.creditDays?.toString() ?: "0",
+            dueDate = openInvoiceDetails.dueDate.toString(),
+            daysOverdue = daysOverdue.toString(),
+            status = openInvoiceDetails.status,
+            invoiceUrl = invoiceDetails?.invoicePdfUrl,
+            serviceType = openInvoiceDetails.serviceType,
+            bl = invoiceDetails?.bl,
+            blDocNo = invoiceDetails?.blDocumentNo,
+            deliveryOrder = invoiceDetails?.deliveryOrder,
+            deliveryOrderDocumentNumber = invoiceDetails?.deliveryOrderDocNo,
+            jobNumber = invoiceDetails?.jobNumber,
+            commercialInvoice = invoiceDetails?.commercialInvoice,
+            airWayBill = invoiceDetails?.airWayBill,
+            eta = invoiceDetails?.eta?.let { SimpleDateFormat("dd-MM-yyyy").format(SimpleDateFormat("yyyy-MM-dd").parse(it)) },
+            etd = invoiceDetails?.etd?.let { SimpleDateFormat("dd-MM-yyyy").format(SimpleDateFormat("yyyy-MM-dd").parse(it)) },
+            remarks = null,
+            address = invoiceDetails?.address,
+            city = invoiceDetails?.city,
+            pincode = invoiceDetails?.pincode
+
+        )
     }
 }

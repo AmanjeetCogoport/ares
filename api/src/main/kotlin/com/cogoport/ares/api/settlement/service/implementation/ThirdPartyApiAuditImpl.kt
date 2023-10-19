@@ -28,6 +28,6 @@ class ThirdPartyApiAuditImpl : ThirdPartyApiAuditService {
                 updatedAt = null
             )
         )
-        return false
+        return true
     }
 }
