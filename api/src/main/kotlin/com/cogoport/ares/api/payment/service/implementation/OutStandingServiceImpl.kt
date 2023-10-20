@@ -1629,6 +1629,8 @@ class OutStandingServiceImpl : OutStandingService {
             createOutstandingDetails(request, orgLevelData[0])
         }
 
+        request.lastUpdatedAt = Timestamp.valueOf(LocalDateTime.now())
+
         Client.updateDocument(AresConstants.CUSTOMER_OUTSTANDING_V2, "${request.organizationId}_$entityCodes", request)
     }
     private suspend fun createOutstandingDetails(customerOutstanding: CustomerOutstandingDocumentResponseV2?, outstanding: ArOutstandingData): CustomerOutstandingDocumentResponseV2 {
