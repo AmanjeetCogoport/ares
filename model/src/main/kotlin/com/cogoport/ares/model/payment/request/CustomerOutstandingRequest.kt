@@ -17,7 +17,7 @@ data class CustomerOutstandingRequest(
     var countryId: List<UUID>? = null,
     var companyType: String? = null,
     var entityCode: String? = "101",
-    var sortBy: String? = "totalOutstandingLedgerAmount",
+    var sortBy: String? = "totalOutstanding",
     var sortType: String? = "Desc",
     var page: Int? = 1,
     var limit: Int? = 10

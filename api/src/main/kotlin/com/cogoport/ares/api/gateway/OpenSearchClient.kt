@@ -977,7 +977,7 @@ class OpenSearchClient {
                         if (request.sageId != null) {
                             b.must { s ->
                                 s.queryString { qs ->
-                                    qs.fields(mutableListOf("sageId.keyword")).query("*${request.sageId}*")
+                                    qs.fields(mutableListOf("sageId")).query("*${request.sageId}*")
                                         .lenient(true)
                                         .allowLeadingWildcard(true)
                                         .defaultOperator(Operator.And)
@@ -988,7 +988,7 @@ class OpenSearchClient {
                         if (request.tradePartyDetailId != null) {
                             b.must { s ->
                                 s.match { v ->
-                                    v.field("organizationId.keyword").query(FieldValue.of(request.tradePartyDetailId.toString()))
+                                    v.field("organizationId").query(FieldValue.of(request.tradePartyDetailId.toString()))
                                 }
                             }
                             b
@@ -996,7 +996,7 @@ class OpenSearchClient {
                         if (request.organizationSerialId != null) {
                             b.must { s ->
                                 s.queryString { qs ->
-                                    qs.fields(mutableListOf("organizationSerialId.keyword")).query("*${request.organizationSerialId}*")
+                                    qs.fields(mutableListOf("organizationSerialId")).query("*${request.organizationSerialId}*")
                                         .lenient(true)
                                         .allowLeadingWildcard(true)
                                         .defaultOperator(Operator.And)
@@ -1007,7 +1007,7 @@ class OpenSearchClient {
                         if (request.tradePartySerialId != null) {
                             b.must { s ->
                                 s.queryString { qs ->
-                                    qs.fields(mutableListOf("tradePartySerialId.keyword")).query("*${request.tradePartySerialId}*")
+                                    qs.fields(mutableListOf("tradePartySerialId")).query("*${request.tradePartySerialId}*")
                                         .lenient(true)
                                         .allowLeadingWildcard(true)
                                         .defaultOperator(Operator.And)
@@ -1050,7 +1050,7 @@ class OpenSearchClient {
                         if (request.tradePartyDetailIds != null) {
                             b.must { s ->
                                 s.terms { v ->
-                                    v.field("organizationId.keyword").terms(
+                                    v.field("organizationId").terms(
                                         TermsQueryField.of { a ->
                                             a.value(
                                                 request.tradePartyDetailIds?.map {
@@ -1082,7 +1082,7 @@ class OpenSearchClient {
                         if (request.countryId != null) {
                             b.must { s ->
                                 s.terms { v ->
-                                    v.field("countryId.keyword").terms(
+                                    v.field("countryId").terms(
                                         TermsQueryField.of { a ->
                                             a.value(
                                                 request.countryId?.map {
@@ -1098,7 +1098,7 @@ class OpenSearchClient {
                         if (request.companyType != null) {
                             b.must { t ->
                                 t.match { v ->
-                                    v.field("companyType.keyword").query(FieldValue.of(request.companyType))
+                                    v.field("companyType").query(FieldValue.of(request.companyType))
                                 }
                             }
                             b
@@ -1106,7 +1106,7 @@ class OpenSearchClient {
                         if (request.entityCode != null) {
                             b.must { s ->
                                 s.terms { v ->
-                                    v.field("entityCode.keyword").terms(
+                                    v.field("entityCode").terms(
                                         TermsQueryField.of { a ->
                                             a.value(
                                                 request.entityCode!!.split("_").map {
