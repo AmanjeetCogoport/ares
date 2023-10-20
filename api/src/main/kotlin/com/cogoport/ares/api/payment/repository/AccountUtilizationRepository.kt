@@ -1634,7 +1634,7 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
                     0
                 END) AS on_account_three_sixty_five_plus_count,
             COALESCE(sum(
-            CASE WHEN aau.created_at >= '2023-04-01' AND acc_type::varchar in (:invoiceAccType) THEN
+            CASE WHEN acc_type::varchar in (:invoiceAccType) THEN
                 sign_flag * (amount_loc - pay_loc)
             ELSE
                 0

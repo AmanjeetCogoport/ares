@@ -283,7 +283,7 @@ class Scheduler(
         }
     }
 
-    @Scheduled(cron = "0 30 6,18 * * *")
+    @Scheduled(cron = "0 30 3,15 * * *")
     fun createArOutstandingData() {
         if (schedulerEnabled) {
             runBlocking {

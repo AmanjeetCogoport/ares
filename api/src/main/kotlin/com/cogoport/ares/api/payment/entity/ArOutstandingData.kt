@@ -63,7 +63,7 @@ data class ArOutstandingData(
     val onAccountSixtyCount: Long,
     @JsonProperty("on_account_ninety_count")
     val onAccountNinetyCount: Long,
-    @JsonProperty("ona_ccount_one_eighty_count")
+    @JsonProperty("on_account_one_eighty_amount")
     val onAccountOneEightyCount: Long,
     @JsonProperty("on_account_three_sixty_five_count")
     val onAccountThreeSixtyFiveCount: Long,

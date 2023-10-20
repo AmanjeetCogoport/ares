@@ -939,9 +939,9 @@ class OpenSearchClient {
             SortOptions.Builder().field { f ->
                 when {
                     callPriority -> f.field("totalCallPriorityScore").order(SortOrder.valueOf(request.sortType.toString()))
-                    totalOutstanding -> f.field("totalOutstanding.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString()))
-                    onAccountPayment -> f.field("onAccount.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString()))
-                    creditNote -> f.field("creditNote.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString()))
+                    totalOutstanding -> f.field("totalOutstanding").order(SortOrder.valueOf(request.sortType.toString()))
+                    onAccountPayment -> f.field("onAccountAmount").order(SortOrder.valueOf(request.sortType.toString()))
+                    creditNote -> f.field("creditNoteAmount").order(SortOrder.valueOf(request.sortType.toString()))
                     notDue -> f.field("openInvoiceAgeingBucket.notDue.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString()))
                     thirty -> f.field("openInvoiceAgeingBucket.thirty.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString()))
                     sixty -> f.field("openInvoiceAgeingBucket.sixty.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString()))
