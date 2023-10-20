@@ -50,5 +50,23 @@ data class CommunicationVariables(
     @JsonProperty("from_date")
     var fromDate: String? = null,
     @JsonProperty("to_date")
-    var toDate: String? = null
+    var toDate: String? = null,
+    @JsonProperty("bank_name")
+    var bankName: String? = null,
+    @JsonProperty("account_number")
+    var accountNumber: String? = null,
+    @JsonProperty("credit_controller_name")
+    var creditControllerName: String? = null,
+    @JsonProperty("credit_controller_email")
+    var creditControllerEmail: String? = null,
+    @JsonProperty("credit_controller_mobile_code")
+    var creditControllerMobileCode: String? = null,
+    @JsonProperty("credit_controller_mobile_number")
+    var creditControllerMobileNumber: String? = null,
+    @JsonProperty("beneficiary_name")
+    var beneficiaryName: String? = null,
+    @JsonProperty("ifsc_code")
+    var ifscCode: String? = null,
+    @JsonProperty("swift_code")
+    var swiftCode: String? = null
 )

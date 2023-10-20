@@ -1,6 +1,7 @@
 package com.cogoport.ares.api.events
 
 import com.cogoport.ares.api.common.client.AuthClient
+import com.cogoport.ares.api.common.models.FindRecordByDocumentNo
 import com.cogoport.ares.api.dunning.model.request.CycleExecutionProcessReq
 import com.cogoport.ares.api.dunning.model.request.PaymentReminderReq
 import com.cogoport.ares.api.dunning.service.interfaces.DunningHelperService
@@ -42,6 +43,7 @@ import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import com.cogoport.ares.model.settlement.request.PostSettlementRequest
 import com.cogoport.brahma.hashids.Hashids
 import com.cogoport.brahma.rabbitmq.model.RabbitmqEventLogDocument
+import com.cogoport.plutus.model.invoice.request.IrnGenerationEmailRequest
 import com.rabbitmq.client.Envelope
 import io.micronaut.messaging.annotation.MessageBody
 import io.micronaut.rabbitmq.annotation.Queue
@@ -111,6 +113,11 @@ class AresMessageConsumer {
     @Queue("ares-unfreeze-credit-consumption", prefetch = 1)
     fun unfreezeCreditConsumption(request: Settlement) = runBlocking {
         settlementService.sendKnockOffDataToCreditConsumption(request)
+    }
+
+    @Queue("ares-unfreeze-debit-consumption", prefetch = 1)
+    fun unfreezeDebitConsumption(request: FindRecordByDocumentNo) = runBlocking {
+        settlementService.sendInvoiceDataToDebitConsumption(request)
     }
 
     @Queue("ares-receivables-outstanding-data", prefetch = 1)
@@ -191,6 +198,11 @@ class AresMessageConsumer {
     @Queue("ares-migrate-gl-codes", prefetch = 1)
     fun migrateGLCode(req: GlCodeMaster) = runBlocking {
         paymentMigrationWrapper.createGLCode(req)
+    }
+
+    @Queue("ares-upsert-migrate-glcodes", prefetch = 1)
+    fun upsertMigrateGLCode(req: GlCodeMaster) = runBlocking {
+        paymentMigrationWrapper.upsertMigrateGLCode(req)
     }
 
     @Queue("ares-post-jv-to-sage", prefetch = 1)
@@ -296,5 +308,10 @@ class AresMessageConsumer {
     @Queue("ares-migrate-payment-amount", prefetch = 1)
     fun migratePaymentAmount(id: Long) = runBlocking {
         paymentMigration.mismatchAmount(id)
+    }
+
+    @Queue("ares-send-email-for-irn-generation", prefetch = 1)
+    fun sendEmailForIrnGeneration(irnGenerationEmailRequest: IrnGenerationEmailRequest) = runBlocking {
+        scheduleService.sendEmailForIrnGeneration(irnGenerationEmailRequest)
     }
 }

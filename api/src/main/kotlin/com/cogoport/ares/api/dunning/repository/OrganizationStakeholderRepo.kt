@@ -77,4 +77,20 @@ interface OrganizationStakeholderRepo : CoroutineCrudRepository<OrganizationStak
     """
     )
     suspend fun getOrgSegment(organizationId: UUID): String?
+
+    @NewSpan
+    @Query(
+        """
+            SELECT
+                *
+            FROM
+                organization_stakeholders
+            WHERE
+                organization_id::UUID = :organizationId
+                AND organization_stakeholder_type IN ('CREDIT_CONTROLLER', 'SALES_AGENT') AND is_active = TRUE
+            """
+    )
+    suspend fun getOrganisationStakeholdersList(
+        organizationId: UUID,
+    ): List<OrganizationStakeholder>
 }
