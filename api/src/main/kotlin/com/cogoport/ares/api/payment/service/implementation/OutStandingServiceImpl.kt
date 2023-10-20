@@ -69,6 +69,8 @@ import com.cogoport.ares.model.payment.response.CustomerInvoiceResponse
 import com.cogoport.ares.model.payment.response.CustomerMonthlyPayment
 import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
 import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponseV2
+import com.cogoport.ares.model.payment.response.OpenInvoiceDetails
+import com.cogoport.ares.model.payment.response.OutStandingReportDetails
 import com.cogoport.ares.model.payment.response.OutstandingAgeingResponse
 import com.cogoport.ares.model.payment.response.PayableStatsOpenSearchResponse
 import com.cogoport.ares.model.payment.response.PayblesInfoRes
@@ -80,6 +82,8 @@ import com.cogoport.brahma.excel.utils.ExcelSheetReader
 import com.cogoport.brahma.opensearch.Client
 import com.cogoport.brahma.opensearch.Configuration
 import com.cogoport.brahma.s3.client.S3Client
+import com.cogoport.plutus.client.PlutusClient
+import com.cogoport.plutus.model.invoice.response.OsReportData
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.micronaut.context.annotation.Value
@@ -93,10 +97,13 @@ import org.opensearch.client.opensearch.core.SearchResponse
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.sql.Timestamp
+import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.Period
 import java.time.Year
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.UUID
@@ -150,8 +157,14 @@ class OutStandingServiceImpl : OutStandingService {
     @Value("\${aws.s3.bucket}")
     private lateinit var s3Bucket: String
 
+    @Value("\${server.base-url}")
+    private lateinit var baseUrl: String
+
     @Inject
     lateinit var s3Client: S3Client
+
+    @Inject
+    lateinit var plutusClient: PlutusClient
 
     @Inject
     lateinit var aresMessagePublisher: AresMessagePublisher
@@ -1526,6 +1539,75 @@ class OutStandingServiceImpl : OutStandingService {
 
     override suspend fun getOutstandingDataBifurcation(request: OutstandingVisualizationRequest): Any {
         return 1
+    }
+
+    override suspend fun getOpenInvoices(organizationId: UUID): String {
+        var openInvoiceDetails = accountUtilizationRepository.getOrgDetails(organizationId)
+        val invoiceIds: List<Long> = openInvoiceDetails.filter { it.accType == "SINV" || it.accType == "SCN" }.map { it.documentNo }
+
+        val invoiceDetails: List<OsReportData?> = plutusClient.getOpenInvoiceData(invoiceIds)
+        val outStandingReport: MutableList<OutStandingReportDetails?> = mutableListOf()
+
+        for (invoice in openInvoiceDetails) {
+            val invoiceDetail = invoiceDetails.find { it?.invoiceId == invoice.documentNo }
+            val outStandingReportDetail = getDetailsForExcel(invoice, invoiceDetail)
+            outStandingReport.add(outStandingReportDetail)
+        }
+
+        val excelName = "OS REPORT" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_hhmmss"))
+        val file = ExcelUtils.writeIntoExcel(outStandingReport as List<Any>, excelName, "open invoices report")
+        val url = s3Client.upload(s3Bucket, "$excelName.xlsx", file!!)
+        val aresDocument = AresDocument(
+            documentUrl = url.toString(),
+            documentName = excelName,
+            documentType = "xlsx",
+            uploadedBy = AresConstants.ARES_USER_ID
+        )
+        aresDocumentRepository.save(aresDocument)
+
+        return url.toString()
+    }
+    fun Date.toLocalDate(): LocalDate {
+        return this.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+    }
+
+    private fun getDetailsForExcel(openInvoiceDetails: OpenInvoiceDetails, invoiceDetails: OsReportData?): OutStandingReportDetails {
+
+        val daysOverdue = openInvoiceDetails.dueDate?.let {
+            val days = Period.between(it.toLocalDate(), Date().toLocalDate()).days
+            if (days >= 0) days else 0
+        } ?: 0
+
+        return OutStandingReportDetails(
+            organizationName = openInvoiceDetails.organizationName,
+            invoiceNumber = openInvoiceDetails.documentNo,
+            entityCode = openInvoiceDetails.entityCode,
+            currency = openInvoiceDetails.currency,
+            invoiceAmount = openInvoiceDetails.amountCurr,
+            openInvoiceAmount = (openInvoiceDetails.amountCurr.toBigDecimal() - openInvoiceDetails.payCurr.toBigDecimal()).toString(),
+            ledgerAmount = openInvoiceDetails.amountLoc,
+            invoiceDate = invoiceDetails?.invoiceDate?.let { SimpleDateFormat("dd-MM-yyyy").format(it) },
+            creditDays = invoiceDetails?.creditDays?.toString() ?: "0",
+            dueDate = openInvoiceDetails.dueDate.toString(),
+            daysOverdue = daysOverdue.toString(),
+            status = openInvoiceDetails.status,
+            invoiceUrl = invoiceDetails?.invoicePdfUrl,
+            serviceType = openInvoiceDetails.serviceType,
+            bl = invoiceDetails?.bl,
+            blDocNo = invoiceDetails?.blDocumentNo,
+            deliveryOrder = invoiceDetails?.deliveryOrder,
+            deliveryOrderDocumentNumber = invoiceDetails?.deliveryOrderDocNo,
+            jobNumber = invoiceDetails?.jobNumber,
+            commercialInvoice = invoiceDetails?.commercialInvoice,
+            airWayBill = invoiceDetails?.airWayBill,
+            eta = invoiceDetails?.eta?.let { SimpleDateFormat("dd-MM-yyyy").format(SimpleDateFormat("yyyy-MM-dd").parse(it)) },
+            etd = invoiceDetails?.etd?.let { SimpleDateFormat("dd-MM-yyyy").format(SimpleDateFormat("yyyy-MM-dd").parse(it)) },
+            remarks = null,
+            address = invoiceDetails?.address,
+            city = invoiceDetails?.city,
+            pincode = invoiceDetails?.pincode
+
+        )
     }
 
     override suspend fun createCustomerDetailsV2(request: CustomerOutstandingDocumentResponseV2) {

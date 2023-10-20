@@ -11,7 +11,7 @@ env:
 jobs:
   report:
     name: Create Report
-    runs-on: ubuntu-latest
+    runs-on: cogo-action-runner
     steps:
       - name: Get current date
         id: date
