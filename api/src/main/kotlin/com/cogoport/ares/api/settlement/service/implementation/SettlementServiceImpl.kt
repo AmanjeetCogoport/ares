@@ -1301,12 +1301,16 @@ open class SettlementServiceImpl : SettlementService {
     private suspend fun deleteSettlement(documentNo: String, settlementType: SettlementType, deletedBy: UUID, deletedByUserType: String?): String {
         val documentNo = Hashids.decode(documentNo)[0]
 
+        val allowedTo = listOf(AresConstants.ABHISHEK_USER_ID, AresConstants.VINOD_USER_ID).contains(deletedBy)
+
         when (settlementType) {
             SettlementType.VTDS -> {
                 val sourceDocument = journalVoucherRepository.findById(documentNo)
                 if (sourceDocument != null) {
-                    if (sourceDocument.status == JVStatus.POSTED) {
-                        throw AresException(AresError.ERR_1552, "")
+                    if (!allowedTo) {
+                        if (sourceDocument.status == JVStatus.POSTED) {
+                            throw AresException(AresError.ERR_1552, "")
+                        }
                     }
                 }
             }
@@ -1314,8 +1318,10 @@ open class SettlementServiceImpl : SettlementService {
                 val sourceDoc = paymentRepository.findByPaymentNumAndPaymentCode(documentNo, PaymentCode.valueOf(settlementType.name))
 
                 if (sourceDoc != null) {
-                    if (sourceDoc.paymentDocumentStatus in listOf(PaymentDocumentStatus.POSTED, PaymentDocumentStatus.FINAL_POSTED)) {
-                        throw AresException(AresError.ERR_1552, "")
+                    if (!allowedTo) {
+                        if (sourceDoc.paymentDocumentStatus in listOf(PaymentDocumentStatus.POSTED, PaymentDocumentStatus.FINAL_POSTED)) {
+                            throw AresException(AresError.ERR_1552, "")
+                        }
                     }
                 }
             }
@@ -1344,8 +1350,11 @@ open class SettlementServiceImpl : SettlementService {
         }
 
         val fetchedDoc = settlementRepository.findBySourceIdAndSourceType(documentNo, sourceType)
-        if (fetchedDoc.any { it!!.settlementStatus == SettlementStatus.POSTED && it.sourceType !in listOf(SettlementType.SECH, SettlementType.PECH) }) {
-            throw AresException(AresError.ERR_1544, "")
+
+        if (!allowedTo) {
+            if (fetchedDoc.any { it!!.settlementStatus == SettlementStatus.POSTED && it.sourceType !in listOf(SettlementType.SECH, SettlementType.PECH) }) {
+                throw AresException(AresError.ERR_1544, "")
+            }
         }
 
         val paymentTdsDoc = fetchedDoc.find { it?.destinationId == documentNo }
@@ -1421,7 +1430,7 @@ open class SettlementServiceImpl : SettlementService {
         }
 
         val settlements = settlementRepository.findByIdIn(fetchedDoc.map { it?.id!! })
-        settlementRepository.deleteByIdIn(fetchedDoc.map { it?.id!! })
+        settlementRepository.softDeleteSettlement(fetchedDoc.map { it?.id!! })
         for (settlementDoc in settlements) {
             auditService.createAudit(
                 AuditRequest(
