@@ -34,7 +34,7 @@ env:
 
 jobs:
   sonarqube:
-    runs-on: ubuntu-latest
+    runs-on: cogo-action-runner
 
     services:
       postgres:

@@ -23,37 +23,9 @@ permissions:
   contents: read
 
 jobs:
-  start-runner:
-    name: Start self-hosted EC2 runner
-    runs-on: ubuntu-latest
-    environment: staging
-    outputs:
-      label: ${{ steps.start-ec2-runner.outputs.label }}
-      ec2-instance-id: ${{ steps.start-ec2-runner.outputs.ec2-instance-id }}
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.ECS_DEPLOY_AWS_ACCESS_KEY }}
-          aws-secret-access-key: ${{ secrets.ECS_DEPLOY_AWS_SECRET_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-      
-      - name: Start EC2 runner
-        id: start-ec2-runner
-        uses: machulav/ec2-github-runner@v2
-        with:
-          mode: start
-          github-token: ${{ secrets.COGOPORT_DEV_ADMIN_TOKEN }}
-          ec2-image-id: ami-07793eef0fa960ccd
-          ec2-instance-type: t3.large
-          subnet-id: subnet-02cb95e950fc1dee3
-          security-group-id: sg-06f68a49b0eb762ed
-  
   deploy_staging:
     name: Start deployment
-    needs:
-      - start-runner # required to get output from the start-runner job
-    runs-on: ${{ needs.start-runner.outputs.label }} # run the job on the newly created runner
+    runs-on: cogo-action-runner
     environment: staging
 
     steps:
@@ -117,25 +89,3 @@ jobs:
           service: ${{ env.ECS_SERVICE }}
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: false
-
-  stop-runner:
-    name: Stop self-hosted EC2 runner
-    needs:
-      - start-runner # required to get output from the start-runner job
-      - deploy_staging # required to wait when the main job is done
-    runs-on: ubuntu-latest
-    if: ${{ always() }} # required to stop the runner even if the error happened in the previous jobs
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.ECS_DEPLOY_AWS_ACCESS_KEY }}
-          aws-secret-access-key: ${{ secrets.ECS_DEPLOY_AWS_SECRET_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-      - name: Stop EC2 runner
-        uses: machulav/ec2-github-runner@v2
-        with:
-          mode: stop
-          github-token: ${{ secrets.COGOPORT_DEV_ADMIN_TOKEN }}
-          label: ${{ needs.start-runner.outputs.label }}
-          ec2-instance-id: ${{ needs.start-runner.outputs.ec2-instance-id }}

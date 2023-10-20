@@ -3,7 +3,7 @@ on:
   pull_request:
 jobs:
   ktlint:
-    runs-on: ubuntu-latest
+    runs-on: cogo-action-runner
 
     steps:
       # https://github.com/marketplace/actions/checkout
@@ -17,7 +17,7 @@ jobs:
           reporter: github-pr-check
           fail_on_error: true
 #  detekt:
-#    runs-on: ubuntu-latest
+#    runs-on: cogo-action-runner
 #
 #    steps:
 #      # https://github.com/marketplace/actions/checkout
