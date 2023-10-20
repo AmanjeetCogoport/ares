@@ -330,4 +330,7 @@ object AresConstants {
     val onAccountAROutstandingAccountTypeList = listOf(AccountType.REC, AccountType.CTDS, AccountType.BANK, AccountType.CONTR, AccountType.ROFF, AccountType.MTCCV, AccountType.MISC, AccountType.INTER, AccountType.OPDIV, AccountType.MTC)
     val paymentAROutstandingAccountTypeList = listOf(AccountType.REC, AccountType.CTDS)
     val jvAROutstandingAccountTypeList = listOf(AccountType.BANK, AccountType.CONTR, AccountType.ROFF, AccountType.MTCCV, AccountType.MISC, AccountType.INTER, AccountType.OPDIV, AccountType.MTC)
+
+    val ABHISHEK_USER_ID = UUID.fromString("fa0dcd74-4b68-4783-a2f9-81dfab26008a")
+    val VINOD_USER_ID = UUID.fromString("6d713339-c528-4696-9f7b-c01f86887ac1")
 }

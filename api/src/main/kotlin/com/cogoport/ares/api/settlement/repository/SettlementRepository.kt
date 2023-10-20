@@ -668,4 +668,12 @@ ORDER BY
         query: String?,
         entityCodes: List<Int?>?
     ): Long
+
+    @NewSpan
+    @Query(
+        """
+            update settlements set deleted_at = NOW() and settlement_status = 'DELETED' WHERE id in (:ids)
+        """
+    )
+    suspend fun softDeleteSettlement(ids: List<Long>?)
 }
