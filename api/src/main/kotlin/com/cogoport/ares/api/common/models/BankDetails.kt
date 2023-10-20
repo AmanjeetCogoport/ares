@@ -24,6 +24,10 @@ data class BankDetails(
     var beneficiaryName: String? = null,
     @JsonProperty("account_type")
     var accountType: String? = null,
+    @JsonProperty("bank_name")
+    var bankName: String? = null,
+    @JsonProperty("ifsc_code")
+    var ifscCode: String? = null,
     @JsonProperty("swift_code")
     var swiftCode: String? = null,
     @JsonProperty("bank_code")

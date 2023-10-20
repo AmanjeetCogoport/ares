@@ -1,5 +1,6 @@
 package com.cogoport.ares.api.events
 
+import com.cogoport.ares.api.common.models.FindRecordByDocumentNo
 import com.cogoport.ares.api.dunning.model.request.CycleExecutionProcessReq
 import com.cogoport.ares.api.dunning.model.request.PaymentReminderReq
 import com.cogoport.ares.api.migration.model.JVParentDetails
@@ -19,6 +20,7 @@ import com.cogoport.ares.model.settlement.GlCodeMaster
 import com.cogoport.ares.model.settlement.PostJVToSageRequest
 import com.cogoport.ares.model.settlement.PostPaymentToSage
 import com.cogoport.ares.model.settlement.event.UpdateSettlementWhenBillUpdatedEvent
+import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
 import com.cogoport.ares.model.settlement.request.PostSettlementRequest
 import io.micronaut.messaging.annotation.MessageHeader
 import io.micronaut.rabbitmq.annotation.Binding
@@ -34,6 +36,9 @@ interface AresMessagePublisher {
 
     @Binding("ares.unfreeze.credit.consumption")
     suspend fun emitUnfreezeCreditConsumption(request: Settlement)
+
+    @Binding("ares.unfreeze.debit.consumption")
+    suspend fun emitUnfreezeDebitConsumption(request: FindRecordByDocumentNo)
 
     @Binding("ares.receivables.outstanding.data")
     suspend fun emitOutstandingData(openSearchEvent: OpenSearchEvent)
@@ -71,6 +76,9 @@ interface AresMessagePublisher {
 
     @Binding("ares.migrate.gl.codes")
     suspend fun emitGLCode(req: GlCodeMaster)
+
+    @Binding("ares.upsert.migrate.glcodes")
+    suspend fun emitUpsertMigrateGlCode(req: GlCodeMaster)
 
     @Binding("ares.post.jv.to.sage")
     suspend fun emitPostJvToSage(req: PostJVToSageRequest)
@@ -118,4 +126,7 @@ interface AresMessagePublisher {
 
     @Binding("ares.migrate.payment.amount")
     suspend fun emitMigratePaymentAmount(id: Long)
+
+    @Binding("ares.send.payment.details.for.autoKnockOff")
+    suspend fun emitSendPaymentDetailsForKnockOff(autoKnockOffRequest: AutoKnockOffRequest)
 }

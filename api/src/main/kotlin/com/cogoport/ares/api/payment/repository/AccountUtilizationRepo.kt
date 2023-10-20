@@ -716,10 +716,32 @@ ORDER BY
                 AND ((:accMode) is null or acc_mode::varchar in (:accMode))
                 AND document_status != 'DELETED'::document_status
                 AND deleted_at is null
+                AND acc_type != 'NEWPR'
                 AND settlement_enabled = true
                 AND ((:docValues) is null or document_value in (:docValues))
                 AND ((:docNumbers) is null or document_no in (:docNumbers))
-            ORDER BY transaction_date DESC, id
+            ORDER BY
+            CASE WHEN :sortType = 'Desc' THEN
+                    CASE 
+                         WHEN :sortBy = 'transactionDate' THEN EXTRACT(epoch FROM transaction_date)::numeric
+                         WHEN :sortBy ='dueDate' THEN EXTRACT(epoch FROM due_date)::numeric
+                         WHEN :sortBy = 'documentAmount' then amount_curr
+                         WHEN :sortBy = 'paidAmount' then pay_curr
+                         when :sortBy = 'balanceAmount' then COALESCE(amount_curr - pay_curr, 0)
+                         when :sortBy = 'tdsAmount' then tds_amount                         
+                    END  
+            END 
+            Desc,
+            CASE WHEN :sortType = 'Asc' THEN
+                    CASE WHEN :sortBy = 'transactionDate' THEN EXTRACT(epoch FROM transaction_date)::numeric
+                         WHEN :sortBy ='dueDate' THEN EXTRACT(epoch FROM due_date)::numeric
+                         WHEN :sortBy = 'documentAmount' then amount_curr
+                         WHEN :sortBy = 'paidAmount' then pay_curr
+                         when :sortBy = 'balanceAmount' then COALESCE(amount_curr - pay_curr, 0)
+                         when :sortBy = 'tdsAmount' then tds_amount
+                    END       
+            END 
+            Asc
             LIMIT :limit
             OFFSET :offset
         )
@@ -791,31 +813,6 @@ ORDER BY
                     END
                 )
             )
-            ORDER BY
-            CASE WHEN :sortType = 'Desc' THEN
-                    CASE 
-                         WHEN :sortBy = 'transactionDate' THEN EXTRACT(epoch FROM au.transaction_date)::numeric
-                         WHEN :sortBy ='dueDate' THEN EXTRACT(epoch FROM au.due_date)::numeric
-                         WHEN :sortBy = 'documentAmount' then au.amount_curr
-                         WHEN :sortBy = 'paidAmount' then au.pay_curr
-                         when :sortBy = 'balanceAmount' then COALESCE(au.amount_curr - au.pay_curr, 0)
-                         when :sortBy = 'tdsAmount' then au.tds_amount
-                         when :sortBy = 'settledTds' then s.amount
-                         
-                    END  
-            END 
-            Desc,
-            CASE WHEN :sortType = 'Asc' THEN
-                    CASE WHEN :sortBy = 'transactionDate' THEN EXTRACT(epoch FROM au.transaction_date)::numeric
-                         WHEN :sortBy ='dueDate' THEN EXTRACT(epoch FROM au.due_date)::numeric
-                         WHEN :sortBy = 'documentAmount' then au.amount_curr
-                         WHEN :sortBy = 'paidAmount' then au.pay_curr
-                         when :sortBy = 'balanceAmount' then COALESCE(au.amount_curr - au.pay_curr, 0)
-                         when :sortBy = 'tdsAmount' then au.tds_amount
-                         when :sortBy = 'settledTds' then s.amount
-                    END       
-            END 
-            Asc
         """
     )
     suspend fun getDocumentList(
@@ -856,6 +853,7 @@ ORDER BY
                     AND settlement_enabled = true
                     AND ((:docValues) is null or document_value in (:docValues))
                     AND ((:docNumbers) is null or document_no in (:docNumbers))
+                    AND acc_type != 'NEWPR'
                     AND 
                     (
                         :documentPaymentStatus is null OR 
@@ -1676,7 +1674,7 @@ ORDER BY
                 AND due_date IS NOT NULL
                 AND document_status = 'FINAL'
                 AND organization_id IS NOT NULL
-                AND entity_code in (:entityCode)
+                AND ((:entityCodes) is null or entity_code in (:entityCodes))
                 AND acc_type::varchar IN (:accType)
                 AND deleted_at IS NULL
                 AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
@@ -1684,7 +1682,7 @@ ORDER BY
                 entity_code, led_currency
             """
     )
-    suspend fun getEntityWiseOutstandingBucket(entityCode: List<Int>, accType: List<AccountType>, accMode: List<AccMode>, defaultersOrgIds: List<UUID>?): EntityWiseOutstandingBucket
+    suspend fun getEntityWiseOutstandingBucket(entityCodes: List<Int>?, accType: List<AccountType>, accMode: List<AccMode>, defaultersOrgIds: List<UUID>?): List<EntityWiseOutstandingBucket>
 
     @NewSpan
     @Query(
@@ -1876,7 +1874,7 @@ ORDER BY
                 AND transaction_date IS NOT NULL
                 AND document_status = 'FINAL'
                 AND organization_id IS NOT NULL
-                AND entity_code IN (:entityCode)
+                AND ((:entityCodes) is null or entity_code in (:entityCodes))
                 AND acc_type::varchar IN (:accType)
                 AND deleted_at IS NULL
                 AND ((:defaultersOrgIds) IS NULL OR organization_id NOT IN (:defaultersOrgIds))
@@ -1884,7 +1882,7 @@ ORDER BY
                 entity_code, led_currency
         """
     )
-    suspend fun getEntityWiseOnAccountBucket(entityCode: List<Int>, accType: List<AccountType>, accMode: List<AccMode>, paymentAccType: List<AccountType>, jvAccType: List<AccountType>, defaultersOrgIds: List<UUID>?): EntityWiseOutstandingBucket
+    suspend fun getEntityWiseOnAccountBucket(entityCodes: List<Int>?, accType: List<AccountType>, accMode: List<AccMode>, paymentAccType: List<AccountType>, jvAccType: List<AccountType>, defaultersOrgIds: List<UUID>?): List<EntityWiseOutstandingBucket>
 
     @NewSpan
     @Query(
@@ -1905,4 +1903,12 @@ ORDER BY
         documentNos: List<Long>,
         accTypes: List<String?>?
     ): List<AccountUtilization>?
+
+    @NewSpan
+    @Query(
+        """
+            SELECT distinct (organization_id) from account_utilizations where ((:accMode) is null or acc_mode::VARCHAR = :accMode)
+        """
+    )
+    suspend fun getDistinctOrgIds(accMode: AccMode?): List<UUID>?
 }

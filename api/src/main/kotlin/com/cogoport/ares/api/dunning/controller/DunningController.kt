@@ -7,6 +7,7 @@ import com.cogoport.ares.api.dunning.model.response.CycleWiseExceptionResp
 import com.cogoport.ares.api.dunning.model.response.MasterExceptionResp
 import com.cogoport.ares.api.dunning.service.interfaces.DunningHelperService
 import com.cogoport.ares.api.dunning.service.interfaces.DunningService
+import com.cogoport.ares.api.dunning.service.interfaces.ScheduleService
 import com.cogoport.ares.common.models.Response
 import com.cogoport.ares.model.common.ResponseList
 import com.cogoport.ares.model.dunning.request.CreateDunningCycleRequest
@@ -29,6 +30,7 @@ import com.cogoport.ares.model.dunning.response.DunningCycleResponse
 import com.cogoport.ares.model.dunning.response.MonthWiseStatisticsOfAccountUtilizationResponse
 import com.cogoport.ares.model.dunning.response.OverallOutstandingAndOnAccountResponse
 import com.cogoport.brahma.hashids.Hashids
+import com.cogoport.plutus.model.invoice.request.IrnGenerationEmailRequest
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -46,7 +48,8 @@ import javax.validation.Valid
 @Controller("/dunning")
 class DunningController(
     private val dunningService: DunningService,
-    private val dunningHelperService: DunningHelperService
+    private val dunningHelperService: DunningHelperService,
+    private val scheduleService: ScheduleService
 ) {
 
     @Post("/cycle")
@@ -199,5 +202,12 @@ class DunningController(
     @Get("/card-data")
     suspend fun dunningCardData(@QueryValue("entityCode") entityCode: MutableList<Int>?): DunningCardData {
         return dunningService.dunningCardData(entityCode)
+    }
+
+    @Post("/send-email-irn-generation")
+    suspend fun sendEmail(
+        request: IrnGenerationEmailRequest
+    ) {
+        scheduleService.sendEmailForIrnGeneration(request)
     }
 }
