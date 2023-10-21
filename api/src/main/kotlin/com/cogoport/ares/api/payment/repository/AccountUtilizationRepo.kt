@@ -1556,13 +1556,6 @@ ORDER BY
                     END) AS thirty_led_amount,
                 sum(
                     CASE WHEN acc_type::varchar IN (:accType)
-                        and(now()::date - due_date) BETWEEN 31 AND 45 THEN
-                        sign_flag * (amount_loc - pay_loc)
-                    ELSE
-                        0
-                    END) AS forty_five_led_amount,
-                sum(
-                    CASE WHEN acc_type::varchar IN (:accType)
                         and(now()::date - due_date) BETWEEN 31 AND 60 THEN
                         sign_flag * (amount_loc - pay_loc)
                     ELSE
@@ -1582,13 +1575,6 @@ ORDER BY
                     ELSE
                         0
                     END) AS one_eighty_led_amount,
-                sum(
-                    CASE WHEN acc_type::varchar IN (:accType)
-                        and(now()::date - due_date) > 180 THEN
-                        sign_flag * (amount_loc - pay_loc)
-                    ELSE
-                        0
-                    END) AS one_eighty_plus_led_amount,
                 sum(
                     CASE WHEN acc_type::varchar IN (:accType)
                         and(now()::date - due_date) BETWEEN 181 AND 365 THEN
@@ -1646,12 +1632,6 @@ ORDER BY
                         0
                     END) AS one_eighty_count,
                 sum(
-                    CASE WHEN (now()::date - due_date) > 180 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
-                        1
-                    ELSE
-                        0
-                    END) AS one_eighty_plus_count,
-                sum(
                     CASE WHEN (now()::date - due_date) BETWEEN 181 AND 365 AND acc_type::varchar IN (:accType) AND amount_curr - pay_curr <> 0 THEN
                         1
                     ELSE
@@ -1708,13 +1688,6 @@ ORDER BY
                     END) AS thirty_led_amount,
                 sum(
                     CASE WHEN acc_type::varchar IN (:accType)
-                        and(now()::date - transaction_date) BETWEEN 31 AND 45 THEN
-                        sign_flag * (amount_loc - pay_loc)
-                    ELSE
-                        0
-                    END) AS forty_five_led_amount,
-                sum(
-                    CASE WHEN acc_type::varchar IN (:accType)
                         and(now()::date - transaction_date) BETWEEN 31 AND 60 THEN
                         sign_flag * (amount_loc - pay_loc)
                     ELSE
@@ -1734,13 +1707,6 @@ ORDER BY
                     ELSE
                         0
                     END) AS one_eighty_led_amount,
-                sum(
-                    CASE WHEN acc_type::varchar IN (:accType)
-                        and(now()::date - transaction_date) > 180 THEN
-                        sign_flag * (amount_loc - pay_loc)
-                    ELSE
-                        0
-                    END) AS one_eighty_plus_led_amount,
                 sum(
                     CASE WHEN acc_type::varchar IN (:accType)
                         and(now()::date - transaction_date) BETWEEN 181 AND 365 THEN
@@ -1785,17 +1751,6 @@ ORDER BY
                 ) AS thirty_count,
                 SUM(
                     CASE 
-                        WHEN (now()::date - transaction_date) BETWEEN 31 AND 45 
-                            AND acc_type::varchar IN (:paymentAccType) 
-                            AND ABS(amount_curr - pay_curr) > 0.001 THEN 1 
-                        WHEN (now()::date - transaction_date) BETWEEN 31 AND 45 
-                            AND acc_type::varchar IN (:jvAccType)
-                            AND amount_curr - pay_curr <> 0 THEN 1 
-                        ELSE 0 
-                    END
-                ) AS forty_five_count,
-                SUM(
-                    CASE 
                         WHEN (now()::date - transaction_date) BETWEEN 31 AND 60 
                             AND acc_type::varchar IN (:paymentAccType) 
                             AND ABS(amount_curr - pay_curr) > 0.001 THEN 1 
@@ -1827,17 +1782,6 @@ ORDER BY
                         ELSE 0 
                     END
                 ) AS one_eighty_count,
-                SUM(
-                    CASE 
-                        WHEN (now()::date - transaction_date) > 180
-                            AND acc_type::varchar IN (:paymentAccType) 
-                            AND ABS(amount_curr - pay_curr) > 0.001 THEN 1 
-                        WHEN (now()::date - transaction_date) > 180
-                            AND acc_type::varchar IN (:jvAccType) 
-                            AND amount_curr - pay_curr <> 0 THEN 1 
-                        ELSE 0 
-                    END
-                ) AS one_eighty_plus_count,
                 SUM(
                     CASE 
                         WHEN (now()::date - transaction_date) BETWEEN 181 AND 365
