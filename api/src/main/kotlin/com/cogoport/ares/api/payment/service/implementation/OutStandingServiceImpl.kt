@@ -1628,7 +1628,6 @@ class OutStandingServiceImpl : OutStandingService {
                 Client.updateDocument(AresConstants.CUSTOMER_OUTSTANDING_V2, "${request.organizationId}_$k", request)
             }
         }
-
     }
     private suspend fun createOutstandingDetails(customerOutstanding: CustomerOutstandingDocumentResponseV2?, outstanding: ArOutstandingData): CustomerOutstandingDocumentResponseV2 {
         customerOutstanding?.openInvoiceAgeingBucket = getAgeingBucketData(outstanding, "invoice")
