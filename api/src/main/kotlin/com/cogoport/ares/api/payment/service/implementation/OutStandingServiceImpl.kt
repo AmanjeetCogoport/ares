@@ -1649,7 +1649,7 @@ class OutStandingServiceImpl : OutStandingService {
             outstanding.onAccountOneEightyCount, outstanding.onAccountThreeSixtyFiveCount,
             outstanding.onAccountThreeSixtyFivePlusCount
         )
-        customerOutstanding?.entityCode = AresConstants.TAGGED_ENTITY_ID_MAPPINGS[customerOutstanding?.cogoEntityId.toString()]
+        customerOutstanding?.entityCode = outstanding.entityCode
         customerOutstanding?.creditNoteCount = calculateTotalCount(
             outstanding.creditNoteNotDueCount, outstanding.creditNoteThirtyCount,
             outstanding.creditNoteSixtyCount, outstanding.creditNoteNinetyCount,
