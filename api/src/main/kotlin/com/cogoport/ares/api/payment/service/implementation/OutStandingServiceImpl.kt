@@ -1289,7 +1289,7 @@ class OutStandingServiceImpl : OutStandingService {
                 oneEightyCount = v.sumOf { it.oneEightyCount },
                 threeSixtyFiveCount = v.sumOf { it.threeSixtyFiveCount },
                 threeSixtyFivePlusCount = v.sumOf { it.threeSixtyFivePlusCount },
-                totalCount =  v.sumOf { it.totalCount }
+                totalCount = v.sumOf { it.totalCount }
             )
 
             responseMap["onAccountBucket"] = EntityWiseOutstandingBucket(
@@ -1310,7 +1310,7 @@ class OutStandingServiceImpl : OutStandingService {
                 oneEightyCount = onAccountData.sumOf { it.oneEightyCount },
                 threeSixtyFiveCount = onAccountData.sumOf { it.threeSixtyFiveCount },
                 threeSixtyFivePlusCount = onAccountData.sumOf { it.threeSixtyFivePlusCount },
-                totalCount =  onAccountData.sumOf { it.totalCount }
+                totalCount = onAccountData.sumOf { it.totalCount }
             )
 
             responseMap["creditNoteBucket"] = EntityWiseOutstandingBucket(
@@ -1331,7 +1331,7 @@ class OutStandingServiceImpl : OutStandingService {
                 oneEightyCount = creditNoteData.sumOf { it.oneEightyCount },
                 threeSixtyFiveCount = creditNoteData.sumOf { it.threeSixtyFiveCount },
                 threeSixtyFivePlusCount = creditNoteData.sumOf { it.threeSixtyFivePlusCount },
-                totalCount =  creditNoteData.sumOf { it.totalCount }
+                totalCount = creditNoteData.sumOf { it.totalCount }
 
             )
 
