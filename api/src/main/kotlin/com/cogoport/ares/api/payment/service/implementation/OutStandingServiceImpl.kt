@@ -1611,10 +1611,8 @@ class OutStandingServiceImpl : OutStandingService {
     }
 
     override suspend fun createCustomerDetailsV2(request: CustomerOutstandingDocumentResponseV2) {
-        val entityCodes = AresConstants.TAGGED_ENTITY_ID_MAPPINGS[request.cogoEntityId.toString()]
-
         val orgOutstanding = accountUtilizationRepository.getArOutstandingData(
-            entityCodes = listOf(entityCodes),
+            entityCodes = null,
             orgIds = listOf(UUID.fromString(request.organizationId)),
             accMode = AccMode.AR.name,
             accTypes = AresConstants.accTypesForAr,
@@ -1623,15 +1621,14 @@ class OutStandingServiceImpl : OutStandingService {
             onAccountAccountType = AresConstants.onAccountTypeForAr
         )
 
-        val orgLevelData = orgOutstanding?.filter { it.organizationId.toString() == request.organizationId && it.entityCode == entityCodes }
-
-        if (!orgLevelData.isNullOrEmpty()) {
-            createOutstandingDetails(request, orgLevelData[0])
+        orgOutstanding?.groupBy { it.entityCode }?.map { (k, v) ->
+            v.map { outstanding ->
+                createOutstandingDetails(request, outstanding)
+                request.lastUpdatedAt = Timestamp.valueOf(LocalDateTime.now())
+                Client.updateDocument(AresConstants.CUSTOMER_OUTSTANDING_V2, "${request.organizationId}_$k", request)
+            }
         }
 
-        request.lastUpdatedAt = Timestamp.valueOf(LocalDateTime.now())
-
-        Client.updateDocument(AresConstants.CUSTOMER_OUTSTANDING_V2, "${request.organizationId}_$entityCodes", request)
     }
     private suspend fun createOutstandingDetails(customerOutstanding: CustomerOutstandingDocumentResponseV2?, outstanding: ArOutstandingData): CustomerOutstandingDocumentResponseV2 {
         customerOutstanding?.openInvoiceAgeingBucket = getAgeingBucketData(outstanding, "invoice")
@@ -1854,7 +1851,7 @@ class OutStandingServiceImpl : OutStandingService {
                 }
         }, CustomerOutstandingDocumentResponseV2::class.java)
 
-        var customerOutstanding: CustomerOutstandingDocumentResponseV2? = null
+        var customerOutstanding: CustomerOutstandingDocumentResponseV2?
 
         if (!searchResponse?.hits()?.hits().isNullOrEmpty()) {
             customerOutstanding = searchResponse?.hits()?.hits()?.map { it.source() }?.get(0)

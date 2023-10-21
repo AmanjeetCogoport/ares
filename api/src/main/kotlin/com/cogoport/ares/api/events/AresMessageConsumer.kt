@@ -324,6 +324,6 @@ class AresMessageConsumer {
 
     @Queue("ares-update-customer-details-v2")
     fun updateCustomerDetailsV2(req: OrgIdAndEntityCode) = runBlocking {
-        outstandingService.updateCustomerDetailsV2(req.organizationId!!, req.entityCode)
+        outstandingService.updateCustomerDetailsV2(req.organizationId, req.entityCode)
     }
 }
