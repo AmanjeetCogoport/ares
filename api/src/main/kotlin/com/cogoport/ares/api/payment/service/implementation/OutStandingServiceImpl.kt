@@ -1554,7 +1554,7 @@ class OutStandingServiceImpl : OutStandingService {
 
     override suspend fun getOpenInvoices(organizationId: UUID): String {
         var openInvoiceDetails = accountUtilizationRepository.getOrgDetails(organizationId)
-        val invoiceIds: List<Long> = openInvoiceDetails.filter { it.accType == "SINV" || it.accType == "SCN" }.map { it.documentNo }
+        val invoiceIds = openInvoiceDetails.filter { listOf(AccountType.SINV.name, AccountType.SCN.name).contains(it.accType) }.map { it.documentNo }
 
         val invoiceDetails: List<OsReportData?> = plutusClient.getOpenInvoiceData(invoiceIds)
         val outStandingReport: MutableList<OutStandingReportDetails?> = mutableListOf()
@@ -1567,7 +1567,7 @@ class OutStandingServiceImpl : OutStandingService {
 
         val excelName = "OS REPORT" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_hhmmss"))
         val file = ExcelUtils.writeIntoExcel(outStandingReport as List<Any>, excelName, "open invoices report")
-        val url = s3Client.upload(s3Bucket, "$excelName.xlsx", file!!)
+        val url = s3Client.upload(s3Bucket, "$excelName.xlsx", file)
         val aresDocument = AresDocument(
             documentUrl = url.toString(),
             documentName = excelName,
