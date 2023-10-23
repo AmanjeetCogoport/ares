@@ -11,5 +11,7 @@ data class UpdateOrganizationDetailAresSideRequest(
     var organizationTradePartiesId: UUID,
     var organizationTradePartySerialId: Long,
     var organizationTradePartyName: String,
-    var updatedBy: UUID
+    var updatedBy: UUID,
+    var billNumber: String,
+    var settlementNumbers: List<String>
 )

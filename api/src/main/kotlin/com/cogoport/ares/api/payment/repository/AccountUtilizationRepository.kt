@@ -20,6 +20,7 @@ import com.cogoport.ares.model.common.PaymentHistoryDetails
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
+import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.response.AccPayablesOfOrgRes
 import com.cogoport.ares.model.payment.response.AccountPayablesStats
 import com.cogoport.ares.model.payment.response.CreditDebitBalance
@@ -1379,17 +1380,24 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
     @NewSpan
     @Query(
         """
-                SELECT
-                    *
-                FROM
-                    account_utilizations
-                WHERE 
-                    document_no = :documentNo
-                AND acc_mode::VARCHAR = :accMode
-            """
+            select 
+                * 
+            from 
+                account_utilizations 
+            where 
+                document_value = :documentValue and 
+                document_no = :documentNo and 
+                acc_mode::varchar = :accMode  and 
+                acc_type::varchar = :accType and 
+                service_type::varchar = :serviceType
+
+        """
     )
     suspend fun getAccountUtilizationByDocNoAndAccMode(
         documentNo: Long,
-        accMode: AccMode
+        documentValue: String,
+        accMode: String,
+        accType: String,
+        serviceType: ServiceType
     ): AccountUtilization?
 }

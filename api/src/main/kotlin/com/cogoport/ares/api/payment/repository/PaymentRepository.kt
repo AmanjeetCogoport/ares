@@ -338,10 +338,14 @@ interface PaymentRepository : CoroutineCrudRepository<Payment, Long> {
             FROM 
                 payments
             WHERE
-                id in (:ids)
+                payment_num in (:paymentNums)
+                and acc_mode::varchar = :accMode
+                and payment_code::varchar = :paymentCode
         """
     )
-    suspend fun getPaymentByIds(
-        ids: List<Long>
+    suspend fun getPaymentByPaymentNums(
+        paymentNums: MutableList<Long>,
+        accMode: String,
+        paymentCode: String
     ): List<Payment>
 }

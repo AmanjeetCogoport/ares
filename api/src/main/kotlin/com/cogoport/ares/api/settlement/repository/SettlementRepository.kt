@@ -668,4 +668,38 @@ ORDER BY
         query: String?,
         entityCodes: List<Int?>?
     ): Long
+
+    @NewSpan
+    @Query(
+        """
+            select 
+                * 
+            from 
+                settlements 
+            where 
+                settlement_num in (:settlementNum)
+                and destination_type::varchar = :destinationType
+        """
+    )
+    suspend fun getSettlementDataUsingSettlementNumAndDestinationType(
+        settlementNum: List<String>,
+        destinationType: SettlementType
+    ): List<Settlement>
+
+    @NewSpan
+    @Query(
+        """
+            SELECT 
+                *
+            FROM 
+                settlements 
+            where 
+                destination_id in (:destIds) 
+                and destination_type::varchar = :destinationType
+        """
+    )
+    suspend fun getSettlementUsingDestinationIdsAndType(
+        destIds: List<Long>,
+        destinationType: SettlementType
+    ): List<Settlement>
 }
