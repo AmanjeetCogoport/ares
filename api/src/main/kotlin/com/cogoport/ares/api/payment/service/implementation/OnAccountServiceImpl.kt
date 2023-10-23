@@ -2308,108 +2308,110 @@ open class OnAccountServiceImpl : OnAccountService {
                 value = ObjectMapper().writeValueAsString(accountUtilizationDetail)
             )
 
-            val settlements = settlementRepository.getSettlementDataUsingSettlementNumAndDestinationType(
-                settlementNum = request.settlementNumbers,
-                destinationType = SettlementType.PINV
-            )
-            val destinationIds: List<Long> = settlements.map { it.destinationId }
+            if (request.settlementNumbers != null && request.settlementNumbers!!.isNotEmpty()) {
+                val settlements = settlementRepository.getSettlementDataUsingSettlementNumAndDestinationType(
+                    settlementNum = request.settlementNumbers!!,
+                    destinationType = SettlementType.PINV
+                )
+                val destinationIds: List<Long> = settlements.map { it.destinationId }
 
-            val allSettlements = settlementRepository.getSettlementUsingDestinationIdsAndType(
-                destIds = destinationIds,
-                destinationType = PINV
-            )
-
-            val paymentNums: MutableList<Long> = mutableListOf()
-            val journalVoucherIds: MutableList<Long> = mutableListOf()
-
-            allSettlements.forEach { settlement ->
-                if (settlement.sourceType == SettlementType.PAY && settlement.sourceId != null) paymentNums.add(settlement.sourceId!!)
-                if (settlement.sourceType == SettlementType.VTDS && settlement.sourceId != null) journalVoucherIds.add(settlement.sourceId!!)
-            }
-
-            if (paymentNums != null) {
-                val payments = paymentRepository.getPaymentByPaymentNums(
-                    paymentNums = paymentNums,
-                    accMode = "AP",
-                    paymentCode = "PAY"
+                val allSettlements = settlementRepository.getSettlementUsingDestinationIdsAndType(
+                    destIds = destinationIds,
+                    destinationType = PINV
                 )
 
-                payments.forEach { payment ->
-                    payment.organizationId = request.organizationTradePartyDetailId
-                    payment.organizationName = request.organizationTradePartyName
-                    payment.taggedOrganizationId = request.organizationId
-                    payment.orgSerialId = request.organizationTradePartySerialId
-                    payment.tradePartyMappingId = request.organizationTradePartiesId
-                    payment.updatedBy = request.updatedBy
+                val paymentNums: MutableList<Long> = mutableListOf()
+                val journalVoucherIds: MutableList<Long> = mutableListOf()
 
-                    paymentRepository.update(payment)
-
-                    response?.put(
-                        key = "payment => ${payment.id}",
-                        value = ObjectMapper().writeValueAsString(payment)
-                    )
-
-                    if (payment.paymentNum != null && payment.paymentNumValue != null) {
-                        val accountUtilizationForPayment = accountUtilizationRepository.getAccountUtilizationByDocNoAndAccMode(
-                            documentNo = payment.paymentNum!!,
-                            documentValue = payment.paymentNumValue!!,
-                            accMode = AP.name,
-                            accType = PAY.name,
-                            serviceType = EXPENSE
-                        )
-
-                        if (accountUtilizationForPayment != null) {
-                            accountUtilizationForPayment?.organizationId = request.organizationTradePartyDetailId
-                            accountUtilizationForPayment?.organizationName = request.organizationTradePartyName
-                            accountUtilizationForPayment?.taggedOrganizationId = request.organizationId
-                            accountUtilizationForPayment?.orgSerialId = request.organizationTradePartySerialId
-                            accountUtilizationForPayment?.tradePartyMappingId = request.organizationTradePartiesId
-                            accountUtilizationRepository.update(accountUtilizationForPayment)
-
-                            response?.put(
-                                key = "accountUtilizationForPayment => ${accountUtilizationForPayment.id}",
-                                value = ObjectMapper().writeValueAsString(accountUtilizationForPayment)
-                            )
-                        }
-                    }
+                allSettlements.forEach { settlement ->
+                    if (settlement.sourceType == SettlementType.PAY && settlement.sourceId != null) paymentNums.add(settlement.sourceId!!)
+                    if (settlement.sourceType == SettlementType.VTDS && settlement.sourceId != null) journalVoucherIds.add(settlement.sourceId!!)
                 }
 
-                if (journalVoucherIds != null) {
-                    journalVoucherIds.forEach { journalVoucherId ->
-                        val journalVoucher = journalVoucherRepository.findById(journalVoucherId)
+                if (paymentNums != null) {
+                    val payments = paymentRepository.getPaymentByPaymentNums(
+                        paymentNums = paymentNums,
+                        accMode = "AP",
+                        paymentCode = "PAY"
+                    )
 
-                        if (journalVoucher != null) {
-                            journalVoucher.tradePartyId = request.organizationTradePartyDetailId
-                            journalVoucher.tradePartyName = request.organizationTradePartyName
-                            journalVoucher.updatedBy = request.updatedBy
+                    payments.forEach { payment ->
+                        payment.organizationId = request.organizationTradePartyDetailId
+                        payment.organizationName = request.organizationTradePartyName
+                        payment.taggedOrganizationId = request.organizationId
+                        payment.orgSerialId = request.organizationTradePartySerialId
+                        payment.tradePartyMappingId = request.organizationTradePartiesId
+                        payment.updatedBy = request.updatedBy
 
-                            journalVoucherRepository.update(journalVoucher)
+                        paymentRepository.update(payment)
 
-                            response?.put(
-                                key = "journalVoucher => ${journalVoucher.id}",
-                                value = ObjectMapper().writeValueAsString(journalVoucher)
-                            )
+                        response?.put(
+                            key = "payment => ${payment.id}",
+                            value = ObjectMapper().writeValueAsString(payment)
+                        )
 
-                            val accountUtilizationForJournalVoucher = accountUtilizationRepository.getAccountUtilizationByDocNoAndAccMode(
-                                documentValue = journalVoucher.jvNum,
-                                documentNo = journalVoucher.id!!,
+                        if (payment.paymentNum != null && payment.paymentNumValue != null) {
+                            val accountUtilizationForPayment = accountUtilizationRepository.getAccountUtilizationByDocNoAndAccMode(
+                                documentNo = payment.paymentNum!!,
+                                documentValue = payment.paymentNumValue!!,
                                 accMode = AP.name,
-                                accType = VTDS.name,
+                                accType = PAY.name,
                                 serviceType = EXPENSE
                             )
 
-                            if (accountUtilizationForJournalVoucher != null) {
-                                accountUtilizationForJournalVoucher?.organizationId = request.organizationTradePartyDetailId
-                                accountUtilizationForJournalVoucher?.organizationName = request.organizationTradePartyName
-                                accountUtilizationForJournalVoucher?.taggedOrganizationId = request.organizationId
-                                accountUtilizationForJournalVoucher?.orgSerialId = request.organizationTradePartySerialId
-                                accountUtilizationForJournalVoucher?.tradePartyMappingId = request.organizationTradePartiesId
-                                accountUtilizationRepository.update(accountUtilizationForJournalVoucher)
+                            if (accountUtilizationForPayment != null) {
+                                accountUtilizationForPayment?.organizationId = request.organizationTradePartyDetailId
+                                accountUtilizationForPayment?.organizationName = request.organizationTradePartyName
+                                accountUtilizationForPayment?.taggedOrganizationId = request.organizationId
+                                accountUtilizationForPayment?.orgSerialId = request.organizationTradePartySerialId
+                                accountUtilizationForPayment?.tradePartyMappingId = request.organizationTradePartiesId
+                                accountUtilizationRepository.update(accountUtilizationForPayment)
 
                                 response?.put(
-                                    key = "accountUtilizationForJournal => ${accountUtilizationForJournalVoucher.id}",
-                                    value = ObjectMapper().writeValueAsString(accountUtilizationForJournalVoucher)
+                                    key = "accountUtilizationForPayment => ${accountUtilizationForPayment.id}",
+                                    value = ObjectMapper().writeValueAsString(accountUtilizationForPayment)
                                 )
+                            }
+                        }
+                    }
+
+                    if (journalVoucherIds != null) {
+                        journalVoucherIds.forEach { journalVoucherId ->
+                            val journalVoucher = journalVoucherRepository.findById(journalVoucherId)
+
+                            if (journalVoucher != null) {
+                                journalVoucher.tradePartyId = request.organizationTradePartyDetailId
+                                journalVoucher.tradePartyName = request.organizationTradePartyName
+                                journalVoucher.updatedBy = request.updatedBy
+
+                                journalVoucherRepository.update(journalVoucher)
+
+                                response?.put(
+                                    key = "journalVoucher => ${journalVoucher.id}",
+                                    value = ObjectMapper().writeValueAsString(journalVoucher)
+                                )
+
+                                val accountUtilizationForJournalVoucher = accountUtilizationRepository.getAccountUtilizationByDocNoAndAccMode(
+                                    documentValue = journalVoucher.jvNum,
+                                    documentNo = journalVoucher.id!!,
+                                    accMode = AP.name,
+                                    accType = VTDS.name,
+                                    serviceType = EXPENSE
+                                )
+
+                                if (accountUtilizationForJournalVoucher != null) {
+                                    accountUtilizationForJournalVoucher?.organizationId = request.organizationTradePartyDetailId
+                                    accountUtilizationForJournalVoucher?.organizationName = request.organizationTradePartyName
+                                    accountUtilizationForJournalVoucher?.taggedOrganizationId = request.organizationId
+                                    accountUtilizationForJournalVoucher?.orgSerialId = request.organizationTradePartySerialId
+                                    accountUtilizationForJournalVoucher?.tradePartyMappingId = request.organizationTradePartiesId
+                                    accountUtilizationRepository.update(accountUtilizationForJournalVoucher)
+
+                                    response?.put(
+                                        key = "accountUtilizationForJournal => ${accountUtilizationForJournalVoucher.id}",
+                                        value = ObjectMapper().writeValueAsString(accountUtilizationForJournalVoucher)
+                                    )
+                                }
                             }
                         }
                     }
