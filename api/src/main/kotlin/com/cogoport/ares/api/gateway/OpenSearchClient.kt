@@ -8,6 +8,7 @@ import com.cogoport.ares.model.payment.request.OrganizationReceivablesRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequestV2
 import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
+import com.cogoport.ares.model.payment.response.AgeingBucketOutstandingV2
 import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
 import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponseV2
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
@@ -24,8 +25,10 @@ import org.opensearch.client.opensearch._types.query_dsl.Query
 import org.opensearch.client.opensearch._types.query_dsl.TermsQueryField
 import org.opensearch.client.opensearch.core.SearchRequest
 import org.opensearch.client.opensearch.core.SearchResponse
+import java.math.BigDecimal
 import java.sql.Timestamp
 import java.time.LocalDateTime
+import java.util.*
 
 class OpenSearchClient {
 
@@ -1031,6 +1034,38 @@ class OpenSearchClient {
                             }
                             b
                         }
+                        if (request.portfolioManagerId != null) {
+                            b.must { s ->
+                                s.terms { v ->
+                                    v.field("portfolioManager.id.keyword").terms(
+                                        TermsQueryField.of { a ->
+                                            a.value(
+                                                request.portfolioManagerId?.map {
+                                                    FieldValue.of(it.toString())
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            b
+                        }
+                        if (request.portfolioManagerRmId != null) {
+                            b.must { s ->
+                                s.terms { v ->
+                                    v.field("portfolioManager.rmDetails.id.keyword").terms(
+                                        TermsQueryField.of { a ->
+                                            a.value(
+                                                request.portfolioManagerId?.map {
+                                                    FieldValue.of(it.toString())
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            b
+                        }
                         if (request.kamId != null) {
                             b.must { s ->
                                 s.terms { v ->
@@ -1050,7 +1085,7 @@ class OpenSearchClient {
                         if (request.tradePartyDetailIds != null) {
                             b.must { s ->
                                 s.terms { v ->
-                                    v.field("organizationId").terms(
+                                    v.field("organizationId.keyword").terms(
                                         TermsQueryField.of { a ->
                                             a.value(
                                                 request.tradePartyDetailIds?.map {
@@ -1104,7 +1139,7 @@ class OpenSearchClient {
                             b
                         }
                         if (request.entityCode != null) {
-                            b.must { s ->
+                            b.should { s ->
                                 s.terms { v ->
                                     v.field("entityCode").terms(
                                         TermsQueryField.of { a ->
@@ -1128,5 +1163,23 @@ class OpenSearchClient {
         }, CustomerOutstandingDocumentResponseV2::class.java)
 
         return response
+    }
+
+    @NewSpan
+    fun getOrgIn101And301(request: CustomerOutstandingRequest):  SearchResponse<CustomerOutstandingDocumentResponseV2>?{
+        val orgIds = Client.search({ t ->
+            t.index(AresConstants.CUSTOMER_OUTSTANDING_V2)
+                .size(0)
+                .aggregations("organizationId_aggregation"){a ->
+                    a.terms { b->
+                        b.size(10000)
+                        b.field("organizationId.keyword")
+                        b.minDocCount(2)
+                    }
+
+                }
+        }, Any::class.java)?.aggregations()!!["organizationId_aggregation"]?.sterms()?.buckets()?.array()?.map { it.key() }
+        request.tradePartyDetailIds = orgIds?.map { UUID.fromString(it)}
+        return listCustomerOutstandingV2(request)
     }
 }

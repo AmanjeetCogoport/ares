@@ -1649,7 +1649,7 @@ class OutStandingServiceImpl : OutStandingService {
             outstanding.onAccountOneEightyCount, outstanding.onAccountThreeSixtyFiveCount,
             outstanding.onAccountThreeSixtyFivePlusCount
         )
-        customerOutstanding?.entityCode = outstanding.entityCode
+        customerOutstanding?.entityCode = outstanding.entityCode.toString()
         customerOutstanding?.creditNoteCount = calculateTotalCount(
             outstanding.creditNoteNotDueCount, outstanding.creditNoteThirtyCount,
             outstanding.creditNoteSixtyCount, outstanding.creditNoteNinetyCount,
@@ -1699,7 +1699,6 @@ class OutStandingServiceImpl : OutStandingService {
             hashMap.put(
                 key,
                 AgeingBucketOutstandingV2(
-                    key = key,
                     ledgerAmount = amountValue,
                     ledgerCount = value["count"].toString().toLongOrNull() ?: 0L,
                     ledgerCurrency = orgOutstanding.ledCurrency
@@ -1779,7 +1778,7 @@ class OutStandingServiceImpl : OutStandingService {
                 AccountType.SCN,
                 AccountType.SREIMBCN
             ),
-            entityCodes = listOf(customerData.entityCode!!),
+            entityCodes = listOf(customerData.entityCode!!.toInt()),
             organizationId = orgId
         )
 
@@ -1794,7 +1793,7 @@ class OutStandingServiceImpl : OutStandingService {
 
         val outstandingData = unifiedDBNewRepository.getTradePartyOutstanding(
             listOf(orgId),
-            listOf(customerData.entityCode!!)
+            listOf(customerData.entityCode!!.toInt())
         )?.first()
 
         val overdueAmntPerTotalAmnt = outstandingData?.overdueOpenInvoicesLedAmount?.divideNumbers(
@@ -1817,7 +1816,7 @@ class OutStandingServiceImpl : OutStandingService {
                 AccountType.SINV,
                 AccountType.SREIMB,
             ),
-            entityCodes = listOf(customerData.entityCode!!),
+            entityCodes = listOf(customerData.entityCode!!.toInt()),
             organizationId = orgId,
             destinationTypes = listOf(
                 SettlementType.SINV,
@@ -1890,19 +1889,80 @@ class OutStandingServiceImpl : OutStandingService {
     }
 
     override suspend fun listCustomerDetailsV2(request: CustomerOutstandingRequest): ResponseList<CustomerOutstandingDocumentResponseV2?> {
-        val response = OpenSearchClient().listCustomerOutstandingV2(request)
-        var list: List<CustomerOutstandingDocumentResponseV2?> = listOf()
-        if (!response?.hits()?.hits().isNullOrEmpty()) {
-            list = response?.hits()?.hits()?.map { it.source() }!!
-        }
         val responseList = ResponseList<CustomerOutstandingDocumentResponseV2?>()
+        var response: SearchResponse<CustomerOutstandingDocumentResponseV2>? = null
+        var responseV2: List<CustomerOutstandingDocumentResponseV2?>? = null
+        val limit = request.limit ?: 10
+        var totalRecords: Long = 0
 
-        responseList.list = list
-        responseList.totalRecords = response?.hits()?.total()?.value() ?: 0
-        responseList.totalPages = if (responseList.totalRecords!! % request.limit!! == 0.toLong()) (responseList.totalRecords!! / request.limit!!) else (responseList.totalRecords!! / request.limit!!) + 1.toLong()
-        responseList.pageNo = request.page!!
+        if (request.entityCode == "101_301") {
+            request.limit = 10000
+            response = OpenSearchClient().getOrgIn101And301(request)
+
+            val filtered = response?.hits()?.hits()?.map { it.source() }?.groupBy { it?.organizationId }?.filter { (_, v) -> v.size >= 2 }
+            totalRecords = filtered?.values?.size?.toLong()!!
+            val startIndex  = (request.page?.minus(1) ?: 0) * limit
+            val endIndex  = startIndex + limit
+
+            responseV2 = filtered.values.toList().flatten().subList(startIndex, endIndex)
+            val groupedList = mutableListOf<CustomerOutstandingDocumentResponseV2?>()
+
+            responseV2.let { hits ->
+                if (hits.isNotEmpty()) {
+                    hits.groupBy { it?.organizationId }.map { (_, v) ->
+                        val filteredData = v.filter { listOf("101", "301").contains(it?.entityCode) }
+                        val resp = filteredData.first()
+                        resp?.totalOutstanding = filteredData.sumOf { it?.totalOutstanding!! }
+                        resp?.openInvoiceAmount = filteredData.sumOf { it?.openInvoiceAmount!! }
+                        resp?.openInvoiceCount = filteredData.sumOf { it?.openInvoiceCount!! }
+                        resp?.onAccountAmount = filteredData.sumOf { it?.onAccountAmount!! }
+                        resp?.totalCallPriorityScore = filteredData.sumOf { it?.totalCallPriorityScore!! }.div(2)
+                        resp?.onAccountCount = filteredData.sumOf { it?.onAccountCount!! }
+                        resp?.creditNoteAmount = filteredData.sumOf { it?.creditNoteAmount!! }
+                        resp?.creditNoteCount = filteredData.sumOf { it?.creditNoteCount!! }
+
+                        val ageingBuckets = listOf("notDue", "thirty", "sixty", "ninety", "oneEighty", "threeSixtyFive", "threeSixtyFivePlus")
+                        ageingBuckets.forEach { bucket ->
+                            resp?.creditNoteAgeingBucket?.set(bucket, AgeingBucketOutstandingV2(
+                                ledgerAmount = filteredData.sumOf { it?.creditNoteAgeingBucket?.get(bucket)?.ledgerAmount ?: BigDecimal(0) },
+                                ledgerCount = filteredData.sumOf { it?.creditNoteAgeingBucket?.get(bucket)?.ledgerCount ?: 0L }
+                            ))
+                            resp?.openInvoiceAgeingBucket?.set(bucket, AgeingBucketOutstandingV2(
+                                ledgerAmount = filteredData.sumOf { it?.openInvoiceAgeingBucket?.get(bucket)?.ledgerAmount ?: BigDecimal(0) },
+                                ledgerCount = filteredData.sumOf { it?.openInvoiceAgeingBucket?.get(bucket)?.ledgerCount ?: 0L }
+                            ))
+                            resp?.onAccountAgeingBucket?.set(bucket, AgeingBucketOutstandingV2(
+                                ledgerAmount = filteredData.sumOf { it?.onAccountAgeingBucket?.get(bucket)?.ledgerAmount ?: BigDecimal(0) },
+                                ledgerCount = filteredData.sumOf { it?.onAccountAgeingBucket?.get(bucket)?.ledgerCount ?: 0L }
+                            ))
+                        }
+
+                        resp?.entityCode = request.entityCode!!
+                        groupedList.add(resp)
+                    }
+
+                    responseList.list = groupedList.toList()
+                }
+            }
+
+        } else {
+            response = OpenSearchClient().listCustomerOutstandingV2(request)
+            responseV2 = response?.hits()?.hits()?.map { it.source() }
+            totalRecords = response?.hits()?.total()?.value()!!
+            responseList.list = if (!responseV2?.toList().isNullOrEmpty()) responseV2?.toList()!! else listOf()
+        }
+
+        responseList.totalPages =
+            if (totalRecords % limit == 0L) {
+                totalRecords / limit
+            } else {
+                totalRecords / limit + 1
+            }
+        responseList.pageNo = request.page ?: 1
+        responseList.totalRecords = totalRecords
         return responseList
     }
+
 
     override suspend fun updateAccountTaggings(req: UpdateAccountTaggingRequest): Boolean {
         val searchResponse = OpenSearchClient().listCustomerOutstandingV2(
@@ -1917,7 +1977,7 @@ class OutStandingServiceImpl : OutStandingService {
         }
         val customerOutstanding = searchResponse?.hits()?.hits()?.map { it.source() }?.get(0)
         customerOutstanding?.taggedState = req.taggedState
-        Client.updateDocument(AresConstants.CUSTOMER_OUTSTANDING_V2, "${customerOutstanding?.organizationId}_${customerOutstanding?.entityCode}", customerOutstanding)
+        Client.updateDocument(AresConstants.CUSTOMER_OUTSTANDING_V2, "${customerOutstanding?.organizationId}_${customerOutstanding?.entityCode}", customerOutstanding, true)
         return true
     }
 }

@@ -46,7 +46,7 @@ data class CustomerOutstandingDocumentResponseV2(
     @JsonProperty("creditNoteAgeingBucket")
     var creditNoteAgeingBucket: HashMap<String, AgeingBucketOutstandingV2?>?,
     @JsonProperty("entityCode")
-    var entityCode: Int?,
+    var entityCode: String?,
     @JsonProperty("lastUpdatedAt")
     var lastUpdatedAt: Timestamp? = Timestamp.valueOf(LocalDateTime.now()),
     @JsonProperty("totalCallPriorityScore")
@@ -106,7 +106,5 @@ data class AgeingBucketOutstandingV2(
     @JsonProperty("ledgerCount")
     var ledgerCount: Long?,
     @JsonProperty("ledgerCurrency")
-    var ledgerCurrency: String,
-    @JsonProperty("key")
-    var key: String,
+    var ledgerCurrency: String? = null
 )

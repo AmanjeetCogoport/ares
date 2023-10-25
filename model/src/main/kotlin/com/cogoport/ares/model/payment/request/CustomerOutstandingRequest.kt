@@ -20,5 +20,7 @@ data class CustomerOutstandingRequest(
     var sortBy: String? = "totalOutstanding",
     var sortType: String? = "Desc",
     var page: Int? = 1,
-    var limit: Int? = 10
+    var limit: Int? = 10,
+    var portfolioManagerId: List<UUID>? = null,
+    var portfolioManagerRmId: List<UUID>? = null
 )
