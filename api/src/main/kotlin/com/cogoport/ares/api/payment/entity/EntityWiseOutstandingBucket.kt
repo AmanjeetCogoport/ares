@@ -16,7 +16,7 @@ data class EntityWiseOutstandingBucket(
     var oneEightyPlusLedAmount: BigDecimal? = BigDecimal(0),
     var threeSixtyFiveLedAmount: BigDecimal? = BigDecimal(0),
     var threeSixtyFivePlusLedAmount: BigDecimal? = BigDecimal(0),
-    var totalLedAmount: BigDecimal?= BigDecimal(0),
+    var totalLedAmount: BigDecimal? = BigDecimal(0),
     var notDueCount: Int? = 0,
     var thirtyCount: Int? = 0,
     var fortyFiveCount: Int? = 0,

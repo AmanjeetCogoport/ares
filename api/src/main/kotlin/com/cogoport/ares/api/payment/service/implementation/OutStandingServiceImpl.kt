@@ -1902,23 +1902,22 @@ class OutStandingServiceImpl : OutStandingService {
 
             var filtered = response?.hits()?.hits()?.map { it.source() }?.groupBy { it?.organizationId }?.filter { (_, v) -> v.size >= 2 }
             totalRecords = filtered?.values?.size?.toLong()!!
-            var startIndex  = (request.page?.minus(1) ?: 0) * (limit*2)
-            var endIndex  = startIndex + limit*2
+            var startIndex = (request.page?.minus(1) ?: 0) * (limit * 2)
+            var endIndex = startIndex + limit * 2
 
             responseV2 = filtered.values.toList().flatten().subList(startIndex, endIndex)
             responseList.list = getSortedData(responseV2, groupedList, request.entityCode).toList()
-            responseList.list.map {it?.ledgerCurrency = "INR"}
+            responseList.list.map { it?.ledgerCurrency = "INR" }
 
             request.sortBy = "callPriority"
             response = OpenSearchClient().getOrgIn101And301(request)
             filtered = response?.hits()?.hits()?.map { it.source() }?.groupBy { it?.organizationId }?.filter { (_, v) -> v.size >= 2 }
-            startIndex  = (request.page?.minus(1) ?: 0) * 1
-            endIndex  = startIndex + 1
+            startIndex = (request.page?.minus(1) ?: 0) * 1
+            endIndex = startIndex + 1
 
             responseV2 = filtered?.values?.toList()?.flatten()?.subList(startIndex, endIndex)
             responseList.byCallPriority = getSortedData(responseV2, groupedList, request.entityCode).toList().first()
             responseList.byCallPriority?.ledgerCurrency = "INR"
-
         } else {
             response = OpenSearchClient().listCustomerOutstandingV2(request)
             responseV2 = response?.hits()?.hits()?.map { it.source() }
@@ -1926,21 +1925,20 @@ class OutStandingServiceImpl : OutStandingService {
             responseList.list = if (!responseV2?.toList().isNullOrEmpty()) responseV2?.toList()!! else listOf()
             request.sortBy = "callPriority"
             request.limit = 1
-            responseList.byCallPriority = OpenSearchClient().listCustomerOutstandingV2(request)?.hits()?.hits()?.map{it.source()}?.first()
-            responseList.list.map {it?.ledgerCurrency = AresConstants.LEDGER_CURRENCY[request.entityCode?.toInt()]}
+            responseList.byCallPriority = OpenSearchClient().listCustomerOutstandingV2(request)?.hits()?.hits()?.map { it.source() }?.first()
+            responseList.list.map { it?.ledgerCurrency = AresConstants.LEDGER_CURRENCY[request.entityCode?.toInt()] }
             responseList.byCallPriority?.ledgerCurrency = AresConstants.LEDGER_CURRENCY[request.entityCode?.toInt()]
         }
 
         responseList.totalPages = if (totalRecords % limit == 0L) {
-                totalRecords / limit
-            } else {
-                totalRecords / limit + 1
-            }
+            totalRecords / limit
+        } else {
+            totalRecords / limit + 1
+        }
         responseList.pageNo = request.page ?: 1
         responseList.totalRecords = totalRecords
         return responseList
     }
-
 
     override suspend fun updateAccountTaggings(req: UpdateAccountTaggingRequest): Boolean {
         val searchResponse = OpenSearchClient().listCustomerOutstandingV2(
@@ -1962,7 +1960,7 @@ class OutStandingServiceImpl : OutStandingService {
     override suspend fun getOverAllCustomerOutstandingV2(entityCodes: String?): HashMap<String, EntityWiseOutstandingBucket> {
         if (entityCodes == null) throw AresException(AresError.ERR_1003, "entity code")
         val orgOutstanding = accountUtilizationRepository.getArOutstandingData(
-            entityCodes = entityCodes.split("_").map{it.toInt()}.toList(),
+            entityCodes = entityCodes.split("_").map { it.toInt() }.toList(),
             orgIds = null,
             accMode = AccMode.AR.name,
             accTypes = AresConstants.accTypesForAr,
@@ -1984,123 +1982,168 @@ class OutStandingServiceImpl : OutStandingService {
         entityWise.entityCode = entityCodes
 
         data?.forEach { it ->
-            entityWise.notDueLedAmount = entityWise.notDueLedAmount?.plus(when (type) {
-                "invoice" -> it.invoiceNotDueAmount
-                "creditNote" -> it.creditNoteNotDueAmount
-                "onAccount" -> it.onAccountNotDueAmount
-                else -> BigDecimal(0)
-            })
+            entityWise.notDueLedAmount = entityWise.notDueLedAmount?.plus(
+                when (type) {
+                    "invoice" -> it.invoiceNotDueAmount
+                    "creditNote" -> it.creditNoteNotDueAmount
+                    "onAccount" -> it.onAccountNotDueAmount
+                    else -> BigDecimal(0)
+                }
+            )
 
-            entityWise.thirtyLedAmount = entityWise.thirtyLedAmount?.plus(when (type) {
-                "invoice" -> it.invoiceThirtyAmount
-                "creditNote" -> it.creditNoteThirtyAmount
-                "onAccount" -> it.onAccountThirtyAmount
-                else -> BigDecimal(0)
-            })
-            entityWise.sixtyLedAmount = entityWise.sixtyLedAmount?.plus(when (type) {
-                "invoice" -> it.invoiceThirtyAmount
-                "creditNote" -> it.creditNoteSixtyAmount
-                "onAccount" -> it.onAccountThirtyAmount
-                else -> BigDecimal(0)
-            })
-            entityWise.ninetyLedAmount = entityWise.thirtyLedAmount?.plus(when (type) {
-                "invoice" -> it.invoiceNinetyAmount
-                "creditNote" -> it.creditNoteNinetyAmount
-                "onAccount" -> it.onAccountNinetyAmount
-                else -> BigDecimal(0)
-            })
-            entityWise.oneEightyLedAmount = entityWise.thirtyLedAmount?.plus(when (type) {
-                "invoice" -> it.invoiceOneEightyAmount
-                "creditNote" -> it.creditNoteOneEightyAmount
-                "onAccount" -> it.onAccountOneEightyAmount
-                else -> BigDecimal(0)
-            })
-            entityWise.threeSixtyFiveLedAmount = entityWise.thirtyLedAmount?.plus(when (type) {
-                "invoice" -> it.invoiceThreeSixtyFiveAmount
-                "creditNote" -> it.creditNoteThreeSixtyFiveAmount
-                "onAccount" -> it.onAccountThreeSixtyFiveAmount
-                else -> BigDecimal(0)
-            })
-            entityWise.threeSixtyFivePlusLedAmount = entityWise.threeSixtyFivePlusLedAmount?.plus(when (type) {
-                "invoice" -> it.invoiceThreeSixtyFivePlusAmount
-                "creditNote" -> it.creditNoteThreeSixtyFivePlusAmount
-                "onAccount" -> it.onAccountThreeSixtyFivePlusAmount
-                else -> BigDecimal(0)
-            })
+            entityWise.thirtyLedAmount = entityWise.thirtyLedAmount?.plus(
+                when (type) {
+                    "invoice" -> it.invoiceThirtyAmount
+                    "creditNote" -> it.creditNoteThirtyAmount
+                    "onAccount" -> it.onAccountThirtyAmount
+                    else -> BigDecimal(0)
+                }
+            )
+            entityWise.sixtyLedAmount = entityWise.sixtyLedAmount?.plus(
+                when (type) {
+                    "invoice" -> it.invoiceThirtyAmount
+                    "creditNote" -> it.creditNoteSixtyAmount
+                    "onAccount" -> it.onAccountThirtyAmount
+                    else -> BigDecimal(0)
+                }
+            )
+            entityWise.ninetyLedAmount = entityWise.thirtyLedAmount?.plus(
+                when (type) {
+                    "invoice" -> it.invoiceNinetyAmount
+                    "creditNote" -> it.creditNoteNinetyAmount
+                    "onAccount" -> it.onAccountNinetyAmount
+                    else -> BigDecimal(0)
+                }
+            )
+            entityWise.oneEightyLedAmount = entityWise.thirtyLedAmount?.plus(
+                when (type) {
+                    "invoice" -> it.invoiceOneEightyAmount
+                    "creditNote" -> it.creditNoteOneEightyAmount
+                    "onAccount" -> it.onAccountOneEightyAmount
+                    else -> BigDecimal(0)
+                }
+            )
+            entityWise.threeSixtyFiveLedAmount = entityWise.thirtyLedAmount?.plus(
+                when (type) {
+                    "invoice" -> it.invoiceThreeSixtyFiveAmount
+                    "creditNote" -> it.creditNoteThreeSixtyFiveAmount
+                    "onAccount" -> it.onAccountThreeSixtyFiveAmount
+                    else -> BigDecimal(0)
+                }
+            )
+            entityWise.threeSixtyFivePlusLedAmount = entityWise.threeSixtyFivePlusLedAmount?.plus(
+                when (type) {
+                    "invoice" -> it.invoiceThreeSixtyFivePlusAmount
+                    "creditNote" -> it.creditNoteThreeSixtyFivePlusAmount
+                    "onAccount" -> it.onAccountThreeSixtyFivePlusAmount
+                    else -> BigDecimal(0)
+                }
+            )
 
-            entityWise.notDueCount = entityWise.notDueCount?.plus(when (type) {
-                "invoice" -> it.invoiceNotDueCount.toInt()
-                "creditNote" -> it.creditNoteNotDueCount.toInt()
-                "onAccount" -> it.onAccountNotDueCount.toInt()
-                else -> 0
-            })
-            entityWise.notDueCount = entityWise.notDueCount?.plus(when (type) {
-                "invoice" -> it.invoiceNotDueCount.toInt()
-                "creditNote" -> it.creditNoteNotDueCount.toInt()
-                "onAccount" -> it.onAccountNotDueCount.toInt()
-                else -> 0
-            })
-            entityWise.thirtyCount = entityWise.thirtyCount?.plus(when (type) {
-                "invoice" -> it.invoiceThirtyCount.toInt()
-                "creditNote" -> it.creditNoteThirtyCount.toInt()
-                "onAccount" -> it.onAccountThirtyCount.toInt()
-                else -> 0
-            })
-            entityWise.sixtyCount = entityWise.sixtyCount?.plus(when (type) {
-                "invoice" -> it.invoiceSixtyCount.toInt()
-                "creditNote" -> it.creditNoteSixtyCount.toInt()
-                "onAccount" -> it.onAccountSixtyCount.toInt()
-                else -> 0
-            })
-            entityWise.ninetyCount = entityWise.ninetyCount?.plus(when (type) {
-                "invoice" -> it.invoiceNinetyCount.toInt()
-                "creditNote" -> it.creditNoteNinetyCount.toInt()
-                "onAccount" -> it.onAccountNinetyCount.toInt()
-                else -> 0
-            })
-            entityWise.oneEightyCount = entityWise.oneEightyCount?.plus(when (type) {
-                "invoice" -> it.invoiceOneEightyCount.toInt()
-                "creditNote" -> it.creditNoteOneEightyCount.toInt()
-                "onAccount" -> it.onAccountOneEightyCount.toInt()
-                else -> 0
-            })
-            entityWise.threeSixtyFiveCount = entityWise.threeSixtyFiveCount?.plus(when (type) {
-                "invoice" -> it.invoiceThreeSixtyFiveCount.toInt()
-                "creditNote" -> it.creditNoteThreeSixtyFiveCount.toInt()
-                "onAccount" -> it.onAccountThreeSixtyFiveCount.toInt()
-                else -> 0
-            })
-            entityWise.threeSixtyFivePlusCount = entityWise.threeSixtyFivePlusCount?.plus(when (type) {
-                "invoice" -> it.invoiceThreeSixtyFivePlusCount.toInt()
-                "creditNote" -> it.creditNoteThreeSixtyFivePlusCount.toInt()
-                "onAccount" -> it.onAccountThreeSixtyFivePlusCount.toInt()
-                else -> 0
-            })
-            entityWise.totalCount = entityWise.totalCount?.plus( when (type) {
-                "invoice" -> (it.invoiceNotDueCount.plus(it.invoiceThirtyCount).plus(it.invoiceSixtyCount).plus(it.invoiceNinetyCount)
-                    .plus(it.invoiceOneEightyCount).plus(it.invoiceThreeSixtyFiveCount).plus(it.invoiceThreeSixtyFivePlusCount)).toInt()
-                "creditNote" -> (it.creditNoteNotDueCount.plus(it.creditNoteThirtyCount).plus(it.creditNoteSixtyCount).plus(it.creditNoteNinetyCount)
-                    .plus(it.creditNoteOneEightyCount).plus(it.creditNoteThreeSixtyFiveCount).plus(it.creditNoteThreeSixtyFivePlusCount)).toInt()
-                "onAccount" -> (it.onAccountNotDueCount.plus(it.onAccountThirtyCount).plus(it.onAccountSixtyCount).plus(it.onAccountNinetyCount)
-                    .plus(it.onAccountOneEightyCount).plus(it.onAccountThreeSixtyFiveCount).plus(it.onAccountThreeSixtyFivePlusCount)).toInt()
-                else -> 0
-            })
-            entityWise.totalLedAmount = entityWise.totalLedAmount?.plus( when (type) {
-                "invoice" -> (it.invoiceNotDueAmount.plus(it.invoiceThirtyAmount).plus(it.invoiceSixtyAmount).plus(it.invoiceNinetyAmount)
-                    .plus(it.invoiceOneEightyAmount).plus(it.invoiceThreeSixtyFiveAmount).plus(it.invoiceThreeSixtyFivePlusAmount))
-                "creditNote" -> (it.creditNoteNotDueAmount.plus(it.creditNoteThirtyAmount).plus(it.creditNoteSixtyAmount).plus(it.creditNoteNinetyAmount)
-                    .plus(it.creditNoteOneEightyAmount).plus(it.creditNoteThreeSixtyFiveAmount).plus(it.creditNoteThreeSixtyFivePlusAmount))
-                "onAccount" -> (it.onAccountNotDueAmount.plus(it.onAccountThirtyAmount).plus(it.onAccountSixtyAmount).plus(it.onAccountNinetyAmount)
-                    .plus(it.onAccountOneEightyAmount).plus(it.onAccountThreeSixtyFiveAmount).plus(it.onAccountThreeSixtyFivePlusAmount))
-                else -> BigDecimal(0)
-            }
+            entityWise.notDueCount = entityWise.notDueCount?.plus(
+                when (type) {
+                    "invoice" -> it.invoiceNotDueCount.toInt()
+                    "creditNote" -> it.creditNoteNotDueCount.toInt()
+                    "onAccount" -> it.onAccountNotDueCount.toInt()
+                    else -> 0
+                }
+            )
+            entityWise.notDueCount = entityWise.notDueCount?.plus(
+                when (type) {
+                    "invoice" -> it.invoiceNotDueCount.toInt()
+                    "creditNote" -> it.creditNoteNotDueCount.toInt()
+                    "onAccount" -> it.onAccountNotDueCount.toInt()
+                    else -> 0
+                }
+            )
+            entityWise.thirtyCount = entityWise.thirtyCount?.plus(
+                when (type) {
+                    "invoice" -> it.invoiceThirtyCount.toInt()
+                    "creditNote" -> it.creditNoteThirtyCount.toInt()
+                    "onAccount" -> it.onAccountThirtyCount.toInt()
+                    else -> 0
+                }
+            )
+            entityWise.sixtyCount = entityWise.sixtyCount?.plus(
+                when (type) {
+                    "invoice" -> it.invoiceSixtyCount.toInt()
+                    "creditNote" -> it.creditNoteSixtyCount.toInt()
+                    "onAccount" -> it.onAccountSixtyCount.toInt()
+                    else -> 0
+                }
+            )
+            entityWise.ninetyCount = entityWise.ninetyCount?.plus(
+                when (type) {
+                    "invoice" -> it.invoiceNinetyCount.toInt()
+                    "creditNote" -> it.creditNoteNinetyCount.toInt()
+                    "onAccount" -> it.onAccountNinetyCount.toInt()
+                    else -> 0
+                }
+            )
+            entityWise.oneEightyCount = entityWise.oneEightyCount?.plus(
+                when (type) {
+                    "invoice" -> it.invoiceOneEightyCount.toInt()
+                    "creditNote" -> it.creditNoteOneEightyCount.toInt()
+                    "onAccount" -> it.onAccountOneEightyCount.toInt()
+                    else -> 0
+                }
+            )
+            entityWise.threeSixtyFiveCount = entityWise.threeSixtyFiveCount?.plus(
+                when (type) {
+                    "invoice" -> it.invoiceThreeSixtyFiveCount.toInt()
+                    "creditNote" -> it.creditNoteThreeSixtyFiveCount.toInt()
+                    "onAccount" -> it.onAccountThreeSixtyFiveCount.toInt()
+                    else -> 0
+                }
+            )
+            entityWise.threeSixtyFivePlusCount = entityWise.threeSixtyFivePlusCount?.plus(
+                when (type) {
+                    "invoice" -> it.invoiceThreeSixtyFivePlusCount.toInt()
+                    "creditNote" -> it.creditNoteThreeSixtyFivePlusCount.toInt()
+                    "onAccount" -> it.onAccountThreeSixtyFivePlusCount.toInt()
+                    else -> 0
+                }
+            )
+            entityWise.totalCount = entityWise.totalCount?.plus(
+                when (type) {
+                    "invoice" -> (
+                        it.invoiceNotDueCount.plus(it.invoiceThirtyCount).plus(it.invoiceSixtyCount).plus(it.invoiceNinetyCount)
+                            .plus(it.invoiceOneEightyCount).plus(it.invoiceThreeSixtyFiveCount).plus(it.invoiceThreeSixtyFivePlusCount)
+                        ).toInt()
+                    "creditNote" -> (
+                        it.creditNoteNotDueCount.plus(it.creditNoteThirtyCount).plus(it.creditNoteSixtyCount).plus(it.creditNoteNinetyCount)
+                            .plus(it.creditNoteOneEightyCount).plus(it.creditNoteThreeSixtyFiveCount).plus(it.creditNoteThreeSixtyFivePlusCount)
+                        ).toInt()
+                    "onAccount" -> (
+                        it.onAccountNotDueCount.plus(it.onAccountThirtyCount).plus(it.onAccountSixtyCount).plus(it.onAccountNinetyCount)
+                            .plus(it.onAccountOneEightyCount).plus(it.onAccountThreeSixtyFiveCount).plus(it.onAccountThreeSixtyFivePlusCount)
+                        ).toInt()
+                    else -> 0
+                }
+            )
+            entityWise.totalLedAmount = entityWise.totalLedAmount?.plus(
+                when (type) {
+                    "invoice" -> (
+                        it.invoiceNotDueAmount.plus(it.invoiceThirtyAmount).plus(it.invoiceSixtyAmount).plus(it.invoiceNinetyAmount)
+                            .plus(it.invoiceOneEightyAmount).plus(it.invoiceThreeSixtyFiveAmount).plus(it.invoiceThreeSixtyFivePlusAmount)
+                        )
+                    "creditNote" -> (
+                        it.creditNoteNotDueAmount.plus(it.creditNoteThirtyAmount).plus(it.creditNoteSixtyAmount).plus(it.creditNoteNinetyAmount)
+                            .plus(it.creditNoteOneEightyAmount).plus(it.creditNoteThreeSixtyFiveAmount).plus(it.creditNoteThreeSixtyFivePlusAmount)
+                        )
+                    "onAccount" -> (
+                        it.onAccountNotDueAmount.plus(it.onAccountThirtyAmount).plus(it.onAccountSixtyAmount).plus(it.onAccountNinetyAmount)
+                            .plus(it.onAccountOneEightyAmount).plus(it.onAccountThreeSixtyFiveAmount).plus(it.onAccountThreeSixtyFivePlusAmount)
+                        )
+                    else -> BigDecimal(0)
+                }
             )
         }
 
         return entityWise
     }
 
-    private fun getSortedData (responseV2: List<CustomerOutstandingDocumentResponseV2?>?, groupedList: MutableList<CustomerOutstandingDocumentResponseV2?>, entityCode: String?): MutableList<CustomerOutstandingDocumentResponseV2?> {
+    private fun getSortedData(responseV2: List<CustomerOutstandingDocumentResponseV2?>?, groupedList: MutableList<CustomerOutstandingDocumentResponseV2?>, entityCode: String?): MutableList<CustomerOutstandingDocumentResponseV2?> {
         responseV2.let { hits ->
             if (!hits.isNullOrEmpty()) {
                 hits.groupBy { it?.organizationId }.map { (_, v) ->
@@ -2117,25 +2160,32 @@ class OutStandingServiceImpl : OutStandingService {
 
                     val ageingBuckets = listOf("notDue", "thirty", "sixty", "ninety", "oneEighty", "threeSixtyFive", "threeSixtyFivePlus")
                     ageingBuckets.forEach { bucket ->
-                        resp?.creditNoteAgeingBucket?.set(bucket, AgeingBucketOutstandingV2(
-                            ledgerAmount = filteredData.sumOf { it?.creditNoteAgeingBucket?.get(bucket)?.ledgerAmount ?: BigDecimal(0) },
-                            ledgerCount = filteredData.sumOf { it?.creditNoteAgeingBucket?.get(bucket)?.ledgerCount ?: 0L }
-                        ))
-                        resp?.openInvoiceAgeingBucket?.set(bucket, AgeingBucketOutstandingV2(
-                            ledgerAmount = filteredData.sumOf { it?.openInvoiceAgeingBucket?.get(bucket)?.ledgerAmount ?: BigDecimal(0) },
-                            ledgerCount = filteredData.sumOf { it?.openInvoiceAgeingBucket?.get(bucket)?.ledgerCount ?: 0L }
-                        ))
-                        resp?.onAccountAgeingBucket?.set(bucket, AgeingBucketOutstandingV2(
-                            ledgerAmount = filteredData.sumOf { it?.onAccountAgeingBucket?.get(bucket)?.ledgerAmount ?: BigDecimal(0) },
-                            ledgerCount = filteredData.sumOf { it?.onAccountAgeingBucket?.get(bucket)?.ledgerCount ?: 0L }
-                        ))
+                        resp?.creditNoteAgeingBucket?.set(
+                            bucket,
+                            AgeingBucketOutstandingV2(
+                                ledgerAmount = filteredData.sumOf { it?.creditNoteAgeingBucket?.get(bucket)?.ledgerAmount ?: BigDecimal(0) },
+                                ledgerCount = filteredData.sumOf { it?.creditNoteAgeingBucket?.get(bucket)?.ledgerCount ?: 0L }
+                            )
+                        )
+                        resp?.openInvoiceAgeingBucket?.set(
+                            bucket,
+                            AgeingBucketOutstandingV2(
+                                ledgerAmount = filteredData.sumOf { it?.openInvoiceAgeingBucket?.get(bucket)?.ledgerAmount ?: BigDecimal(0) },
+                                ledgerCount = filteredData.sumOf { it?.openInvoiceAgeingBucket?.get(bucket)?.ledgerCount ?: 0L }
+                            )
+                        )
+                        resp?.onAccountAgeingBucket?.set(
+                            bucket,
+                            AgeingBucketOutstandingV2(
+                                ledgerAmount = filteredData.sumOf { it?.onAccountAgeingBucket?.get(bucket)?.ledgerAmount ?: BigDecimal(0) },
+                                ledgerCount = filteredData.sumOf { it?.onAccountAgeingBucket?.get(bucket)?.ledgerCount ?: 0L }
+                            )
+                        )
                     }
 
                     resp?.entityCode = entityCode
                     groupedList.add(resp!!)
                 }
-
-
             }
         }
         return groupedList
