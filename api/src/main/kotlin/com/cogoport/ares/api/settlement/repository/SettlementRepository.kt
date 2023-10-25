@@ -672,7 +672,7 @@ ORDER BY
     @NewSpan
     @Query(
         """
-            update settlements set deleted_at = NOW() and settlement_status = 'DELETED' WHERE id in (:ids)
+            UPDATE settlements SET deleted_at = NOW(), settlement_status = 'DELETED' WHERE id IN (:ids) AND deleted_at is null
         """
     )
     suspend fun softDeleteSettlement(ids: List<Long>?)
