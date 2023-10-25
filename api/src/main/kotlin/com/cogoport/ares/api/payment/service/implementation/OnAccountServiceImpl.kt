@@ -2295,11 +2295,11 @@ open class OnAccountServiceImpl : OnAccountService {
                 serviceType = EXPENSE
             ) ?: throw AresException(ERR_1002, " account utilization not found.")
 
-            accountUtilizationDetail.organizationId = request.organizationTradePartyDetailId
-            accountUtilizationDetail.organizationName = request.organizationTradePartyName
-            accountUtilizationDetail.taggedOrganizationId = request.organizationId
-            accountUtilizationDetail.tradePartyMappingId = request.organizationTradePartiesId
-            accountUtilizationDetail.orgSerialId = request.organizationTradePartySerialId
+            accountUtilizationDetail.organizationId = request.organizationTradePartyDetailId ?: accountUtilizationDetail.organizationId
+            accountUtilizationDetail.organizationName = request.organizationTradePartyName ?: accountUtilizationDetail.organizationName
+            accountUtilizationDetail.taggedOrganizationId = request.organizationId ?: accountUtilizationDetail.taggedOrganizationId
+            accountUtilizationDetail.tradePartyMappingId = request.organizationTradePartiesId ?: accountUtilizationDetail.tradePartyMappingId
+            accountUtilizationDetail.orgSerialId = request.organizationTradePartySerialId ?: accountUtilizationDetail.orgSerialId
 
             accountUtilizationRepository.update(accountUtilizationDetail)
 
@@ -2336,11 +2336,11 @@ open class OnAccountServiceImpl : OnAccountService {
                     )
 
                     payments.forEach { payment ->
-                        payment.organizationId = request.organizationTradePartyDetailId
-                        payment.organizationName = request.organizationTradePartyName
-                        payment.taggedOrganizationId = request.organizationId
-                        payment.orgSerialId = request.organizationTradePartySerialId
-                        payment.tradePartyMappingId = request.organizationTradePartiesId
+                        payment.organizationId = request.organizationTradePartyDetailId ?: payment.organizationId
+                        payment.organizationName = request.organizationTradePartyName ?: payment.organizationName
+                        payment.taggedOrganizationId = request.organizationId ?: payment.taggedOrganizationId
+                        payment.orgSerialId = request.organizationTradePartySerialId ?: payment.orgSerialId
+                        payment.tradePartyMappingId = request.organizationTradePartiesId ?: payment.tradePartyMappingId
                         payment.updatedBy = request.updatedBy
 
                         paymentRepository.update(payment)
@@ -2360,11 +2360,11 @@ open class OnAccountServiceImpl : OnAccountService {
                             )
 
                             if (accountUtilizationForPayment != null) {
-                                accountUtilizationForPayment?.organizationId = request.organizationTradePartyDetailId
-                                accountUtilizationForPayment?.organizationName = request.organizationTradePartyName
-                                accountUtilizationForPayment?.taggedOrganizationId = request.organizationId
-                                accountUtilizationForPayment?.orgSerialId = request.organizationTradePartySerialId
-                                accountUtilizationForPayment?.tradePartyMappingId = request.organizationTradePartiesId
+                                accountUtilizationForPayment?.organizationId = request.organizationTradePartyDetailId ?: accountUtilizationDetail?.organizationId
+                                accountUtilizationForPayment?.organizationName = request.organizationTradePartyName ?: accountUtilizationDetail?.organizationName
+                                accountUtilizationForPayment?.taggedOrganizationId = request.organizationId ?: accountUtilizationDetail?.taggedOrganizationId
+                                accountUtilizationForPayment?.orgSerialId = request.organizationTradePartySerialId ?: accountUtilizationDetail?.orgSerialId
+                                accountUtilizationForPayment?.tradePartyMappingId = request.organizationTradePartiesId ?: accountUtilizationDetail?.tradePartyMappingId
                                 accountUtilizationRepository.update(accountUtilizationForPayment)
 
                                 response?.put(
@@ -2380,8 +2380,8 @@ open class OnAccountServiceImpl : OnAccountService {
                             val journalVoucher = journalVoucherRepository.findById(journalVoucherId)
 
                             if (journalVoucher != null) {
-                                journalVoucher.tradePartyId = request.organizationTradePartyDetailId
-                                journalVoucher.tradePartyName = request.organizationTradePartyName
+                                journalVoucher.tradePartyId = request.organizationTradePartyDetailId ?: journalVoucher.tradePartyId
+                                journalVoucher.tradePartyName = request.organizationTradePartyName ?: journalVoucher.tradePartyName
                                 journalVoucher.updatedBy = request.updatedBy
 
                                 journalVoucherRepository.update(journalVoucher)
@@ -2400,11 +2400,11 @@ open class OnAccountServiceImpl : OnAccountService {
                                 )
 
                                 if (accountUtilizationForJournalVoucher != null) {
-                                    accountUtilizationForJournalVoucher?.organizationId = request.organizationTradePartyDetailId
-                                    accountUtilizationForJournalVoucher?.organizationName = request.organizationTradePartyName
-                                    accountUtilizationForJournalVoucher?.taggedOrganizationId = request.organizationId
-                                    accountUtilizationForJournalVoucher?.orgSerialId = request.organizationTradePartySerialId
-                                    accountUtilizationForJournalVoucher?.tradePartyMappingId = request.organizationTradePartiesId
+                                    accountUtilizationForJournalVoucher?.organizationId = request.organizationTradePartyDetailId ?: accountUtilizationForJournalVoucher.organizationId
+                                    accountUtilizationForJournalVoucher?.organizationName = request.organizationTradePartyName ?: accountUtilizationForJournalVoucher.organizationName
+                                    accountUtilizationForJournalVoucher?.taggedOrganizationId = request.organizationId ?: accountUtilizationForJournalVoucher.taggedOrganizationId
+                                    accountUtilizationForJournalVoucher?.orgSerialId = request.organizationTradePartySerialId ?: accountUtilizationForJournalVoucher.orgSerialId
+                                    accountUtilizationForJournalVoucher?.tradePartyMappingId = request.organizationTradePartiesId ?: accountUtilizationForJournalVoucher.tradePartyMappingId
                                     accountUtilizationRepository.update(accountUtilizationForJournalVoucher)
 
                                     response?.put(
