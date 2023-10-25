@@ -103,8 +103,9 @@ open class KnockoffServiceImpl : KnockoffService {
 
         /* CHECK INVOICE/BILL EXISTS IN ACCOUNT UTILIZATION FOR THAT KNOCK OFF DOCUMENT*/
         val accountUtilization = accountUtilizationRepository.findRecord(knockOffRecord.documentNo, knockOffRecord.accType.name, AccMode.AP.name)
-        val isTransRefNumberExists = paymentRepository.isTransRefNumberExists(knockOffRecord.organizationId, knockOffRecord.transRefNumber)
-        if (accountUtilization == null || isTransRefNumberExists) {
+//        val isTransRefNumberExists = paymentRepository.isTransRefNumberExists(knockOffRecord.organizationId, knockOffRecord.transRefNumber)
+//        if (accountUtilization == null || isTransRefNumberExists) {
+        if (accountUtilization == null) {
             val accPayResponse = AccountPayableFileResponse(
                 knockOffRecord.documentNo, knockOffRecord.documentValue, false,
                 KnockOffStatus.UNPAID.name, Messages.NO_DOCUMENT_EXISTS,

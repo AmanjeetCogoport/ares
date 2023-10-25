@@ -1539,8 +1539,8 @@ open class OnAccountServiceImpl : OnAccountService {
                             paymentId,
                             "PAYMENT",
                             "404",
-                            "UMRNUM_0: ${paymentDetails.paymentNumValue}",
-                            "Sage Payment Num Value not present",
+                            "UMRNUM_0: ${paymentDetails.paymentNumValue} -> ${result.requestString}",
+                            "Sage Payment Num Value not present -> ${result.response}",
                             false
                         )
                     )

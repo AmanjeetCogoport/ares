@@ -11,4 +11,8 @@ data class SalesFunnelResponse(
     var draftToFinanceAcceptedPercentage: Int? = 0,
     var financeToIrnPercentage: Int? = 0,
     var settledPercentage: Int? = 0,
+    var irnFailedInvoicesCount: Int? = 0,
+    var financeToIrnFailedPercentage: Int? = 0,
+    var irnCancelledInvoicesCount: Int? = 0,
+    var irnGenToIrnCancelledPercentage: Int? = 0
 )
