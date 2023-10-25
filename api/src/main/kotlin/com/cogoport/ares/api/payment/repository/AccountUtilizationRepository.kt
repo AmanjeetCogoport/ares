@@ -20,6 +20,7 @@ import com.cogoport.ares.model.common.PaymentHistoryDetails
 import com.cogoport.ares.model.payment.AccMode
 import com.cogoport.ares.model.payment.AccountType
 import com.cogoport.ares.model.payment.DocumentStatus
+import com.cogoport.ares.model.payment.ServiceType
 import com.cogoport.ares.model.payment.response.AccPayablesOfOrgRes
 import com.cogoport.ares.model.payment.response.AccountPayablesStats
 import com.cogoport.ares.model.payment.response.CreditDebitBalance
@@ -1375,4 +1376,28 @@ interface AccountUtilizationRepository : CoroutineCrudRepository<AccountUtilizat
         """
     )
     suspend fun getOrgDetails(organizationId: UUID): List<OpenInvoiceDetails>
+
+    @NewSpan
+    @Query(
+        """
+            select 
+                * 
+            from 
+                account_utilizations 
+            where 
+                document_value = :documentValue and 
+                document_no = :documentNo and 
+                acc_mode::varchar = :accMode  and 
+                acc_type::varchar = :accType and 
+                service_type::varchar = :serviceType
+
+        """
+    )
+    suspend fun getAccountUtilizationByDocNoAndAccMode(
+        documentNo: Long,
+        documentValue: String,
+        accMode: String,
+        accType: String,
+        serviceType: ServiceType
+    ): AccountUtilization?
 }

@@ -99,7 +99,7 @@ dependencies {
     implementation("com.cogoport.hades:hades-model:1.0.30")
 
     //Kuber Client
-    implementation("com.cogoport.kuber:kuber-model:1.1.42")
+    implementation("com.cogoport.kuber:kuber-model:1.1.48")
     implementation("com.cogoport.kuber:kuber-client:1.1.19")
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.3")

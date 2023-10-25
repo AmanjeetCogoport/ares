@@ -114,6 +114,8 @@ open class DunningServiceImpl(
 
     @Transactional
     override suspend fun syncOrgStakeholders(syncOrgStakeholderRequest: SyncOrgStakeholderRequest): Long {
+        if (syncOrgStakeholderRequest.organizationSegment == null) syncOrgStakeholderRequest.organizationSegment = OrganizationSegment.ENTERPRISE.name
+
         val organizationStakeholderType = OrganizationStakeholderType.valueOf(
             util.replaceUnderScore(syncOrgStakeholderRequest.organizationStakeholderType)
         ).toString()

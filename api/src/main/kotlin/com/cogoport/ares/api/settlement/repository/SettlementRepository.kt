@@ -10,6 +10,7 @@ import com.cogoport.ares.model.settlement.SettlementMatchingFailedOnSageExcelRes
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.enums.SettlementStatus
 import com.cogoport.ares.model.settlement.event.PaymentInfoRec
+import com.cogoport.ares.model.settlement.request.SettlementSouDestList
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -668,4 +669,44 @@ ORDER BY
         query: String?,
         entityCodes: List<Int?>?
     ): Long
+
+    @NewSpan
+    @Query(
+        """
+            select 
+                source_id,
+                source_type,
+                destination_id,
+                destination_type
+            from 
+                settlements 
+            where 
+                settlement_num in (:settlementNum)
+                and destination_type::varchar = :destinationType
+        """
+    )
+    suspend fun getSettlementDataUsingSettlementNumAndDestinationType(
+        settlementNum: List<String>,
+        destinationType: SettlementType
+    ): List<SettlementSouDestList>
+
+    @NewSpan
+    @Query(
+        """
+            SELECT 
+                source_id,
+                source_type,
+                destination_id,
+                destination_type
+            FROM 
+                settlements 
+            where 
+                destination_id in (:destIds) 
+                and destination_type::varchar = :destinationType
+        """
+    )
+    suspend fun getSettlementUsingDestinationIdsAndType(
+        destIds: List<Long>,
+        destinationType: SettlementType
+    ): List<SettlementSouDestList>
 }
