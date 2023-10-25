@@ -2311,7 +2311,7 @@ open class OnAccountServiceImpl : OnAccountService {
             if (request.settlementNumbers != null && request.settlementNumbers!!.isNotEmpty()) {
                 val settlements = settlementRepository.getSettlementDataUsingSettlementNumAndDestinationType(
                     settlementNum = request.settlementNumbers!!,
-                    destinationType = SettlementType.PINV
+                    destinationType = PINV
                 )
                 val destinationIds: List<Long> = settlements.map { it.destinationId }
 
@@ -2324,15 +2324,15 @@ open class OnAccountServiceImpl : OnAccountService {
                 val journalVoucherIds: MutableList<Long> = mutableListOf()
 
                 allSettlements.forEach { settlement ->
-                    if (settlement.sourceType == SettlementType.PAY && settlement.sourceId != null) paymentNums.add(settlement.sourceId!!)
-                    if (settlement.sourceType == SettlementType.VTDS && settlement.sourceId != null) journalVoucherIds.add(settlement.sourceId!!)
+                    if (settlement.sourceType == SettlementType.PAY.name && settlement.sourceId != null) paymentNums.add(settlement.sourceId!!)
+                    if (settlement.sourceType == SettlementType.VTDS.name && settlement.sourceId != null) journalVoucherIds.add(settlement.sourceId!!)
                 }
 
                 if (paymentNums != null) {
                     val payments = paymentRepository.getPaymentByPaymentNums(
                         paymentNums = paymentNums,
-                        accMode = "AP",
-                        paymentCode = "PAY"
+                        accMode = AP.name,
+                        paymentCode = PAY.name
                     )
 
                     payments.forEach { payment ->

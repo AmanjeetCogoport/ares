@@ -10,6 +10,7 @@ import com.cogoport.ares.model.settlement.SettlementMatchingFailedOnSageExcelRes
 import com.cogoport.ares.model.settlement.SettlementType
 import com.cogoport.ares.model.settlement.enums.SettlementStatus
 import com.cogoport.ares.model.settlement.event.PaymentInfoRec
+import com.cogoport.ares.model.settlement.request.SettlementSouDestList
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.r2dbc.annotation.R2dbcRepository
@@ -673,7 +674,10 @@ ORDER BY
     @Query(
         """
             select 
-                * 
+                source_id,
+                source_type,
+                destination_id,
+                destination_type
             from 
                 settlements 
             where 
@@ -684,13 +688,16 @@ ORDER BY
     suspend fun getSettlementDataUsingSettlementNumAndDestinationType(
         settlementNum: List<String>,
         destinationType: SettlementType
-    ): List<Settlement>
+    ): List<SettlementSouDestList>
 
     @NewSpan
     @Query(
         """
             SELECT 
-                *
+                source_id,
+                source_type,
+                destination_id,
+                destination_type
             FROM 
                 settlements 
             where 
@@ -701,5 +708,5 @@ ORDER BY
     suspend fun getSettlementUsingDestinationIdsAndType(
         destIds: List<Long>,
         destinationType: SettlementType
-    ): List<Settlement>
+    ): List<SettlementSouDestList>
 }
