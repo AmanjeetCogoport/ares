@@ -1262,85 +1262,85 @@ class OutStandingServiceImpl : OutStandingService {
         customerData.totalCallPriorityScore = callPriorityScores.geTotalCallPriority()
     }
 
-    override suspend fun getOverallCustomerOutstanding(entityCodes: String?): HashMap<String, EntityWiseOutstandingBucket> {
-        val entityCodes: List<Int>? = entityCodes?.split("_")?.map { it.toInt() }
-        val defaultersOrgIds = defaultedBusinessPartnersService.listTradePartyDetailIds()
-        val openInvoiceQueryResponse = accountUtilizationRepo.getEntityWiseOutstandingBucket(entityCodes, listOf(AccountType.SINV, AccountType.SREIMB), listOf(AccMode.AR), defaultersOrgIds)
-        val creditNoteQueryResponse = accountUtilizationRepo.getEntityWiseOutstandingBucket(entityCodes, listOf(AccountType.SCN, AccountType.SREIMBCN), listOf(AccMode.AR), defaultersOrgIds)
-
-        val onAccountTypeList = AresConstants.onAccountAROutstandingAccountTypeList
-        val paymentAccountTypeList = AresConstants.paymentAROutstandingAccountTypeList
-        val jvAccountTypeList = AresConstants.jvAROutstandingAccountTypeList
-
-        val onAccountRecQueryResponse = accountUtilizationRepo.getEntityWiseOnAccountBucket(entityCodes, onAccountTypeList, listOf(AccMode.AR), paymentAccountTypeList, jvAccountTypeList, defaultersOrgIds)
-
-        val responseMap = HashMap<String, EntityWiseOutstandingBucket>()
-        openInvoiceQueryResponse.groupBy { it.ledCurrency }.entries.map { (k, v) ->
-
-            val creditNoteData = creditNoteQueryResponse.filter { it.ledCurrency == k }
-            val onAccountData = onAccountRecQueryResponse.filter { it.ledCurrency == k }
-            responseMap["totalOutstandingBucket"] = EntityWiseOutstandingBucket(
-                entityCode = v.joinToString("_") { it.entityCode },
-                ledCurrency = k,
-                notDueLedAmount = v.sumOf { it.notDueLedAmount }.plus(creditNoteData.sumOf { it.notDueLedAmount }).plus(onAccountData.sumOf { it.notDueLedAmount }),
-                thirtyLedAmount = v.sumOf { it.thirtyLedAmount }.plus(creditNoteData.sumOf { it.thirtyLedAmount }).plus(onAccountData.sumOf { it.thirtyLedAmount }),
-                fortyFiveLedAmount = v.sumOf { it.fortyFiveLedAmount }.plus(creditNoteData.sumOf { it.fortyFiveLedAmount }).plus(onAccountData.sumOf { it.fortyFiveLedAmount }),
-                sixtyLedAmount = v.sumOf { it.sixtyLedAmount }.plus(creditNoteData.sumOf { it.sixtyLedAmount }).plus(onAccountData.sumOf { it.sixtyLedAmount }),
-                ninetyLedAmount = v.sumOf { it.ninetyLedAmount }.plus(creditNoteData.sumOf { it.ninetyLedAmount }).plus(onAccountData.sumOf { it.ninetyLedAmount }),
-                oneEightyLedAmount = v.sumOf { it.oneEightyLedAmount }.plus(creditNoteData.sumOf { it.oneEightyLedAmount }).plus(onAccountData.sumOf { it.oneEightyLedAmount }),
-                oneEightyPlusLedAmount = v.sumOf { it.oneEightyPlusLedAmount }.plus(creditNoteData.sumOf { it.oneEightyPlusLedAmount }).plus(onAccountData.sumOf { it.oneEightyPlusLedAmount }),
-                threeSixtyFiveLedAmount = v.sumOf { it.threeSixtyFiveLedAmount }.plus(creditNoteData.sumOf { it.threeSixtyFiveLedAmount }).plus(onAccountData.sumOf { it.threeSixtyFiveLedAmount }),
-                threeSixtyFivePlusLedAmount = v.sumOf { it.threeSixtyFivePlusLedAmount }.plus(creditNoteData.sumOf { it.threeSixtyFivePlusLedAmount }).plus(onAccountData.sumOf { it.threeSixtyFivePlusLedAmount }),
-                totalLedAmount = v.sumOf { it.totalLedAmount }.plus(creditNoteData.sumOf { it.totalLedAmount }).plus(onAccountData.sumOf { it.totalLedAmount })
-            )
-
-            responseMap["openInvoiceBucket"] = EntityWiseOutstandingBucket(
-                entityCode = v.joinToString("_") { it.entityCode },
-                ledCurrency = k,
-                notDueLedAmount = v.sumOf { it.notDueLedAmount },
-                thirtyLedAmount = v.sumOf { it.thirtyLedAmount }.plus(creditNoteData.sumOf { it.thirtyLedAmount }).plus(onAccountData.sumOf { it.thirtyLedAmount }),
-                fortyFiveLedAmount = v.sumOf { it.fortyFiveLedAmount },
-                sixtyLedAmount = v.sumOf { it.sixtyLedAmount },
-                ninetyLedAmount = v.sumOf { it.ninetyLedAmount },
-                oneEightyLedAmount = v.sumOf { it.oneEightyLedAmount },
-                oneEightyPlusLedAmount = v.sumOf { it.oneEightyPlusLedAmount },
-                threeSixtyFiveLedAmount = v.sumOf { it.threeSixtyFiveLedAmount },
-                threeSixtyFivePlusLedAmount = v.sumOf { it.threeSixtyFivePlusLedAmount },
-                totalLedAmount = v.sumOf { it.totalLedAmount }
-            )
-
-            responseMap["creditNoteBucket"] = EntityWiseOutstandingBucket(
-                entityCode = v.joinToString("_") { it.entityCode },
-                ledCurrency = k,
-                notDueLedAmount = creditNoteData.sumOf { it.notDueLedAmount },
-                thirtyLedAmount = creditNoteData.sumOf { it.thirtyLedAmount },
-                fortyFiveLedAmount = creditNoteData.sumOf { it.fortyFiveLedAmount },
-                sixtyLedAmount = creditNoteData.sumOf { it.sixtyLedAmount },
-                ninetyLedAmount = creditNoteData.sumOf { it.ninetyLedAmount },
-                oneEightyLedAmount = creditNoteData.sumOf { it.oneEightyLedAmount },
-                oneEightyPlusLedAmount = creditNoteData.sumOf { it.oneEightyPlusLedAmount },
-                threeSixtyFiveLedAmount = creditNoteData.sumOf { it.threeSixtyFiveLedAmount },
-                threeSixtyFivePlusLedAmount = creditNoteData.sumOf { it.threeSixtyFivePlusLedAmount },
-                totalLedAmount = creditNoteData.sumOf { it.totalLedAmount }
-            )
-            responseMap["onAccountBucket"] = EntityWiseOutstandingBucket(
-                entityCode = v.joinToString("_") { it.entityCode },
-                ledCurrency = k,
-                notDueLedAmount = onAccountData.sumOf { it.notDueLedAmount },
-                thirtyLedAmount = onAccountData.sumOf { it.thirtyLedAmount },
-                fortyFiveLedAmount = onAccountData.sumOf { it.fortyFiveLedAmount },
-                sixtyLedAmount = onAccountData.sumOf { it.sixtyLedAmount },
-                ninetyLedAmount = onAccountData.sumOf { it.ninetyLedAmount },
-                oneEightyLedAmount = onAccountData.sumOf { it.oneEightyLedAmount },
-                oneEightyPlusLedAmount = onAccountData.sumOf { it.oneEightyPlusLedAmount },
-                threeSixtyFiveLedAmount = onAccountData.sumOf { it.threeSixtyFiveLedAmount },
-                threeSixtyFivePlusLedAmount = onAccountData.sumOf { it.threeSixtyFivePlusLedAmount },
-                totalLedAmount = onAccountData.sumOf { it.totalLedAmount }
-            )
-        }
-
-        return responseMap
-    }
+//    override suspend fun getOverallCustomerOutstanding(entityCodes: String?): HashMap<String, EntityWiseOutstandingBucket> {
+//        val entityCodes: List<Int>? = entityCodes?.split("_")?.map { it.toInt() }
+//        val defaultersOrgIds = defaultedBusinessPartnersService.listTradePartyDetailIds()
+//        val openInvoiceQueryResponse = accountUtilizationRepo.getEntityWiseOutstandingBucket(entityCodes, listOf(AccountType.SINV, AccountType.SREIMB), listOf(AccMode.AR), defaultersOrgIds)
+//        val creditNoteQueryResponse = accountUtilizationRepo.getEntityWiseOutstandingBucket(entityCodes, listOf(AccountType.SCN, AccountType.SREIMBCN), listOf(AccMode.AR), defaultersOrgIds)
+//
+//        val onAccountTypeList = AresConstants.onAccountAROutstandingAccountTypeList
+//        val paymentAccountTypeList = AresConstants.paymentAROutstandingAccountTypeList
+//        val jvAccountTypeList = AresConstants.jvAROutstandingAccountTypeList
+//
+//        val onAccountRecQueryResponse = accountUtilizationRepo.getEntityWiseOnAccountBucket(entityCodes, onAccountTypeList, listOf(AccMode.AR), paymentAccountTypeList, jvAccountTypeList, defaultersOrgIds)
+//
+//        val responseMap = HashMap<String, EntityWiseOutstandingBucket>()
+//        openInvoiceQueryResponse.groupBy { it.ledCurrency }.entries.map { (k, v) ->
+//
+//            val creditNoteData = creditNoteQueryResponse.filter { it.ledCurrency == k }
+//            val onAccountData = onAccountRecQueryResponse.filter { it.ledCurrency == k }
+//            responseMap["totalOutstandingBucket"] = EntityWiseOutstandingBucket(
+//                entityCode = v.joinToString("_") { it.entityCode },
+//                ledCurrency = k,
+//                notDueLedAmount = v.sumOf { it.notDueLedAmount }.plus(creditNoteData.sumOf { it.notDueLedAmount }).plus(onAccountData.sumOf { it.notDueLedAmount }),
+//                thirtyLedAmount = v.sumOf { it.thirtyLedAmount }.plus(creditNoteData.sumOf { it.thirtyLedAmount }).plus(onAccountData.sumOf { it.thirtyLedAmount }),
+//                fortyFiveLedAmount = v.sumOf { it.fortyFiveLedAmount }.plus(creditNoteData.sumOf { it.fortyFiveLedAmount }).plus(onAccountData.sumOf { it.fortyFiveLedAmount }),
+//                sixtyLedAmount = v.sumOf { it.sixtyLedAmount }.plus(creditNoteData.sumOf { it.sixtyLedAmount }).plus(onAccountData.sumOf { it.sixtyLedAmount }),
+//                ninetyLedAmount = v.sumOf { it.ninetyLedAmount }.plus(creditNoteData.sumOf { it.ninetyLedAmount }).plus(onAccountData.sumOf { it.ninetyLedAmount }),
+//                oneEightyLedAmount = v.sumOf { it.oneEightyLedAmount }.plus(creditNoteData.sumOf { it.oneEightyLedAmount }).plus(onAccountData.sumOf { it.oneEightyLedAmount }),
+//                oneEightyPlusLedAmount = v.sumOf { it.oneEightyPlusLedAmount }.plus(creditNoteData.sumOf { it.oneEightyPlusLedAmount }).plus(onAccountData.sumOf { it.oneEightyPlusLedAmount }),
+//                threeSixtyFiveLedAmount = v.sumOf { it.threeSixtyFiveLedAmount }.plus(creditNoteData.sumOf { it.threeSixtyFiveLedAmount }).plus(onAccountData.sumOf { it.threeSixtyFiveLedAmount }),
+//                threeSixtyFivePlusLedAmount = v.sumOf { it.threeSixtyFivePlusLedAmount }.plus(creditNoteData.sumOf { it.threeSixtyFivePlusLedAmount }).plus(onAccountData.sumOf { it.threeSixtyFivePlusLedAmount }),
+//                totalLedAmount = v.sumOf { it.totalLedAmount }.plus(creditNoteData.sumOf { it.totalLedAmount }).plus(onAccountData.sumOf { it.totalLedAmount })
+//            )
+//
+//            responseMap["openInvoiceBucket"] = EntityWiseOutstandingBucket(
+//                entityCode = v.joinToString("_") { it.entityCode },
+//                ledCurrency = k,
+//                notDueLedAmount = v.sumOf { it.notDueLedAmount },
+//                thirtyLedAmount = v.sumOf { it.thirtyLedAmount }.plus(creditNoteData.sumOf { it.thirtyLedAmount }).plus(onAccountData.sumOf { it.thirtyLedAmount }),
+//                fortyFiveLedAmount = v.sumOf { it.fortyFiveLedAmount },
+//                sixtyLedAmount = v.sumOf { it.sixtyLedAmount },
+//                ninetyLedAmount = v.sumOf { it.ninetyLedAmount },
+//                oneEightyLedAmount = v.sumOf { it.oneEightyLedAmount },
+//                oneEightyPlusLedAmount = v.sumOf { it.oneEightyPlusLedAmount },
+//                threeSixtyFiveLedAmount = v.sumOf { it.threeSixtyFiveLedAmount },
+//                threeSixtyFivePlusLedAmount = v.sumOf { it.threeSixtyFivePlusLedAmount },
+//                totalLedAmount = v.sumOf { it.totalLedAmount }
+//            )
+//
+//            responseMap["creditNoteBucket"] = EntityWiseOutstandingBucket(
+//                entityCode = v.joinToString("_") { it.entityCode },
+//                ledCurrency = k,
+//                notDueLedAmount = creditNoteData.sumOf { it.notDueLedAmount },
+//                thirtyLedAmount = creditNoteData.sumOf { it.thirtyLedAmount },
+//                fortyFiveLedAmount = creditNoteData.sumOf { it.fortyFiveLedAmount },
+//                sixtyLedAmount = creditNoteData.sumOf { it.sixtyLedAmount },
+//                ninetyLedAmount = creditNoteData.sumOf { it.ninetyLedAmount },
+//                oneEightyLedAmount = creditNoteData.sumOf { it.oneEightyLedAmount },
+//                oneEightyPlusLedAmount = creditNoteData.sumOf { it.oneEightyPlusLedAmount },
+//                threeSixtyFiveLedAmount = creditNoteData.sumOf { it.threeSixtyFiveLedAmount },
+//                threeSixtyFivePlusLedAmount = creditNoteData.sumOf { it.threeSixtyFivePlusLedAmount },
+//                totalLedAmount = creditNoteData.sumOf { it.totalLedAmount }
+//            )
+//            responseMap["onAccountBucket"] = EntityWiseOutstandingBucket(
+//                entityCode = v.joinToString("_") { it.entityCode },
+//                ledCurrency = k,
+//                notDueLedAmount = onAccountData.sumOf { it.notDueLedAmount },
+//                thirtyLedAmount = onAccountData.sumOf { it.thirtyLedAmount },
+//                fortyFiveLedAmount = onAccountData.sumOf { it.fortyFiveLedAmount },
+//                sixtyLedAmount = onAccountData.sumOf { it.sixtyLedAmount },
+//                ninetyLedAmount = onAccountData.sumOf { it.ninetyLedAmount },
+//                oneEightyLedAmount = onAccountData.sumOf { it.oneEightyLedAmount },
+//                oneEightyPlusLedAmount = onAccountData.sumOf { it.oneEightyPlusLedAmount },
+//                threeSixtyFiveLedAmount = onAccountData.sumOf { it.threeSixtyFiveLedAmount },
+//                threeSixtyFivePlusLedAmount = onAccountData.sumOf { it.threeSixtyFivePlusLedAmount },
+//                totalLedAmount = onAccountData.sumOf { it.totalLedAmount }
+//            )
+//        }
+//
+//        return responseMap
+//    }
 
     override suspend fun createSupplierDetailsV2() {
         val indexName = AresConstants.SUPPLIERS_OUTSTANDING_OVERALL_INDEX_V2
@@ -1898,58 +1898,33 @@ class OutStandingServiceImpl : OutStandingService {
         if (request.entityCode == "101_301") {
             request.limit = 10000
             response = OpenSearchClient().getOrgIn101And301(request)
-
-            val filtered = response?.hits()?.hits()?.map { it.source() }?.groupBy { it?.organizationId }?.filter { (_, v) -> v.size >= 2 }
-            totalRecords = filtered?.values?.size?.toLong()!!
-            val startIndex  = (request.page?.minus(1) ?: 0) * limit
-            val endIndex  = startIndex + limit
-
-            responseV2 = filtered.values.toList().flatten().subList(startIndex, endIndex)
             val groupedList = mutableListOf<CustomerOutstandingDocumentResponseV2?>()
 
-            responseV2.let { hits ->
-                if (hits.isNotEmpty()) {
-                    hits.groupBy { it?.organizationId }.map { (_, v) ->
-                        val filteredData = v.filter { listOf("101", "301").contains(it?.entityCode) }
-                        val resp = filteredData.first()
-                        resp?.totalOutstanding = filteredData.sumOf { it?.totalOutstanding!! }
-                        resp?.openInvoiceAmount = filteredData.sumOf { it?.openInvoiceAmount!! }
-                        resp?.openInvoiceCount = filteredData.sumOf { it?.openInvoiceCount!! }
-                        resp?.onAccountAmount = filteredData.sumOf { it?.onAccountAmount!! }
-                        resp?.totalCallPriorityScore = filteredData.sumOf { it?.totalCallPriorityScore!! }.div(2)
-                        resp?.onAccountCount = filteredData.sumOf { it?.onAccountCount!! }
-                        resp?.creditNoteAmount = filteredData.sumOf { it?.creditNoteAmount!! }
-                        resp?.creditNoteCount = filteredData.sumOf { it?.creditNoteCount!! }
+            var filtered = response?.hits()?.hits()?.map { it.source() }?.groupBy { it?.organizationId }?.filter { (_, v) -> v.size >= 2 }
+            totalRecords = filtered?.values?.size?.toLong()!!
+            var startIndex  = (request.page?.minus(1) ?: 0) * limit
+            var endIndex  = startIndex + limit
 
-                        val ageingBuckets = listOf("notDue", "thirty", "sixty", "ninety", "oneEighty", "threeSixtyFive", "threeSixtyFivePlus")
-                        ageingBuckets.forEach { bucket ->
-                            resp?.creditNoteAgeingBucket?.set(bucket, AgeingBucketOutstandingV2(
-                                ledgerAmount = filteredData.sumOf { it?.creditNoteAgeingBucket?.get(bucket)?.ledgerAmount ?: BigDecimal(0) },
-                                ledgerCount = filteredData.sumOf { it?.creditNoteAgeingBucket?.get(bucket)?.ledgerCount ?: 0L }
-                            ))
-                            resp?.openInvoiceAgeingBucket?.set(bucket, AgeingBucketOutstandingV2(
-                                ledgerAmount = filteredData.sumOf { it?.openInvoiceAgeingBucket?.get(bucket)?.ledgerAmount ?: BigDecimal(0) },
-                                ledgerCount = filteredData.sumOf { it?.openInvoiceAgeingBucket?.get(bucket)?.ledgerCount ?: 0L }
-                            ))
-                            resp?.onAccountAgeingBucket?.set(bucket, AgeingBucketOutstandingV2(
-                                ledgerAmount = filteredData.sumOf { it?.onAccountAgeingBucket?.get(bucket)?.ledgerAmount ?: BigDecimal(0) },
-                                ledgerCount = filteredData.sumOf { it?.onAccountAgeingBucket?.get(bucket)?.ledgerCount ?: 0L }
-                            ))
-                        }
+            responseV2 = filtered.values.toList().flatten().subList(startIndex, endIndex)
+            responseList.list = getSortedData(responseV2, groupedList, request.entityCode).toList()
 
-                        resp?.entityCode = request.entityCode!!
-                        groupedList.add(resp)
-                    }
+            request.sortBy = "callPriority"
+            response = OpenSearchClient().getOrgIn101And301(request)
+            filtered = response?.hits()?.hits()?.map { it.source() }?.groupBy { it?.organizationId }?.filter { (_, v) -> v.size >= 2 }
+            startIndex  = (request.page?.minus(1) ?: 0) * 1
+            endIndex  = startIndex + 1
 
-                    responseList.list = groupedList.toList()
-                }
-            }
+            responseV2 = filtered?.values?.toList()?.flatten()?.subList(startIndex, endIndex)
+            responseList.byCallPriority = getSortedData(responseV2, groupedList, request.entityCode).toList().first()
 
         } else {
             response = OpenSearchClient().listCustomerOutstandingV2(request)
             responseV2 = response?.hits()?.hits()?.map { it.source() }
             totalRecords = response?.hits()?.total()?.value()!!
             responseList.list = if (!responseV2?.toList().isNullOrEmpty()) responseV2?.toList()!! else listOf()
+            request.sortBy = "callPriority"
+            request.limit = 1
+            responseList.byCallPriority = OpenSearchClient().listCustomerOutstandingV2(request)?.hits()?.hits()?.map{it.source()}?.first()
         }
 
         responseList.totalPages =
@@ -1979,5 +1954,188 @@ class OutStandingServiceImpl : OutStandingService {
         customerOutstanding?.taggedState = req.taggedState
         Client.updateDocument(AresConstants.CUSTOMER_OUTSTANDING_V2, "${customerOutstanding?.organizationId}_${customerOutstanding?.entityCode}", customerOutstanding, true)
         return true
+    }
+
+    override suspend fun getOverAllCustomerOutstandingV2(entityCodes: String?): HashMap<String, EntityWiseOutstandingBucket> {
+        if (entityCodes == null) throw AresException(AresError.ERR_1003, "entity code")
+        val orgOutstanding = accountUtilizationRepository.getArOutstandingData(
+            entityCodes = entityCodes.split("_").map{it.toInt()}.toList(),
+            orgIds = null,
+            accMode = AccMode.AR.name,
+            accTypes = AresConstants.accTypesForAr,
+            invoiceAccType = AresConstants.invoiceAccTypeForAr,
+            creditNoteAccType = AresConstants.creditNoteAccTypeForAr,
+            onAccountAccountType = AresConstants.onAccountTypeForAr
+        )
+
+        return hashMapOf(
+            "invoice" to calculateEntityWise(entityCodes, orgOutstanding, "invoice"),
+            "creditNote" to calculateEntityWise(entityCodes, orgOutstanding, "creditNote"),
+            "onAccount" to calculateEntityWise(entityCodes, orgOutstanding, "onAccount")
+        )
+    }
+
+    private fun calculateEntityWise(entityCodes: String, data: List<ArOutstandingData>?, type: String): EntityWiseOutstandingBucket {
+        val entityWise = EntityWiseOutstandingBucket()
+        entityWise.ledCurrency = data?.firstOrNull()?.ledCurrency
+        entityWise.entityCode = entityCodes
+
+        data?.forEach { it ->
+            entityWise.notDueLedAmount = entityWise.notDueLedAmount?.plus(when (type) {
+                "invoice" -> it.invoiceNotDueAmount
+                "creditNote" -> it.creditNoteNotDueAmount
+                "onAccount" -> it.onAccountNotDueAmount
+                else -> BigDecimal(0)
+            })
+
+            entityWise.thirtyLedAmount = entityWise.thirtyLedAmount?.plus(when (type) {
+                "invoice" -> it.invoiceThirtyAmount
+                "creditNote" -> it.creditNoteThirtyAmount
+                "onAccount" -> it.onAccountThirtyAmount
+                else -> BigDecimal(0)
+            })
+            entityWise.sixtyLedAmount = entityWise.sixtyLedAmount?.plus(when (type) {
+                "invoice" -> it.invoiceThirtyAmount
+                "creditNote" -> it.creditNoteSixtyAmount
+                "onAccount" -> it.onAccountThirtyAmount
+                else -> BigDecimal(0)
+            })
+            entityWise.ninetyLedAmount = entityWise.thirtyLedAmount?.plus(when (type) {
+                "invoice" -> it.invoiceNinetyAmount
+                "creditNote" -> it.creditNoteNinetyAmount
+                "onAccount" -> it.onAccountNinetyAmount
+                else -> BigDecimal(0)
+            })
+            entityWise.oneEightyLedAmount = entityWise.thirtyLedAmount?.plus(when (type) {
+                "invoice" -> it.invoiceOneEightyAmount
+                "creditNote" -> it.creditNoteOneEightyAmount
+                "onAccount" -> it.onAccountOneEightyAmount
+                else -> BigDecimal(0)
+            })
+            entityWise.threeSixtyFiveLedAmount = entityWise.thirtyLedAmount?.plus(when (type) {
+                "invoice" -> it.invoiceThreeSixtyFiveAmount
+                "creditNote" -> it.creditNoteThreeSixtyFiveAmount
+                "onAccount" -> it.onAccountThreeSixtyFiveAmount
+                else -> BigDecimal(0)
+            })
+            entityWise.threeSixtyFivePlusLedAmount = entityWise.threeSixtyFivePlusLedAmount?.plus(when (type) {
+                "invoice" -> it.invoiceThreeSixtyFivePlusAmount
+                "creditNote" -> it.creditNoteThreeSixtyFivePlusAmount
+                "onAccount" -> it.onAccountThreeSixtyFivePlusAmount
+                else -> BigDecimal(0)
+            })
+
+            entityWise.notDueCount = entityWise.notDueCount?.plus(when (type) {
+                "invoice" -> it.invoiceNotDueCount.toInt()
+                "creditNote" -> it.creditNoteNotDueCount.toInt()
+                "onAccount" -> it.onAccountNotDueCount.toInt()
+                else -> 0
+            })
+            entityWise.notDueCount = entityWise.notDueCount?.plus(when (type) {
+                "invoice" -> it.invoiceNotDueCount.toInt()
+                "creditNote" -> it.creditNoteNotDueCount.toInt()
+                "onAccount" -> it.onAccountNotDueCount.toInt()
+                else -> 0
+            })
+            entityWise.thirtyCount = entityWise.thirtyCount?.plus(when (type) {
+                "invoice" -> it.invoiceThirtyCount.toInt()
+                "creditNote" -> it.creditNoteThirtyCount.toInt()
+                "onAccount" -> it.onAccountThirtyCount.toInt()
+                else -> 0
+            })
+            entityWise.sixtyCount = entityWise.sixtyCount?.plus(when (type) {
+                "invoice" -> it.invoiceSixtyCount.toInt()
+                "creditNote" -> it.creditNoteSixtyCount.toInt()
+                "onAccount" -> it.onAccountSixtyCount.toInt()
+                else -> 0
+            })
+            entityWise.ninetyCount = entityWise.ninetyCount?.plus(when (type) {
+                "invoice" -> it.invoiceNinetyCount.toInt()
+                "creditNote" -> it.creditNoteNinetyCount.toInt()
+                "onAccount" -> it.onAccountNinetyCount.toInt()
+                else -> 0
+            })
+            entityWise.oneEightyCount = entityWise.oneEightyCount?.plus(when (type) {
+                "invoice" -> it.invoiceOneEightyCount.toInt()
+                "creditNote" -> it.creditNoteOneEightyCount.toInt()
+                "onAccount" -> it.onAccountOneEightyCount.toInt()
+                else -> 0
+            })
+            entityWise.threeSixtyFiveCount = entityWise.threeSixtyFiveCount?.plus(when (type) {
+                "invoice" -> it.invoiceThreeSixtyFiveCount.toInt()
+                "creditNote" -> it.creditNoteThreeSixtyFiveCount.toInt()
+                "onAccount" -> it.onAccountThreeSixtyFiveCount.toInt()
+                else -> 0
+            })
+            entityWise.threeSixtyFivePlusCount = entityWise.threeSixtyFivePlusCount?.plus(when (type) {
+                "invoice" -> it.invoiceThreeSixtyFivePlusCount.toInt()
+                "creditNote" -> it.creditNoteThreeSixtyFivePlusCount.toInt()
+                "onAccount" -> it.onAccountThreeSixtyFivePlusCount.toInt()
+                else -> 0
+            })
+            entityWise.totalCount = entityWise.totalCount?.plus( when (type) {
+                "invoice" -> (it.invoiceNotDueCount.plus(it.invoiceThirtyCount).plus(it.invoiceSixtyCount).plus(it.invoiceNinetyCount)
+                    .plus(it.invoiceOneEightyCount).plus(it.invoiceThreeSixtyFiveCount).plus(it.invoiceThreeSixtyFivePlusCount)).toInt()
+                "creditNote" -> (it.creditNoteNotDueCount.plus(it.creditNoteThirtyCount).plus(it.creditNoteSixtyCount).plus(it.creditNoteNinetyCount)
+                    .plus(it.creditNoteOneEightyCount).plus(it.creditNoteThreeSixtyFiveCount).plus(it.creditNoteThreeSixtyFivePlusCount)).toInt()
+                "onAccount" -> (it.onAccountNotDueCount.plus(it.onAccountThirtyCount).plus(it.onAccountSixtyCount).plus(it.onAccountNinetyCount)
+                    .plus(it.onAccountOneEightyCount).plus(it.onAccountThreeSixtyFiveCount).plus(it.onAccountThreeSixtyFivePlusCount)).toInt()
+                else -> 0
+            })
+            entityWise.totalLedAmount = entityWise.totalLedAmount?.plus( when (type) {
+                "invoice" -> (it.invoiceNotDueAmount.plus(it.invoiceThirtyAmount).plus(it.invoiceSixtyAmount).plus(it.invoiceNinetyAmount)
+                    .plus(it.invoiceOneEightyAmount).plus(it.invoiceThreeSixtyFiveAmount).plus(it.invoiceThreeSixtyFivePlusAmount))
+                "creditNote" -> (it.creditNoteNotDueAmount.plus(it.creditNoteThirtyAmount).plus(it.creditNoteSixtyAmount).plus(it.creditNoteNinetyAmount)
+                    .plus(it.creditNoteOneEightyAmount).plus(it.creditNoteThreeSixtyFiveAmount).plus(it.creditNoteThreeSixtyFivePlusAmount))
+                "onAccount" -> (it.onAccountNotDueAmount.plus(it.onAccountThirtyAmount).plus(it.onAccountSixtyAmount).plus(it.onAccountNinetyAmount)
+                    .plus(it.onAccountOneEightyAmount).plus(it.onAccountThreeSixtyFiveAmount).plus(it.onAccountThreeSixtyFivePlusAmount))
+                else -> BigDecimal(0)
+            }
+            )
+        }
+
+        return entityWise
+    }
+
+    private fun getSortedData (responseV2: List<CustomerOutstandingDocumentResponseV2?>?, groupedList: MutableList<CustomerOutstandingDocumentResponseV2?>, entityCode: String?): MutableList<CustomerOutstandingDocumentResponseV2?> {
+        responseV2.let { hits ->
+            if (!hits.isNullOrEmpty()) {
+                hits.groupBy { it?.organizationId }.map { (_, v) ->
+                    val filteredData = v.filter { listOf("101", "301").contains(it?.entityCode) }
+                    val resp = filteredData.first()
+                    resp?.totalOutstanding = filteredData.sumOf { it?.totalOutstanding!! }
+                    resp?.openInvoiceAmount = filteredData.sumOf { it?.openInvoiceAmount!! }
+                    resp?.openInvoiceCount = filteredData.sumOf { it?.openInvoiceCount!! }
+                    resp?.onAccountAmount = filteredData.sumOf { it?.onAccountAmount!! }
+                    resp?.totalCallPriorityScore = filteredData.sumOf { it?.totalCallPriorityScore!! }.div(2)
+                    resp?.onAccountCount = filteredData.sumOf { it?.onAccountCount!! }
+                    resp?.creditNoteAmount = filteredData.sumOf { it?.creditNoteAmount!! }
+                    resp?.creditNoteCount = filteredData.sumOf { it?.creditNoteCount!! }
+
+                    val ageingBuckets = listOf("notDue", "thirty", "sixty", "ninety", "oneEighty", "threeSixtyFive", "threeSixtyFivePlus")
+                    ageingBuckets.forEach { bucket ->
+                        resp?.creditNoteAgeingBucket?.set(bucket, AgeingBucketOutstandingV2(
+                            ledgerAmount = filteredData.sumOf { it?.creditNoteAgeingBucket?.get(bucket)?.ledgerAmount ?: BigDecimal(0) },
+                            ledgerCount = filteredData.sumOf { it?.creditNoteAgeingBucket?.get(bucket)?.ledgerCount ?: 0L }
+                        ))
+                        resp?.openInvoiceAgeingBucket?.set(bucket, AgeingBucketOutstandingV2(
+                            ledgerAmount = filteredData.sumOf { it?.openInvoiceAgeingBucket?.get(bucket)?.ledgerAmount ?: BigDecimal(0) },
+                            ledgerCount = filteredData.sumOf { it?.openInvoiceAgeingBucket?.get(bucket)?.ledgerCount ?: 0L }
+                        ))
+                        resp?.onAccountAgeingBucket?.set(bucket, AgeingBucketOutstandingV2(
+                            ledgerAmount = filteredData.sumOf { it?.onAccountAgeingBucket?.get(bucket)?.ledgerAmount ?: BigDecimal(0) },
+                            ledgerCount = filteredData.sumOf { it?.onAccountAgeingBucket?.get(bucket)?.ledgerCount ?: 0L }
+                        ))
+                    }
+
+                    resp?.entityCode = entityCode
+                    groupedList.add(resp!!)
+                }
+
+
+            }
+        }
+
+        return groupedList
     }
 }

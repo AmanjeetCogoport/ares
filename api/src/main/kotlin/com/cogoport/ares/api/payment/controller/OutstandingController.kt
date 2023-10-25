@@ -200,24 +200,24 @@ class OutstandingController {
         return outStandingService.createLedgerSummary()
     }
 
-    @Auth
-    @Get("/overall-customer-outstanding")
-    suspend fun getOverallCustomerOutstanding(
-        @QueryValue("entityCode") entityCode: String? = "101",
-        user: AuthResponse?,
-        httpRequest: HttpRequest<*>
-    ): HashMap<String, EntityWiseOutstandingBucket> {
-        val partnerTaggedEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))
-        val updatedEntityCode = if (partnerTaggedEntityCode?.toInt() != null) {
-            when (partnerTaggedEntityCode) {
-                "101" -> "101_301"
-                else -> partnerTaggedEntityCode
-            }
-        } else {
-            entityCode
-        }
-        return outStandingService.getOverallCustomerOutstanding(updatedEntityCode!!)
-    }
+//    @Auth
+//    @Get("/overall-customer-outstanding")
+//    suspend fun getOverallCustomerOutstanding(
+//        @QueryValue("entityCode") entityCode: String? = "101",
+//        user: AuthResponse?,
+//        httpRequest: HttpRequest<*>
+//    ): HashMap<String, EntityWiseOutstandingBucket> {
+//        val partnerTaggedEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))
+//        val updatedEntityCode = if (partnerTaggedEntityCode?.toInt() != null) {
+//            when (partnerTaggedEntityCode) {
+//                "101" -> "101_301"
+//                else -> partnerTaggedEntityCode
+//            }
+//        } else {
+//            entityCode
+//        }
+//        return outStandingService.getOverallCustomerOutstanding(updatedEntityCode!!)
+//    }
 
     @Post("/supplier-v2")
     suspend fun createSupplierDetailsV2(): Response<String> {
@@ -296,5 +296,23 @@ class OutstandingController {
     @Get("/migrate-customer-data")
     suspend fun migrateCustomerData() {
         outStandingService.getCustomerData()
+    }
+
+    @Get("/overall-customer-outstanding")
+    suspend fun getOverAllCustomerOutstandingV2(
+    @QueryValue("entityCode") entityCode: String? = "101",
+    user: AuthResponse?,
+    httpRequest: HttpRequest<*>
+    ): HashMap<String, EntityWiseOutstandingBucket> {
+        val partnerTaggedEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))
+        val updatedEntityCode = if (partnerTaggedEntityCode?.toInt() != null) {
+            when (partnerTaggedEntityCode) {
+                "101" -> "101_301"
+                else -> partnerTaggedEntityCode
+            }
+        } else {
+            entityCode
+        }
+        return outStandingService.getOverAllCustomerOutstandingV2(updatedEntityCode!!)
     }
 }

@@ -10,4 +10,7 @@ data class ResponseList<T>(
     var totalPages: Long? = 0,
     var totalRecords: Long? = 0,
     var pageNo: Int? = 0
-)
+) {
+    @javax.persistence.Transient
+    var byCallPriority: T? = null
+}

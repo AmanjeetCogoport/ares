@@ -73,7 +73,7 @@ interface OutStandingService {
 
     suspend fun createLedgerSummary()
 
-    suspend fun getOverallCustomerOutstanding(entityCodes: String?): HashMap<String, EntityWiseOutstandingBucket>
+//    suspend fun getOverallCustomerOutstanding(entityCodes: String?): HashMap<String, EntityWiseOutstandingBucket>
 
     suspend fun createSupplierDetailsV2()
 
@@ -96,4 +96,6 @@ interface OutStandingService {
     suspend fun listCustomerDetailsV2(req: CustomerOutstandingRequest): ResponseList<CustomerOutstandingDocumentResponseV2?>
 
     suspend fun updateAccountTaggings(req: UpdateAccountTaggingRequest): Boolean
+
+    suspend fun getOverAllCustomerOutstandingV2(entityCodes: String?): HashMap<String, EntityWiseOutstandingBucket>
 }
