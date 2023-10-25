@@ -1902,8 +1902,8 @@ class OutStandingServiceImpl : OutStandingService {
 
             var filtered = response?.hits()?.hits()?.map { it.source() }?.groupBy { it?.organizationId }?.filter { (_, v) -> v.size >= 2 }
             totalRecords = filtered?.values?.size?.toLong()!!
-            var startIndex  = (request.page?.minus(1) ?: 0) * limit
-            var endIndex  = startIndex + limit
+            var startIndex  = (request.page?.minus(1) ?: 0) * (limit*2)
+            var endIndex  = startIndex + limit*2
 
             responseV2 = filtered.values.toList().flatten().subList(startIndex, endIndex)
             responseList.list = getSortedData(responseV2, groupedList, request.entityCode).toList()
@@ -2138,7 +2138,6 @@ class OutStandingServiceImpl : OutStandingService {
 
             }
         }
-
         return groupedList
     }
 }
