@@ -1907,6 +1907,7 @@ class OutStandingServiceImpl : OutStandingService {
 
             responseV2 = filtered.values.toList().flatten().subList(startIndex, endIndex)
             responseList.list = getSortedData(responseV2, groupedList, request.entityCode).toList()
+            responseList.list.map {it?.ledgerCurrency = "INR"}
 
             request.sortBy = "callPriority"
             response = OpenSearchClient().getOrgIn101And301(request)
@@ -1916,6 +1917,7 @@ class OutStandingServiceImpl : OutStandingService {
 
             responseV2 = filtered?.values?.toList()?.flatten()?.subList(startIndex, endIndex)
             responseList.byCallPriority = getSortedData(responseV2, groupedList, request.entityCode).toList().first()
+            responseList.byCallPriority?.ledgerCurrency = "INR"
 
         } else {
             response = OpenSearchClient().listCustomerOutstandingV2(request)
@@ -1925,10 +1927,11 @@ class OutStandingServiceImpl : OutStandingService {
             request.sortBy = "callPriority"
             request.limit = 1
             responseList.byCallPriority = OpenSearchClient().listCustomerOutstandingV2(request)?.hits()?.hits()?.map{it.source()}?.first()
+            responseList.list.map {it?.ledgerCurrency = AresConstants.LEDGER_CURRENCY[request.entityCode?.toInt()]}
+            responseList.byCallPriority?.ledgerCurrency = AresConstants.LEDGER_CURRENCY[request.entityCode?.toInt()]
         }
 
-        responseList.totalPages =
-            if (totalRecords % limit == 0L) {
+        responseList.totalPages = if (totalRecords % limit == 0L) {
                 totalRecords / limit
             } else {
                 totalRecords / limit + 1

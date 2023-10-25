@@ -77,7 +77,10 @@ data class CustomerOutstandingDocumentResponseV2(
     var creditNoteCount: Int?,
     @JsonProperty("totalOutstanding")
     var totalOutstanding: BigDecimal?,
-)
+) {
+    @field:javax.persistence.Transient
+    var ledgerCurrency: String? = null
+}
 
 @Introspected
 @JsonIgnoreProperties(ignoreUnknown = true)
