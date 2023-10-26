@@ -22,9 +22,11 @@ import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequestV2
+import com.cogoport.ares.model.payment.request.UpdateAccountTaggingRequest
 import com.cogoport.ares.model.payment.response.AccPayablesOfOrgRes
 import com.cogoport.ares.model.payment.response.CustomerMonthlyPayment
 import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
+import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponseV2
 import com.cogoport.ares.model.payment.response.PayblesInfoRes
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocumentV2
@@ -71,7 +73,7 @@ interface OutStandingService {
 
     suspend fun createLedgerSummary()
 
-    suspend fun getOverallCustomerOutstanding(entityCodes: String?): HashMap<String, EntityWiseOutstandingBucket>
+//    suspend fun getOverallCustomerOutstanding(entityCodes: String?): HashMap<String, EntityWiseOutstandingBucket>
 
     suspend fun createSupplierDetailsV2()
 
@@ -85,5 +87,15 @@ interface OutStandingService {
 
     suspend fun getOpenInvoices(organizationId: UUID): String
 
+    suspend fun createCustomerDetailsV2(request: CustomerOutstandingDocumentResponseV2)
     suspend fun getOutstandingDataBifurcation(request: OutstandingVisualizationRequest): Any
+
+    suspend fun updateCustomerDetailsV2(orgId: UUID, entityCode: Int?)
+    suspend fun getCustomerData()
+
+    suspend fun listCustomerDetailsV2(req: CustomerOutstandingRequest): ResponseList<CustomerOutstandingDocumentResponseV2?>
+
+    suspend fun updateAccountTaggings(req: UpdateAccountTaggingRequest): Boolean
+
+    suspend fun getOverAllCustomerOutstandingV2(entityCodes: String?): HashMap<String, EntityWiseOutstandingBucket>
 }

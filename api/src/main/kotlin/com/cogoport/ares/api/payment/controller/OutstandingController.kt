@@ -1,6 +1,8 @@
 package com.cogoport.ares.api.payment.controller
 
 import com.cogoport.ares.api.common.service.implementation.Scheduler
+import com.cogoport.ares.api.exception.AresError
+import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.EntityLevelStats
 import com.cogoport.ares.api.payment.entity.EntityWiseOutstandingBucket
 import com.cogoport.ares.api.payment.model.CustomerOutstandingPaymentRequest
@@ -28,10 +30,12 @@ import com.cogoport.ares.model.payment.request.InvoiceListRequest
 import com.cogoport.ares.model.payment.request.OutstandingListRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequestV2
+import com.cogoport.ares.model.payment.request.UpdateAccountTaggingRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.AccPayablesOfOrgRes
 import com.cogoport.ares.model.payment.response.CustomerMonthlyPayment
 import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
+import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponseV2
 import com.cogoport.ares.model.payment.response.PayblesInfoRes
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocumentV2
@@ -196,24 +200,24 @@ class OutstandingController {
         return outStandingService.createLedgerSummary()
     }
 
-    @Auth
-    @Get("/overall-customer-outstanding")
-    suspend fun getOverallCustomerOutstanding(
-        @QueryValue("entityCode") entityCode: String? = "101",
-        user: AuthResponse?,
-        httpRequest: HttpRequest<*>
-    ): HashMap<String, EntityWiseOutstandingBucket> {
-        val partnerTaggedEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))
-        val updatedEntityCode = if (partnerTaggedEntityCode?.toInt() != null) {
-            when (partnerTaggedEntityCode) {
-                "101" -> "101_301"
-                else -> partnerTaggedEntityCode
-            }
-        } else {
-            entityCode
-        }
-        return outStandingService.getOverallCustomerOutstanding(updatedEntityCode!!)
-    }
+//    @Auth
+//    @Get("/overall-customer-outstanding")
+//    suspend fun getOverallCustomerOutstanding(
+//        @QueryValue("entityCode") entityCode: String? = "101",
+//        user: AuthResponse?,
+//        httpRequest: HttpRequest<*>
+//    ): HashMap<String, EntityWiseOutstandingBucket> {
+//        val partnerTaggedEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))
+//        val updatedEntityCode = if (partnerTaggedEntityCode?.toInt() != null) {
+//            when (partnerTaggedEntityCode) {
+//                "101" -> "101_301"
+//                else -> partnerTaggedEntityCode
+//            }
+//        } else {
+//            entityCode
+//        }
+//        return outStandingService.getOverallCustomerOutstanding(updatedEntityCode!!)
+//    }
 
     @Post("/supplier-v2")
     suspend fun createSupplierDetailsV2(): Response<String> {
@@ -255,5 +259,60 @@ class OutstandingController {
     suspend fun getOutstandingDataBifurcation(@Valid request: OutstandingVisualizationRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): Any {
         val updatedEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))?.toInt() ?: request.entityCode
         return outStandingService.getOutstandingDataBifurcation(request)
+    }
+
+    @Post("/customer-v2")
+    suspend fun createCustomerDetailsV2(@Valid @Body request: CustomerOutstandingDocumentResponseV2): Response<String> {
+        outStandingService.createCustomerDetailsV2(request)
+        return Response<String>().ok("created", HttpStatus.OK.name)
+    }
+
+    @Put("/customer-v2")
+    suspend fun updateCustomerDetailsV2(@Valid @Body request: UpdateSupplierOutstandingRequest) {
+        if (request.orgId == null) throw AresException(AresError.ERR_1003, "orgId")
+        return outStandingService.updateCustomerDetailsV2(request.orgId!!, request.entityCode)
+    }
+
+    @Auth
+    @Get("/by-customer-v2{?request*}")
+    suspend fun getCustomerDetailsV2(@Valid request: CustomerOutstandingRequest, user: AuthResponse?, httpRequest: HttpRequest<*>): ResponseList<CustomerOutstandingDocumentResponseV2?> {
+        val partnerTaggedEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))
+        request.entityCode = if (partnerTaggedEntityCode?.toInt() != null) {
+            when (partnerTaggedEntityCode) {
+                "101" -> "101_301"
+                else -> partnerTaggedEntityCode
+            }
+        } else {
+            request.entityCode
+        }
+        return Response<ResponseList<CustomerOutstandingDocumentResponseV2?>>().ok(outStandingService.listCustomerDetailsV2(request))
+    }
+
+    @Put("/update-account-taggings")
+    suspend fun updateAccountTaggings(@Valid @Body req: UpdateAccountTaggingRequest): Boolean {
+        return outStandingService.updateAccountTaggings(req)
+    }
+
+    @Get("/migrate-customer-data")
+    suspend fun migrateCustomerData() {
+        outStandingService.getCustomerData()
+    }
+
+    @Get("/overall-customer-outstanding")
+    suspend fun getOverAllCustomerOutstandingV2(
+        @QueryValue("entityCode") entityCode: String? = "101",
+        user: AuthResponse?,
+        httpRequest: HttpRequest<*>
+    ): HashMap<String, EntityWiseOutstandingBucket> {
+        val partnerTaggedEntityCode = util.getCogoEntityCode(user?.filters?.get("partner_id"))
+        val updatedEntityCode = if (partnerTaggedEntityCode?.toInt() != null) {
+            when (partnerTaggedEntityCode) {
+                "101" -> "101_301"
+                else -> partnerTaggedEntityCode
+            }
+        } else {
+            entityCode
+        }
+        return outStandingService.getOverAllCustomerOutstandingV2(updatedEntityCode!!)
     }
 }

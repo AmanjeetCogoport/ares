@@ -9,6 +9,7 @@ import com.cogoport.ares.model.payment.request.SupplierOutstandingRequest
 import com.cogoport.ares.model.payment.request.SupplierOutstandingRequestV2
 import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponse
+import com.cogoport.ares.model.payment.response.CustomerOutstandingDocumentResponseV2
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocument
 import com.cogoport.ares.model.payment.response.SupplierOutstandingDocumentV2
 import com.cogoport.brahma.opensearch.Client
@@ -25,6 +26,7 @@ import org.opensearch.client.opensearch.core.SearchRequest
 import org.opensearch.client.opensearch.core.SearchResponse
 import java.sql.Timestamp
 import java.time.LocalDateTime
+import java.util.UUID
 
 class OpenSearchClient {
 
@@ -903,5 +905,280 @@ class OpenSearchClient {
         }, SupplierOutstandingDocumentV2::class.java)
 
         return response
+    }
+
+    @NewSpan
+    fun listCustomerOutstandingV2(request: CustomerOutstandingRequest): SearchResponse<CustomerOutstandingDocumentResponseV2>? {
+        val offset = 0.coerceAtLeast(((request.page!! - 1) * request.limit!!))
+        var totalOutstanding = false
+        var onAccountPayment = false
+        var creditNote = false
+        var notDue = false
+        var thirty = false
+        var sixty = false
+        var ninety = false
+        var oneEighty = false
+        var threeSixtyFive = false
+        var threeSixtyFivePlus = false
+        var callPriority = false
+
+        when (request.sortBy) {
+            "totalOutstanding" -> totalOutstanding = true
+            "onAccountAmount" -> onAccountPayment = true
+            "creditNoteAmount" -> creditNote = true
+            "openInvoiceNotDueLedgerAmount" -> notDue = true
+            "openInvoiceThirtyLedgerAmount" -> thirty = true
+            "openInvoiceSixtyLedgerAmount" -> sixty = true
+            "openInvoiceNinetyLedgerAmount" -> ninety = true
+            "openInvoiceOneEightyLedgerAmount" -> oneEighty = true
+            "openInvoiceThreeSixtyFiveLedgerAmount" -> threeSixtyFive = true
+            "openInvoiceThreeSixtyFivePlusLedgerAmount" -> threeSixtyFivePlus = true
+            "callPriority" -> callPriority = true
+        }
+
+        val sortList = mutableListOf(
+            SortOptions.Builder().field { f ->
+                when {
+                    callPriority -> f.field("totalCallPriorityScore").order(SortOrder.valueOf(request.sortType.toString()))
+                    totalOutstanding -> f.field("totalOutstanding").order(SortOrder.valueOf(request.sortType.toString()))
+                    onAccountPayment -> f.field("onAccountAmount").order(SortOrder.valueOf(request.sortType.toString()))
+                    creditNote -> f.field("creditNoteAmount").order(SortOrder.valueOf(request.sortType.toString()))
+                    notDue -> f.field("openInvoiceAgeingBucket.notDue.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString()))
+                    thirty -> f.field("openInvoiceAgeingBucket.thirty.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString()))
+                    sixty -> f.field("openInvoiceAgeingBucket.sixty.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString()))
+                    ninety -> f.field("openInvoiceAgeingBucket.ninety.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString()))
+                    oneEighty -> f.field("openInvoiceAgeingBucket.oneEighty.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString()))
+                    threeSixtyFive -> f.field("openInvoiceAgeingBucket.threeSixtyFive.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString()))
+                    threeSixtyFivePlus -> f.field("openInvoiceAgeingBucket.threeSixtyFivePlus.ledgerAmount").order(SortOrder.valueOf(request.sortType.toString()))
+                }
+                f
+            }.build()
+        )
+
+        if (callPriority) {
+            sortList.add(SortOptions.Builder().field { f -> f.field("totalOutstanding").order(SortOrder.valueOf(request.sortType.toString())) }.build())
+        }
+
+        val searchFilterFields: MutableList<String> = mutableListOf("businessName", "registrationNumber.keyword", "tradePartySerialId.keyword", "sageId.keyword", "organizationSerialId.keyword")
+        val response = Client.search({ t ->
+            t.index(AresConstants.CUSTOMER_OUTSTANDING_V2)
+                .query { q ->
+                    q.bool { b ->
+                        if (request.q != null) {
+                            b.must { s ->
+                                s.queryString { qs ->
+                                    qs.fields(searchFilterFields).query("*${request.q}*")
+                                        .lenient(true)
+                                        .allowLeadingWildcard(true)
+                                        .defaultOperator(Operator.And)
+                                }
+                            }
+                            b
+                        }
+                        if (request.sageId != null) {
+                            b.must { s ->
+                                s.queryString { qs ->
+                                    qs.fields(mutableListOf("sageId")).query("*${request.sageId}*")
+                                        .lenient(true)
+                                        .allowLeadingWildcard(true)
+                                        .defaultOperator(Operator.And)
+                                }
+                            }
+                            b
+                        }
+                        if (request.tradePartyDetailId != null) {
+                            b.must { s ->
+                                s.match { v ->
+                                    v.field("organizationId").query(FieldValue.of(request.tradePartyDetailId.toString()))
+                                }
+                            }
+                            b
+                        }
+                        if (request.organizationSerialId != null) {
+                            b.must { s ->
+                                s.queryString { qs ->
+                                    qs.fields(mutableListOf("organizationSerialId")).query("*${request.organizationSerialId}*")
+                                        .lenient(true)
+                                        .allowLeadingWildcard(true)
+                                        .defaultOperator(Operator.And)
+                                }
+                            }
+                            b
+                        }
+                        if (request.tradePartySerialId != null) {
+                            b.must { s ->
+                                s.queryString { qs ->
+                                    qs.fields(mutableListOf("tradePartySerialId")).query("*${request.tradePartySerialId}*")
+                                        .lenient(true)
+                                        .allowLeadingWildcard(true)
+                                        .defaultOperator(Operator.And)
+                                }
+                            }
+                            b
+                        }
+                        if (request.salesAgentId != null) {
+                            b.must { s ->
+                                s.terms { v ->
+                                    v.field("salesAgent.id.keyword").terms(
+                                        TermsQueryField.of { a ->
+                                            a.value(
+                                                request.salesAgentId?.map {
+                                                    FieldValue.of(it.toString())
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            b
+                        }
+                        if (request.portfolioManagerId != null) {
+                            b.must { s ->
+                                s.terms { v ->
+                                    v.field("portfolioManager.id.keyword").terms(
+                                        TermsQueryField.of { a ->
+                                            a.value(
+                                                request.portfolioManagerId?.map {
+                                                    FieldValue.of(it.toString())
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            b
+                        }
+                        if (request.portfolioManagerRmId != null) {
+                            b.must { s ->
+                                s.terms { v ->
+                                    v.field("portfolioManager.rmDetails.id.keyword").terms(
+                                        TermsQueryField.of { a ->
+                                            a.value(
+                                                request.portfolioManagerRmId?.map {
+                                                    FieldValue.of(it.toString())
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            b
+                        }
+                        if (request.kamId != null) {
+                            b.must { s ->
+                                s.terms { v ->
+                                    v.field("kam.id.keyword").terms(
+                                        TermsQueryField.of { a ->
+                                            a.value(
+                                                request.kamId?.map {
+                                                    FieldValue.of(it.toString())
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            b
+                        }
+                        if (request.tradePartyDetailIds != null) {
+                            b.must { s ->
+                                s.terms { v ->
+                                    v.field("organizationId.keyword").terms(
+                                        TermsQueryField.of { a ->
+                                            a.value(
+                                                request.tradePartyDetailIds?.map {
+                                                    FieldValue.of(it.toString())
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            b
+                        }
+                        if (request.creditControllerId != null) {
+                            b.must { s ->
+                                s.terms { v ->
+                                    v.field("creditController.id.keyword").terms(
+                                        TermsQueryField.of { a ->
+                                            a.value(
+                                                request.creditControllerId?.map {
+                                                    FieldValue.of(it.toString())
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            b
+                        }
+                        if (request.countryId != null) {
+                            b.must { s ->
+                                s.terms { v ->
+                                    v.field("countryId").terms(
+                                        TermsQueryField.of { a ->
+                                            a.value(
+                                                request.countryId?.map {
+                                                    FieldValue.of(it.toString())
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            b
+                        }
+                        if (request.companyType != null) {
+                            b.must { t ->
+                                t.match { v ->
+                                    v.field("companyType").query(FieldValue.of(request.companyType))
+                                }
+                            }
+                            b
+                        }
+                        if (request.entityCode != null) {
+                            b.should { s ->
+                                s.terms { v ->
+                                    v.field("entityCode").terms(
+                                        TermsQueryField.of { a ->
+                                            a.value(
+                                                request.entityCode!!.split("_").map {
+                                                    FieldValue.of(it)
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            b
+                        }
+                        b
+                    }
+                    q
+                }
+                .sort(sortList)
+                .from(offset).size(request.limit)
+        }, CustomerOutstandingDocumentResponseV2::class.java)
+
+        return response
+    }
+
+    @NewSpan
+    fun getOrgIn101And301(request: CustomerOutstandingRequest): SearchResponse<CustomerOutstandingDocumentResponseV2>? {
+        val orgIds = Client.search({ t ->
+            t.index(AresConstants.CUSTOMER_OUTSTANDING_V2)
+                .size(0)
+                .aggregations("organizationId_aggregation") { a ->
+                    a.terms { b ->
+                        b.size(10000)
+                        b.field("organizationId.keyword")
+                        b.minDocCount(2)
+                    }
+                }
+        }, Any::class.java)
+            ?.aggregations()!!["organizationId_aggregation"]
+            ?.sterms()?.buckets()?.array()?.map { it.key() }
+        request.tradePartyDetailIds = orgIds?.map { UUID.fromString(it) }
+        return listCustomerOutstandingV2(request)
     }
 }

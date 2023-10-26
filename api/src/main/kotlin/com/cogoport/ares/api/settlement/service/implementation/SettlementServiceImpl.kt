@@ -16,6 +16,7 @@ import com.cogoport.ares.api.events.PlutusMessagePublisher
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.api.payment.entity.OrgIdAndEntityCode
 import com.cogoport.ares.api.payment.entity.PaymentData
 import com.cogoport.ares.api.payment.mapper.AccUtilizationToPaymentMapper
 import com.cogoport.ares.api.payment.mapper.PaymentToPaymentMapper
@@ -1480,6 +1481,7 @@ open class SettlementServiceImpl : SettlementService {
         val accUtilObj = accountUtilizationRepository.update(accUtil)
 
         aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accUtil.organizationId))
+        aresMessagePublisher.emitUpdateCustomerDetail(OrgIdAndEntityCode(accUtil.organizationId!!, accUtil.entityCode))
 
         auditService.createAudit(
             AuditRequest(
@@ -2011,6 +2013,7 @@ open class SettlementServiceImpl : SettlementService {
         }
         val accountUtilization = accountUtilizationRepository.update(paymentUtilization)
         aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(paymentUtilization.organizationId))
+        aresMessagePublisher.emitUpdateCustomerDetail(OrgIdAndEntityCode(paymentUtilization.organizationId!!, paymentUtilization.entityCode))
 
         auditService.createAudit(
             AuditRequest(
@@ -2943,6 +2946,7 @@ open class SettlementServiceImpl : SettlementService {
         }
         if (accUtilRes.accMode == AccMode.AR) {
             aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(orgId = accUtilRes.organizationId))
+            aresMessagePublisher.emitUpdateCustomerDetail(OrgIdAndEntityCode(accUtilRes.organizationId!!, accUtilRes.entityCode))
         }
 
         return savedPayment.paymentNum!!

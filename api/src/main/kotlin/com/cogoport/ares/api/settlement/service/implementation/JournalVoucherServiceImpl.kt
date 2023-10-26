@@ -6,6 +6,7 @@ import com.cogoport.ares.api.events.AresMessagePublisher
 import com.cogoport.ares.api.exception.AresError
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.payment.entity.AccountUtilization
+import com.cogoport.ares.api.payment.entity.OrgIdAndEntityCode
 import com.cogoport.ares.api.payment.model.AuditRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.service.interfaces.AuditService
@@ -123,6 +124,7 @@ open class JournalVoucherServiceImpl : JournalVoucherService {
 
         if (accUtilObj.accMode == AccMode.AR) {
             aresMessagePublisher.emitUpdateCustomerOutstanding(UpdateSupplierOutstandingRequest(accountAccUtilizationRequest.organizationId))
+            aresMessagePublisher.emitUpdateCustomerDetail(OrgIdAndEntityCode(accountAccUtilizationRequest.organizationId!!, accountAccUtilizationRequest.entityCode))
         }
 
         auditService.createAudit(

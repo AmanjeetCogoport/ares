@@ -4,7 +4,8 @@ import io.micronaut.core.annotation.Introspected
 import java.util.UUID
 
 @Introspected
-data class UpdateSupplierOutstandingRequest(
-    var orgId: UUID?,
-    var entityCode: Int? = null
+data class UpdateAccountTaggingRequest(
+    val organizationId: UUID?,
+    val entityCode: Int?,
+    val taggedState: String?
 )

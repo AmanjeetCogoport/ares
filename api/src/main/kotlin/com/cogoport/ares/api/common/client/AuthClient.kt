@@ -11,6 +11,7 @@ import com.cogoport.ares.api.migration.model.SerialIdDetailsResponse
 import com.cogoport.ares.model.common.CreateCommunicationRequest
 import com.cogoport.ares.model.common.GetOrganizationTradePartyDetailRequest
 import com.cogoport.ares.model.common.GetOrganizationTradePartyDetailResponse
+import com.cogoport.ares.model.payment.HookToAresRequest
 import com.cogoport.ares.model.payment.MappingIdDetailRequest
 import com.cogoport.ares.model.payment.TradePartyDetailRequest
 import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
@@ -101,4 +102,7 @@ interface AuthClient {
 
     @Get("/get_ledger_exchange_rate{?request*}")
     suspend fun getLedgerExchangeRate(request: LedgerExchangeRateRequest): LedgerExchangeRateResponse
+
+    @Post("/organization/organization_trade_party_details_hook_to_ares")
+    suspend fun createOrgDetail(@Body req: HookToAresRequest)
 }

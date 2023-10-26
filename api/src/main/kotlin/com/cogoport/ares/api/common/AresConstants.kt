@@ -25,6 +25,7 @@ object AresConstants {
     val COGO_ENTITIES = listOf(101, 201, 301, 401, 501, 601, 701, 801)
     const val SUPPLIERS_OUTSTANDING_OVERALL_INDEX = "supplier_outstanding_overall"
     const val CUSTOMERS_OUTSTANDING_OVERALL_INDEX = "customer_outstanding_overall"
+    const val CUSTOMER_OUTSTANDING_V2 = "customer_outstanding_v2"
     const val SUPPLIERS_OUTSTANDING_OVERALL_INDEX_V2 = "supplier_outstanding"
     const val PAYABLES_STATS_INDEX = "payables_stats"
     const val KEY_DELIMITER = "_"
@@ -209,7 +210,9 @@ object AresConstants {
         "migrate-payment-amount",
         "send-email-for-irn-generation",
         "upsert-migrate-glcodes",
-        "unfreeze-debit-consumption"
+        "unfreeze-debit-consumption",
+        "create-org-details",
+        "update-customer-details-v2"
     )
 
     val RETRY_QUEUES = listOf(
@@ -254,13 +257,11 @@ object AresConstants {
 
     const val performedByUserNameForMail = "Business Finance Tech Team"
     const val SAGE_PLATFORM_REPORT = "sage_platform_report"
-    const val RECIPIENT_EMAIL_FOR_EVERYDAY_SAGE_PLATFORM_REPORT = "bhanugoban@cogoport.com"
+    const val RECIPIENT_EMAIL_FOR_EVERYDAY_SAGE_PLATFORM_REPORT = "vinod.talapa@cogoport.com"
 
     val CC_MAIL_ID_FOR_EVERYDAY_SAGE_PLATFORM_REPORT = mutableListOf<String>(
         "abhishek.kumar@cogoport.com",
-        "vivek.garg@cogoport.com",
-        "shikhar.tyagi@cogoport.com",
-        "suhas.latelwar@cogoport.com"
+        "vivek.garg@cogoport.com"
     )
 
     val MONTH = mapOf(
@@ -333,4 +334,18 @@ object AresConstants {
 
     val ABHISHEK_USER_ID = UUID.fromString("fa0dcd74-4b68-4783-a2f9-81dfab26008a")
     val VINOD_USER_ID = UUID.fromString("6d713339-c528-4696-9f7b-c01f86887ac1")
+
+    val accTypesForAr = listOf(
+        AccountType.SINV.name, AccountType.SCN.name, AccountType.SREIMB.name,
+        AccountType.REC.name, AccountType.CTDS.name, AccountType.OPDIV.name,
+        AccountType.MISC.name, AccountType.BANK.name, AccountType.CONTR.name,
+        AccountType.INTER.name, AccountType.MTC.name, AccountType.MTCCV.name
+    )
+    val invoiceAccTypeForAr = listOf(AccountType.SINV.name, AccountType.SREIMB.name)
+    val creditNoteAccTypeForAr = listOf(AccountType.SCN.name, AccountType.SREIMBCN.name)
+    val onAccountTypeForAr = listOf(
+        AccountType.REC.name, AccountType.CTDS.name, AccountType.OPDIV.name,
+        AccountType.MISC.name, AccountType.BANK.name, AccountType.CONTR.name,
+        AccountType.INTER.name, AccountType.MTC.name, AccountType.MTCCV.name
+    )
 }

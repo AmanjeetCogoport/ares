@@ -282,4 +282,15 @@ class Scheduler(
             }
         }
     }
+
+    @Scheduled(cron = "0 30 3,15 * * *")
+    fun createArOutstandingData() {
+        if (schedulerEnabled) {
+            runBlocking {
+                val today = now()
+                logger().info("Creating Customer record : $today")
+                outStandingService.getCustomerData()
+            }
+        }
+    }
 }
