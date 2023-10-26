@@ -268,7 +268,7 @@ class OutstandingController {
     }
 
     @Put("/customer-v2")
-    suspend fun updateCustomerDetailsV2(request: UpdateSupplierOutstandingRequest) {
+    suspend fun updateCustomerDetailsV2(@Valid @Body request: UpdateSupplierOutstandingRequest) {
         if (request.orgId == null) throw AresException(AresError.ERR_1003, "orgId")
         return outStandingService.updateCustomerDetailsV2(request.orgId!!, request.entityCode)
     }

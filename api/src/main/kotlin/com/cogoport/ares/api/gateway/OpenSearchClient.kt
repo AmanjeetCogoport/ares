@@ -1175,9 +1175,10 @@ class OpenSearchClient {
                         b.minDocCount(2)
                     }
                 }
-        }, Any::class.java)?.aggregations()!!["organizationId_aggregation"]?.sterms()?.buckets()?.array()?.map { it.key() }
-                            request.tradePartyDetailIds = orgIds?.map { UUID.fromString(it) }
-                            return listCustomerOutstandingV2(request)
-                        }
-                    }
-                    
+        }, Any::class.java)
+            ?.aggregations()!!["organizationId_aggregation"]
+            ?.sterms()?.buckets()?.array()?.map { it.key() }
+        request.tradePartyDetailIds = orgIds?.map { UUID.fromString(it) }
+        return listCustomerOutstandingV2(request)
+    }
+}
