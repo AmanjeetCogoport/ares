@@ -24,6 +24,7 @@ import com.cogoport.ares.api.settlement.entity.Settlement
 import com.cogoport.ares.api.settlement.service.interfaces.ParentJVService
 import com.cogoport.ares.api.settlement.service.interfaces.SettlementService
 import com.cogoport.ares.api.settlement.service.interfaces.TaggedSettlementService
+import com.cogoport.ares.api.utils.logger
 import com.cogoport.ares.model.common.CreateCommunicationRequest
 import com.cogoport.ares.model.dunning.request.SendMailOfAllCommunicationToTradePartyReq
 import com.cogoport.ares.model.payment.AccountUtilizationEvent
@@ -46,6 +47,7 @@ import com.cogoport.ares.model.settlement.request.PostSettlementRequest
 import com.cogoport.brahma.hashids.Hashids
 import com.cogoport.brahma.rabbitmq.model.RabbitmqEventLogDocument
 import com.cogoport.plutus.model.invoice.request.IrnGenerationEmailRequest
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.rabbitmq.client.Envelope
 import io.micronaut.messaging.annotation.MessageBody
 import io.micronaut.rabbitmq.annotation.Queue
@@ -324,6 +326,7 @@ class AresMessageConsumer {
 
     @Queue("ares-update-customer-details-v2", prefetch = 1)
     fun updateCustomerDetailsV2(req: OrgIdAndEntityCode) = runBlocking {
+        logger().info(ObjectMapper().writeValueAsString(req))
         outstandingService.updateCustomerDetailsV2(req.organizationId, req.entityCode)
     }
 }
