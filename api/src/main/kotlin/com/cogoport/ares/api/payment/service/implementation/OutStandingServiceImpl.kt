@@ -1870,7 +1870,7 @@ class OutStandingServiceImpl : OutStandingService {
 
             if (!orgLevelData.isNullOrEmpty()) {
                 customerOutstanding = createOutstandingDetails(customerOutstanding, orgLevelData[0])
-                Client.addDocument(AresConstants.CUSTOMER_OUTSTANDING_V2, "${orgId}_$entityCode", customerOutstanding)
+                Client.addDocument(AresConstants.CUSTOMER_OUTSTANDING_V2, "${orgId}_$entityCode", customerOutstanding, true)
             }
         } else {
             aresMessagePublisher.emitCreateOrgDetail(
@@ -1904,7 +1904,7 @@ class OutStandingServiceImpl : OutStandingService {
             totalRecords = filtered?.values?.size?.toLong()!!
             var startIndex = (request.page?.minus(1) ?: 0) * (limit * 2)
             val lastIndex = startIndex + (limit * 2)
-            var endIndex: Int = when(lastIndex > totalRecords) {
+            var endIndex: Int = when (lastIndex > totalRecords) {
                 true -> totalRecords.toInt()
                 false -> lastIndex
             }
