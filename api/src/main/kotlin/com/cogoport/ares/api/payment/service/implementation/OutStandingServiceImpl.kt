@@ -1270,34 +1270,47 @@ class OutStandingServiceImpl : OutStandingService {
 
             val creditNoteData = creditNoteQueryResponse.filter { it.ledCurrency == k }
             val onAccountData = onAccountRecQueryResponse.filter { it.ledCurrency == k }
-            responseMap["totalOutstandingBucket"] = EntityWiseOutstandingBucket(
-                entityCode = v.joinToString("_") { it.entityCode },
-                ledCurrency = k,
-                notDueLedAmount = v.sumOf { it.notDueLedAmount }.plus(creditNoteData.sumOf { it.notDueLedAmount }).plus(onAccountData.sumOf { it.notDueLedAmount }),
-                thirtyLedAmount = v.sumOf { it.thirtyLedAmount }.plus(creditNoteData.sumOf { it.thirtyLedAmount }).plus(onAccountData.sumOf { it.thirtyLedAmount }),
-                fortyFiveLedAmount = v.sumOf { it.fortyFiveLedAmount }.plus(creditNoteData.sumOf { it.fortyFiveLedAmount }).plus(onAccountData.sumOf { it.fortyFiveLedAmount }),
-                sixtyLedAmount = v.sumOf { it.sixtyLedAmount }.plus(creditNoteData.sumOf { it.sixtyLedAmount }).plus(onAccountData.sumOf { it.sixtyLedAmount }),
-                ninetyLedAmount = v.sumOf { it.ninetyLedAmount }.plus(creditNoteData.sumOf { it.ninetyLedAmount }).plus(onAccountData.sumOf { it.ninetyLedAmount }),
-                oneEightyLedAmount = v.sumOf { it.oneEightyLedAmount }.plus(creditNoteData.sumOf { it.oneEightyLedAmount }).plus(onAccountData.sumOf { it.oneEightyLedAmount }),
-                oneEightyPlusLedAmount = v.sumOf { it.oneEightyPlusLedAmount }.plus(creditNoteData.sumOf { it.oneEightyPlusLedAmount }).plus(onAccountData.sumOf { it.oneEightyPlusLedAmount }),
-                threeSixtyFiveLedAmount = v.sumOf { it.threeSixtyFiveLedAmount }.plus(creditNoteData.sumOf { it.threeSixtyFiveLedAmount }).plus(onAccountData.sumOf { it.threeSixtyFiveLedAmount }),
-                threeSixtyFivePlusLedAmount = v.sumOf { it.threeSixtyFivePlusLedAmount }.plus(creditNoteData.sumOf { it.threeSixtyFivePlusLedAmount }).plus(onAccountData.sumOf { it.threeSixtyFivePlusLedAmount }),
-                totalLedAmount = v.sumOf { it.totalLedAmount }.plus(creditNoteData.sumOf { it.totalLedAmount }).plus(onAccountData.sumOf { it.totalLedAmount })
-            )
 
             responseMap["openInvoiceBucket"] = EntityWiseOutstandingBucket(
                 entityCode = v.joinToString("_") { it.entityCode },
                 ledCurrency = k,
                 notDueLedAmount = v.sumOf { it.notDueLedAmount },
                 thirtyLedAmount = v.sumOf { it.thirtyLedAmount }.plus(creditNoteData.sumOf { it.thirtyLedAmount }).plus(onAccountData.sumOf { it.thirtyLedAmount }),
-                fortyFiveLedAmount = v.sumOf { it.fortyFiveLedAmount },
                 sixtyLedAmount = v.sumOf { it.sixtyLedAmount },
                 ninetyLedAmount = v.sumOf { it.ninetyLedAmount },
                 oneEightyLedAmount = v.sumOf { it.oneEightyLedAmount },
-                oneEightyPlusLedAmount = v.sumOf { it.oneEightyPlusLedAmount },
                 threeSixtyFiveLedAmount = v.sumOf { it.threeSixtyFiveLedAmount },
                 threeSixtyFivePlusLedAmount = v.sumOf { it.threeSixtyFivePlusLedAmount },
-                totalLedAmount = v.sumOf { it.totalLedAmount }
+                totalLedAmount = v.sumOf { it.totalLedAmount },
+                notDueCount = v.sumOf { it.notDueCount },
+                thirtyCount = v.sumOf { it.thirtyCount },
+                sixtyCount = v.sumOf { it.sixtyCount },
+                ninetyCount = v.sumOf { it.ninetyCount },
+                oneEightyCount = v.sumOf { it.oneEightyCount },
+                threeSixtyFiveCount = v.sumOf { it.threeSixtyFiveCount },
+                threeSixtyFivePlusCount = v.sumOf { it.threeSixtyFivePlusCount },
+                totalCount = v.sumOf { it.totalCount }
+            )
+
+            responseMap["onAccountBucket"] = EntityWiseOutstandingBucket(
+                entityCode = v.joinToString("_") { it.entityCode },
+                ledCurrency = k,
+                notDueLedAmount = onAccountData.sumOf { it.notDueLedAmount },
+                thirtyLedAmount = onAccountData.sumOf { it.thirtyLedAmount },
+                sixtyLedAmount = onAccountData.sumOf { it.sixtyLedAmount },
+                ninetyLedAmount = onAccountData.sumOf { it.ninetyLedAmount },
+                oneEightyLedAmount = onAccountData.sumOf { it.oneEightyLedAmount },
+                threeSixtyFiveLedAmount = onAccountData.sumOf { it.threeSixtyFiveLedAmount },
+                threeSixtyFivePlusLedAmount = onAccountData.sumOf { it.threeSixtyFivePlusLedAmount },
+                totalLedAmount = onAccountData.sumOf { it.totalLedAmount },
+                notDueCount = onAccountData.sumOf { it.notDueCount },
+                thirtyCount = onAccountData.sumOf { it.thirtyCount },
+                sixtyCount = onAccountData.sumOf { it.sixtyCount },
+                ninetyCount = onAccountData.sumOf { it.ninetyCount },
+                oneEightyCount = onAccountData.sumOf { it.oneEightyCount },
+                threeSixtyFiveCount = onAccountData.sumOf { it.threeSixtyFiveCount },
+                threeSixtyFivePlusCount = onAccountData.sumOf { it.threeSixtyFivePlusCount },
+                totalCount = onAccountData.sumOf { it.totalCount }
             )
 
             responseMap["creditNoteBucket"] = EntityWiseOutstandingBucket(
@@ -1305,28 +1318,34 @@ class OutStandingServiceImpl : OutStandingService {
                 ledCurrency = k,
                 notDueLedAmount = creditNoteData.sumOf { it.notDueLedAmount },
                 thirtyLedAmount = creditNoteData.sumOf { it.thirtyLedAmount },
-                fortyFiveLedAmount = creditNoteData.sumOf { it.fortyFiveLedAmount },
                 sixtyLedAmount = creditNoteData.sumOf { it.sixtyLedAmount },
                 ninetyLedAmount = creditNoteData.sumOf { it.ninetyLedAmount },
                 oneEightyLedAmount = creditNoteData.sumOf { it.oneEightyLedAmount },
-                oneEightyPlusLedAmount = creditNoteData.sumOf { it.oneEightyPlusLedAmount },
                 threeSixtyFiveLedAmount = creditNoteData.sumOf { it.threeSixtyFiveLedAmount },
                 threeSixtyFivePlusLedAmount = creditNoteData.sumOf { it.threeSixtyFivePlusLedAmount },
-                totalLedAmount = creditNoteData.sumOf { it.totalLedAmount }
+                totalLedAmount = creditNoteData.sumOf { it.totalLedAmount },
+                notDueCount = creditNoteData.sumOf { it.notDueCount },
+                thirtyCount = creditNoteData.sumOf { it.thirtyCount },
+                sixtyCount = creditNoteData.sumOf { it.sixtyCount },
+                ninetyCount = creditNoteData.sumOf { it.ninetyCount },
+                oneEightyCount = creditNoteData.sumOf { it.oneEightyCount },
+                threeSixtyFiveCount = creditNoteData.sumOf { it.threeSixtyFiveCount },
+                threeSixtyFivePlusCount = creditNoteData.sumOf { it.threeSixtyFivePlusCount },
+                totalCount = creditNoteData.sumOf { it.totalCount }
+
             )
-            responseMap["onAccountBucket"] = EntityWiseOutstandingBucket(
+
+            responseMap["totalOutstandingBucket"] = EntityWiseOutstandingBucket(
                 entityCode = v.joinToString("_") { it.entityCode },
                 ledCurrency = k,
-                notDueLedAmount = onAccountData.sumOf { it.notDueLedAmount },
-                thirtyLedAmount = onAccountData.sumOf { it.thirtyLedAmount },
-                fortyFiveLedAmount = onAccountData.sumOf { it.fortyFiveLedAmount },
-                sixtyLedAmount = onAccountData.sumOf { it.sixtyLedAmount },
-                ninetyLedAmount = onAccountData.sumOf { it.ninetyLedAmount },
-                oneEightyLedAmount = onAccountData.sumOf { it.oneEightyLedAmount },
-                oneEightyPlusLedAmount = onAccountData.sumOf { it.oneEightyPlusLedAmount },
-                threeSixtyFiveLedAmount = onAccountData.sumOf { it.threeSixtyFiveLedAmount },
-                threeSixtyFivePlusLedAmount = onAccountData.sumOf { it.threeSixtyFivePlusLedAmount },
-                totalLedAmount = onAccountData.sumOf { it.totalLedAmount }
+                notDueLedAmount = v.sumOf { it.notDueLedAmount }.plus(creditNoteData.sumOf { it.notDueLedAmount }).plus(onAccountData.sumOf { it.notDueLedAmount }),
+                thirtyLedAmount = v.sumOf { it.thirtyLedAmount }.plus(creditNoteData.sumOf { it.thirtyLedAmount }).plus(onAccountData.sumOf { it.thirtyLedAmount }),
+                sixtyLedAmount = v.sumOf { it.sixtyLedAmount }.plus(creditNoteData.sumOf { it.sixtyLedAmount }).plus(onAccountData.sumOf { it.sixtyLedAmount }),
+                ninetyLedAmount = v.sumOf { it.ninetyLedAmount }.plus(creditNoteData.sumOf { it.ninetyLedAmount }).plus(onAccountData.sumOf { it.ninetyLedAmount }),
+                oneEightyLedAmount = v.sumOf { it.oneEightyLedAmount }.plus(creditNoteData.sumOf { it.oneEightyLedAmount }).plus(onAccountData.sumOf { it.oneEightyLedAmount }),
+                threeSixtyFiveLedAmount = v.sumOf { it.threeSixtyFiveLedAmount }.plus(creditNoteData.sumOf { it.threeSixtyFiveLedAmount }).plus(onAccountData.sumOf { it.threeSixtyFiveLedAmount }),
+                threeSixtyFivePlusLedAmount = v.sumOf { it.threeSixtyFivePlusLedAmount }.plus(creditNoteData.sumOf { it.threeSixtyFivePlusLedAmount }).plus(onAccountData.sumOf { it.threeSixtyFivePlusLedAmount }),
+                totalLedAmount = v.sumOf { it.totalLedAmount }.plus(creditNoteData.sumOf { it.totalLedAmount }).plus(onAccountData.sumOf { it.totalLedAmount })
             )
         }
 
@@ -1534,8 +1553,8 @@ class OutStandingServiceImpl : OutStandingService {
     }
 
     override suspend fun getOpenInvoices(organizationId: UUID): String {
-        val openInvoiceDetails = accountUtilizationRepository.getOrgDetails(organizationId)
-        val invoiceIds: List<Long> = openInvoiceDetails.filter { listOf(AccountType.SINV.name, AccountType.SCN.name).contains(it.accType) }.map { it.documentNo }
+        var openInvoiceDetails = accountUtilizationRepository.getOrgDetails(organizationId)
+        val invoiceIds = openInvoiceDetails.filter { listOf(AccountType.SINV.name, AccountType.SCN.name).contains(it.accType) }.map { it.documentNo }
 
         val invoiceDetails: List<OsReportData?> = plutusClient.getOpenInvoiceData(invoiceIds)
         val outStandingReport: MutableList<OutStandingReportDetails?> = mutableListOf()

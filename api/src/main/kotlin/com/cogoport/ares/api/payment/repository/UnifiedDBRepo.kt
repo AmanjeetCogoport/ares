@@ -55,7 +55,7 @@ interface UnifiedDBRepo : CoroutineCrudRepository<AccountUtilization, Long> {
             WHERE 
             EXTRACT(YEAR FROM COALESCE(sinv.invoice_date, sinv.proforma_date)) = :year
             AND EXTRACT(MONTH FROM COALESCE(sinv.invoice_date, sinv.proforma_date)) = :month
-            AND sinv.status in ('DRAFT','FINANCE_ACCEPTED','IRN_GENERATED', 'POSTED') 
+            AND sinv.status in ('DRAFT','FINANCE_ACCEPTED','IRN_GENERATED', 'POSTED', 'IRN_FAILED', 'IRN_CANCELLED') 
             AND (pa.entity_code = :entityCode)
             AND lj.job_source != 'FREIGHT_FORCE'
             AND sinv.invoice_type in ('INVOICE', 'CREDIT_NOTE')

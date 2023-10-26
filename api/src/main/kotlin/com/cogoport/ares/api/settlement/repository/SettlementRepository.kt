@@ -709,4 +709,12 @@ ORDER BY
         destIds: List<Long>,
         destinationType: SettlementType
     ): List<SettlementSouDestList>
+
+    @NewSpan
+    @Query(
+        """
+            UPDATE settlements SET deleted_at = NOW(), settlement_status = 'DELETED' WHERE id IN (:ids) AND deleted_at is null
+        """
+    )
+    suspend fun softDeleteSettlement(ids: List<Long>?)
 }
