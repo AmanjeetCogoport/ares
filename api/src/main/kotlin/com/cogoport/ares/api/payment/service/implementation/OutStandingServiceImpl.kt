@@ -1612,7 +1612,7 @@ class OutStandingServiceImpl : OutStandingService {
     }
 
     override suspend fun createCustomerDetailsV2(request: CustomerOutstandingDocumentResponseV2) {
-        val orgOutstanding = accountUtilizationRepository.getArOutstandingData(
+        val orgOutstanding = accountUtilizationRepo.getArOutstandingData(
             entityCodes = null,
             orgIds = listOf(UUID.fromString(request.organizationId)),
             accMode = AccMode.AR.name,
@@ -1855,7 +1855,7 @@ class OutStandingServiceImpl : OutStandingService {
         if (!searchResponse?.hits()?.hits().isNullOrEmpty()) {
             customerOutstanding = searchResponse?.hits()?.hits()?.map { it.source() }?.get(0)
 
-            val orgOutstanding = accountUtilizationRepository.getArOutstandingData(
+            val orgOutstanding = accountUtilizationRepo.getArOutstandingData(
                 entityCodes = listOf(entityCode),
                 orgIds = listOf(orgId),
                 accMode = AccMode.AR.name,
@@ -1902,11 +1902,13 @@ class OutStandingServiceImpl : OutStandingService {
 
             var filtered = response?.hits()?.hits()?.map { it.source() }?.groupBy { it?.organizationId }?.filter { (_, v) -> v.size >= 2 }
             totalRecords = filtered?.values?.size?.toLong()!!
+            if (totalRecords == 0L) {
+                return responseList
+            }
             var startIndex = (request.page?.minus(1) ?: 0) * (limit * 2)
-            val lastIndex = startIndex + (limit * 2)
-            var endIndex: Int = when (lastIndex > totalRecords) {
+            var endIndex: Int = when ((startIndex + (limit * 2)) > totalRecords) {
                 true -> totalRecords.toInt()
-                false -> lastIndex
+                false -> startIndex + (limit * 2)
             }
 
             responseV2 = filtered.values.toList().flatten().subList(startIndex, endIndex)
@@ -1917,7 +1919,10 @@ class OutStandingServiceImpl : OutStandingService {
             response = OpenSearchClient().getOrgIn101And301(request)
             filtered = response?.hits()?.hits()?.map { it.source() }?.groupBy { it?.organizationId }?.filter { (_, v) -> v.size >= 2 }
             startIndex = (request.page?.minus(1) ?: 0) * 1
-            endIndex = startIndex + 1
+            endIndex = when ((startIndex + (limit * 2)) > totalRecords) {
+                true -> totalRecords.toInt()
+                false -> startIndex + (limit * 2)
+            }
 
             responseV2 = filtered?.values?.toList()?.flatten()?.subList(startIndex, endIndex)
             responseList.byCallPriority = getSortedData(responseV2, groupedList, request.entityCode).toList().first()
@@ -1925,7 +1930,7 @@ class OutStandingServiceImpl : OutStandingService {
         } else {
             response = OpenSearchClient().listCustomerOutstandingV2(request)
             if (response?.hits()?.hits()?.size == 0) {
-                responseList.list = listOf()
+                return responseList
             } else {
                 responseV2 = response?.hits()?.hits()?.map { it.source() }
                 totalRecords = response?.hits()?.total()?.value()!!
@@ -1970,7 +1975,7 @@ class OutStandingServiceImpl : OutStandingService {
 
     override suspend fun getOverAllCustomerOutstandingV2(entityCodes: String?): HashMap<String, EntityWiseOutstandingBucket> {
         if (entityCodes == null) throw AresException(AresError.ERR_1003, "entity code")
-        val orgOutstanding = accountUtilizationRepository.getArOutstandingData(
+        val orgOutstanding = accountUtilizationRepo.getArOutstandingData(
             entityCodes = entityCodes.split("_").map { it.toInt() }.toList(),
             orgIds = null,
             accMode = AccMode.AR.name,
