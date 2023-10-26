@@ -1668,8 +1668,8 @@ class OutStandingServiceImpl : OutStandingService {
                 "thirty" to mapOf("amount" to orgOutstanding.invoiceThirtyAmount, "count" to orgOutstanding.invoiceThirtyCount),
                 "sixty" to mapOf("amount" to orgOutstanding.invoiceSixtyAmount, "count" to orgOutstanding.invoiceSixtyCount),
                 "ninety" to mapOf("amount" to orgOutstanding.invoiceNinetyAmount, "count" to orgOutstanding.invoiceNinetyCount),
-                "oneEighty" to mapOf("amount" to orgOutstanding.invoiceOneEightyAmount, "count" to orgOutstanding.invoiceOneEightyAmount),
-                "threeSixtyFive" to mapOf("amount" to orgOutstanding.invoiceThreeSixtyFiveAmount, "count" to orgOutstanding.invoiceThreeSixtyFiveAmount),
+                "oneEighty" to mapOf("amount" to orgOutstanding.invoiceOneEightyAmount, "count" to orgOutstanding.invoiceOneEightyCount),
+                "threeSixtyFive" to mapOf("amount" to orgOutstanding.invoiceThreeSixtyFiveAmount, "count" to orgOutstanding.invoiceThreeSixtyFiveCount),
                 "threeSixtyFivePlus" to mapOf("amount" to orgOutstanding.invoiceThreeSixtyFivePlusAmount, "count" to orgOutstanding.invoiceThreeSixtyFivePlusCount)
             )
             "onAccount" -> mapOf(
@@ -1677,8 +1677,8 @@ class OutStandingServiceImpl : OutStandingService {
                 "thirty" to mapOf("amount" to orgOutstanding.onAccountThirtyAmount, "count" to orgOutstanding.onAccountThirtyCount),
                 "sixty" to mapOf("amount" to orgOutstanding.onAccountSixtyAmount, "count" to orgOutstanding.onAccountSixtyCount),
                 "ninety" to mapOf("amount" to orgOutstanding.onAccountNinetyAmount, "count" to orgOutstanding.onAccountNinetyCount),
-                "oneEighty" to mapOf("amount" to orgOutstanding.onAccountOneEightyAmount, "count" to orgOutstanding.onAccountOneEightyAmount),
-                "threeSixtyFive" to mapOf("amount" to orgOutstanding.onAccountThreeSixtyFiveAmount, "count" to orgOutstanding.onAccountThreeSixtyFiveAmount),
+                "oneEighty" to mapOf("amount" to orgOutstanding.onAccountOneEightyAmount, "count" to orgOutstanding.onAccountOneEightyCount),
+                "threeSixtyFive" to mapOf("amount" to orgOutstanding.onAccountThreeSixtyFiveAmount, "count" to orgOutstanding.onAccountThreeSixtyFiveCount),
                 "threeSixtyFivePlus" to mapOf("amount" to orgOutstanding.onAccountThreeSixtyFivePlusAmount, "count" to orgOutstanding.onAccountThreeSixtyFivePlusCount)
             )
             "creditNote" -> mapOf(
@@ -1686,8 +1686,8 @@ class OutStandingServiceImpl : OutStandingService {
                 "thirty" to mapOf("amount" to orgOutstanding.creditNoteThirtyAmount, "count" to orgOutstanding.creditNoteThirtyCount),
                 "sixty" to mapOf("amount" to orgOutstanding.creditNoteSixtyAmount, "count" to orgOutstanding.creditNoteSixtyCount),
                 "ninety" to mapOf("amount" to orgOutstanding.creditNoteNinetyAmount, "count" to orgOutstanding.creditNoteNinetyCount),
-                "oneEighty" to mapOf("amount" to orgOutstanding.creditNoteOneEightyAmount, "count" to orgOutstanding.creditNoteOneEightyAmount),
-                "threeSixtyFive" to mapOf("amount" to orgOutstanding.creditNoteThreeSixtyFiveAmount, "count" to orgOutstanding.creditNoteThreeSixtyFiveAmount),
+                "oneEighty" to mapOf("amount" to orgOutstanding.creditNoteOneEightyAmount, "count" to orgOutstanding.creditNoteOneEightyCount),
+                "threeSixtyFive" to mapOf("amount" to orgOutstanding.creditNoteThreeSixtyFiveAmount, "count" to orgOutstanding.creditNoteThreeSixtyFiveCount),
                 "threeSixtyFivePlus" to mapOf("amount" to orgOutstanding.creditNoteThreeSixtyFivePlusAmount, "count" to orgOutstanding.creditNoteThreeSixtyFivePlusCount)
             )
             else -> emptyMap()
@@ -1864,7 +1864,6 @@ class OutStandingServiceImpl : OutStandingService {
                 creditNoteAccType = AresConstants.creditNoteAccTypeForAr,
                 onAccountAccountType = AresConstants.onAccountTypeForAr
             )
-
             val orgLevelData = orgOutstanding?.filter { it.organizationId == orgId && it.entityCode == entityCode }
 
             customerOutstanding?.lastUpdatedAt = Timestamp.valueOf(LocalDateTime.now())
@@ -1904,7 +1903,11 @@ class OutStandingServiceImpl : OutStandingService {
             var filtered = response?.hits()?.hits()?.map { it.source() }?.groupBy { it?.organizationId }?.filter { (_, v) -> v.size >= 2 }
             totalRecords = filtered?.values?.size?.toLong()!!
             var startIndex = (request.page?.minus(1) ?: 0) * (limit * 2)
-            var endIndex = startIndex + limit * 2
+            val lastIndex = startIndex + (limit * 2)
+            var endIndex: Int = when(lastIndex > totalRecords) {
+                true -> totalRecords.toInt()
+                false -> lastIndex
+            }
 
             responseV2 = filtered.values.toList().flatten().subList(startIndex, endIndex)
             responseList.list = getSortedData(responseV2, groupedList, request.entityCode).toList()
@@ -1921,14 +1924,21 @@ class OutStandingServiceImpl : OutStandingService {
             responseList.byCallPriority?.ledgerCurrency = "INR"
         } else {
             response = OpenSearchClient().listCustomerOutstandingV2(request)
-            responseV2 = response?.hits()?.hits()?.map { it.source() }
-            totalRecords = response?.hits()?.total()?.value()!!
-            responseList.list = if (!responseV2?.toList().isNullOrEmpty()) responseV2?.toList()!! else listOf()
-            request.sortBy = "callPriority"
-            request.limit = 1
-            responseList.byCallPriority = OpenSearchClient().listCustomerOutstandingV2(request)?.hits()?.hits()?.map { it.source() }?.first()
-            responseList.list.map { it?.ledgerCurrency = AresConstants.LEDGER_CURRENCY[request.entityCode?.toInt()] }
-            responseList.byCallPriority?.ledgerCurrency = AresConstants.LEDGER_CURRENCY[request.entityCode?.toInt()]
+            if (response?.hits()?.hits()?.size == 0) {
+                responseList.list = listOf()
+            } else {
+                responseV2 = response?.hits()?.hits()?.map { it.source() }
+                totalRecords = response?.hits()?.total()?.value()!!
+                responseList.list = if (!responseV2?.toList().isNullOrEmpty()) responseV2?.toList()!! else listOf()
+                request.sortBy = "callPriority"
+                request.limit = 1
+                responseList.byCallPriority =
+                    OpenSearchClient().listCustomerOutstandingV2(request)?.hits()?.hits()?.map { it.source() }?.first()
+                responseList.list.map {
+                    it?.ledgerCurrency = AresConstants.LEDGER_CURRENCY[request.entityCode?.toInt()]
+                }
+                responseList.byCallPriority?.ledgerCurrency = AresConstants.LEDGER_CURRENCY[request.entityCode?.toInt()]
+            }
         }
 
         responseList.totalPages = if (totalRecords % limit == 0L) {
@@ -2038,15 +2048,6 @@ class OutStandingServiceImpl : OutStandingService {
                     "creditNote" -> it.creditNoteThreeSixtyFivePlusAmount
                     "onAccount" -> it.onAccountThreeSixtyFivePlusAmount
                     else -> BigDecimal(0)
-                }
-            )
-
-            entityWise.notDueCount = entityWise.notDueCount?.plus(
-                when (type) {
-                    "invoice" -> it.invoiceNotDueCount.toInt()
-                    "creditNote" -> it.creditNoteNotDueCount.toInt()
-                    "onAccount" -> it.onAccountNotDueCount.toInt()
-                    else -> 0
                 }
             )
             entityWise.notDueCount = entityWise.notDueCount?.plus(

@@ -1054,7 +1054,7 @@ class OpenSearchClient {
                                     v.field("portfolioManager.rmDetails.id.keyword").terms(
                                         TermsQueryField.of { a ->
                                             a.value(
-                                                request.portfolioManagerId?.map {
+                                                request.portfolioManagerRmId?.map {
                                                     FieldValue.of(it.toString())
                                                 }
                                             )
