@@ -435,8 +435,10 @@ class DashboardServiceImpl : DashboardService {
         if (data?.size != 0) {
             salesFunnelResponse.draftInvoicesCount = data?.size
             salesFunnelResponse.financeAcceptedInvoiceCount = data?.count { it.status?.name != "DRAFT" }
+            salesFunnelResponse.irnFailedInvoicesCount = data?.count { it.status?.name == "IRN_FAILED" }
+            salesFunnelResponse.irnCancelledInvoicesCount = data?.count { it.status?.name == "IRN_CANCELLED" }
             salesFunnelResponse.irnGeneratedInvoicesCount =
-                data?.count { !listOf("DRAFT", "FINANCE_ACCEPTED").contains(it.status?.name) }
+                data?.count { !listOf("DRAFT", "FINANCE_ACCEPTED", "IRN_FAILED", "IRN_CANCELLED").contains(it.status?.name) }
             salesFunnelResponse.settledInvoicesCount = data?.count { it.paymentStatus == "PAID" }
 
             salesFunnelResponse.draftToFinanceAcceptedPercentage =
@@ -449,6 +451,14 @@ class DashboardServiceImpl : DashboardService {
             }
             if (salesFunnelResponse.irnGeneratedInvoicesCount!! != 0) {
                 salesFunnelResponse.settledPercentage = salesFunnelResponse.settledInvoicesCount?.times(100)
+                    ?.div(salesFunnelResponse.irnGeneratedInvoicesCount!!)
+            }
+            if (salesFunnelResponse.financeAcceptedInvoiceCount!! != 0) {
+                salesFunnelResponse.financeToIrnFailedPercentage = salesFunnelResponse.irnFailedInvoicesCount?.times(100)
+                    ?.div(salesFunnelResponse.financeAcceptedInvoiceCount!!)
+            }
+            if (salesFunnelResponse.irnGeneratedInvoicesCount!! != 0) {
+                salesFunnelResponse.irnGenToIrnCancelledPercentage = salesFunnelResponse.irnCancelledInvoicesCount?.times(100)
                     ?.div(salesFunnelResponse.irnGeneratedInvoicesCount!!)
             }
         }

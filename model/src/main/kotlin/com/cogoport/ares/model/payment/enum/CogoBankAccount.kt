@@ -8,5 +8,5 @@ enum class CogoBankAccount(val cogoAccountNo: String?) {
     RBLC("409000876343"),
     RBLD("609000715480"),
     RBLU("409000824933"),
-    AXISINBBA24("921020029492479")
+    AXISP("921020029492479")
 }
