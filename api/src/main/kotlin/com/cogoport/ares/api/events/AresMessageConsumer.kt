@@ -317,12 +317,12 @@ class AresMessageConsumer {
         scheduleService.sendEmailForIrnGeneration(irnGenerationEmailRequest)
     }
 
-    @Queue("ares-create-org-details")
+    @Queue("ares-create-org-details", prefetch = 1)
     fun createOrgDetails(req: HookToAresRequest) = runBlocking {
         authClient.createOrgDetail(req)
     }
 
-    @Queue("ares-update-customer-details-v2")
+    @Queue("ares-update-customer-details-v2", prefetch = 1)
     fun updateCustomerDetailsV2(req: OrgIdAndEntityCode) = runBlocking {
         outstandingService.updateCustomerDetailsV2(req.organizationId, req.entityCode)
     }
