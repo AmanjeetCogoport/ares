@@ -14,6 +14,7 @@ import com.cogoport.ares.api.events.KuberMessagePublisher
 import com.cogoport.ares.api.events.OpenSearchEvent
 import com.cogoport.ares.api.events.PlutusMessagePublisher
 import com.cogoport.ares.api.exception.AresError
+import com.cogoport.ares.api.exception.AresError.ERR_1002
 import com.cogoport.ares.api.exception.AresException
 import com.cogoport.ares.api.gateway.OpenSearchClient
 import com.cogoport.ares.api.migration.model.SagePlatformPaymentHeader
@@ -32,6 +33,7 @@ import com.cogoport.ares.api.payment.model.OpenSearchRequest
 import com.cogoport.ares.api.payment.model.PushAccountUtilizationRequest
 import com.cogoport.ares.api.payment.repository.AccountUtilizationRepository
 import com.cogoport.ares.api.payment.repository.AresDocumentRepository
+import com.cogoport.ares.api.payment.repository.InvoicePayMappingRepository
 import com.cogoport.ares.api.payment.repository.PaymentFileRepository
 import com.cogoport.ares.api.payment.repository.PaymentRepository
 import com.cogoport.ares.api.payment.repository.UnifiedDBNewRepository
@@ -55,7 +57,11 @@ import com.cogoport.ares.model.common.AresModelConstants
 import com.cogoport.ares.model.common.CreateCommunicationRequest
 import com.cogoport.ares.model.common.DeleteConsolidatedInvoicesReq
 import com.cogoport.ares.model.payment.AccMode
+import com.cogoport.ares.model.payment.AccMode.AP
 import com.cogoport.ares.model.payment.AccountType
+import com.cogoport.ares.model.payment.AccountType.EXP
+import com.cogoport.ares.model.payment.AccountType.PAY
+import com.cogoport.ares.model.payment.AccountType.VTDS
 import com.cogoport.ares.model.payment.DocType
 import com.cogoport.ares.model.payment.DocumentSearchType
 import com.cogoport.ares.model.payment.DocumentStatus
@@ -67,6 +73,7 @@ import com.cogoport.ares.model.payment.Payment
 import com.cogoport.ares.model.payment.PaymentCode
 import com.cogoport.ares.model.payment.PaymentDocumentStatus
 import com.cogoport.ares.model.payment.ServiceType
+import com.cogoport.ares.model.payment.ServiceType.EXPENSE
 import com.cogoport.ares.model.payment.TradePartyDetailRequest
 import com.cogoport.ares.model.payment.TradePartyOrganizationResponse
 import com.cogoport.ares.model.payment.UpdateCSDPaymentRequest
@@ -83,6 +90,7 @@ import com.cogoport.ares.model.payment.request.DeletePaymentRequest
 import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.request.OnAccountTotalAmountRequest
 import com.cogoport.ares.model.payment.request.SaasInvoiceHookRequest
+import com.cogoport.ares.model.payment.request.UpdateOrganizationDetailAresSideRequest
 import com.cogoport.ares.model.payment.request.UpdateSupplierOutstandingRequest
 import com.cogoport.ares.model.payment.response.ARLedgerResponse
 import com.cogoport.ares.model.payment.response.AccountCollectionResponse
@@ -100,6 +108,7 @@ import com.cogoport.ares.model.sage.SageFailedResponse
 import com.cogoport.ares.model.sage.SageOrganizationAccountTypeRequest
 import com.cogoport.ares.model.settlement.PostPaymentToSage
 import com.cogoport.ares.model.settlement.SettlementType
+import com.cogoport.ares.model.settlement.SettlementType.PINV
 import com.cogoport.ares.model.settlement.enums.JVSageAccount
 import com.cogoport.ares.model.settlement.enums.JVSageControls
 import com.cogoport.ares.model.settlement.request.AutoKnockOffRequest
@@ -251,6 +260,9 @@ open class OnAccountServiceImpl : OnAccountService {
 
     @Inject
     lateinit var glCodeMasterRepository: GlCodeMasterRepository
+
+    @Inject
+    lateinit var invoicePayMappingRepository: InvoicePayMappingRepository
 
     @Value("\${server.base-url}") // application-prod.yml path
     private lateinit var baseUrl: String
@@ -2265,5 +2277,156 @@ open class OnAccountServiceImpl : OnAccountService {
             var entityCode: Int?,
             var entityId: UUID?
         )
+    }
+
+    @Transactional
+    override suspend fun updateVendorTradePartyData(
+        request: UpdateOrganizationDetailAresSideRequest
+    ): MutableMap<String, String>? {
+        var response: MutableMap<String, String>? = mutableMapOf()
+
+        response?.put(
+            key = "requestBody",
+            value = ObjectMapper().writeValueAsString(request)
+        )
+
+        try {
+            var accountUtilizationDetail = accountUtilizationRepository.getAccountUtilizationByDocNoAndAccMode(
+                documentNo = request.billId,
+                accMode = AP.name,
+                documentValue = request.billNumber,
+                accType = EXP.name,
+                serviceType = EXPENSE
+            ) ?: throw AresException(ERR_1002, " account utilization not found.")
+
+            accountUtilizationDetail.organizationId = request.organizationTradePartyDetailId ?: accountUtilizationDetail.organizationId
+            accountUtilizationDetail.organizationName = request.organizationTradePartyName ?: accountUtilizationDetail.organizationName
+            accountUtilizationDetail.taggedOrganizationId = request.organizationId ?: accountUtilizationDetail.taggedOrganizationId
+            accountUtilizationDetail.tradePartyMappingId = request.organizationTradePartiesId ?: accountUtilizationDetail.tradePartyMappingId
+            accountUtilizationDetail.orgSerialId = request.organizationTradePartySerialId ?: accountUtilizationDetail.orgSerialId
+
+            accountUtilizationRepository.update(accountUtilizationDetail)
+
+            response?.put(
+                key = "accountUtilizationDetail",
+                value = ObjectMapper().writeValueAsString(accountUtilizationDetail)
+            )
+
+            if (request.settlementNumbers != null && request.settlementNumbers!!.isNotEmpty()) {
+                val settlements = settlementRepository.getSettlementDataUsingSettlementNumAndDestinationType(
+                    settlementNum = request.settlementNumbers!!,
+                    destinationType = PINV
+                )
+                val destinationIds: List<Long> = settlements.map { it.destinationId }
+
+                val allSettlements = settlementRepository.getSettlementUsingDestinationIdsAndType(
+                    destIds = destinationIds,
+                    destinationType = PINV
+                )
+
+                val paymentNums: MutableList<Long> = mutableListOf()
+                val journalVoucherIds: MutableList<Long> = mutableListOf()
+
+                allSettlements.forEach { settlement ->
+                    if (settlement.sourceType == SettlementType.PAY.name && settlement.sourceId != null) paymentNums.add(settlement.sourceId!!)
+                    if (settlement.sourceType == SettlementType.VTDS.name && settlement.sourceId != null) journalVoucherIds.add(settlement.sourceId!!)
+                }
+
+                if (paymentNums != null) {
+                    val payments = paymentRepository.getPaymentByPaymentNums(
+                        paymentNums = paymentNums,
+                        accMode = AP.name,
+                        paymentCode = PAY.name
+                    )
+
+                    payments.forEach { payment ->
+                        payment.organizationId = request.organizationTradePartyDetailId ?: payment.organizationId
+                        payment.organizationName = request.organizationTradePartyName ?: payment.organizationName
+                        payment.taggedOrganizationId = request.organizationId ?: payment.taggedOrganizationId
+                        payment.orgSerialId = request.organizationTradePartySerialId ?: payment.orgSerialId
+                        payment.tradePartyMappingId = request.organizationTradePartiesId ?: payment.tradePartyMappingId
+                        payment.updatedBy = request.updatedBy
+
+                        paymentRepository.update(payment)
+
+                        response?.put(
+                            key = "payment => ${payment.id}",
+                            value = ObjectMapper().writeValueAsString(payment)
+                        )
+
+                        if (payment.paymentNum != null && payment.paymentNumValue != null) {
+                            val accountUtilizationForPayment = accountUtilizationRepository.getAccountUtilizationByDocNoAndAccMode(
+                                documentNo = payment.paymentNum!!,
+                                documentValue = payment.paymentNumValue!!,
+                                accMode = AP.name,
+                                accType = PAY.name,
+                                serviceType = EXPENSE
+                            )
+
+                            if (accountUtilizationForPayment != null) {
+                                accountUtilizationForPayment?.organizationId = request.organizationTradePartyDetailId ?: accountUtilizationDetail?.organizationId
+                                accountUtilizationForPayment?.organizationName = request.organizationTradePartyName ?: accountUtilizationDetail?.organizationName
+                                accountUtilizationForPayment?.taggedOrganizationId = request.organizationId ?: accountUtilizationDetail?.taggedOrganizationId
+                                accountUtilizationForPayment?.orgSerialId = request.organizationTradePartySerialId ?: accountUtilizationDetail?.orgSerialId
+                                accountUtilizationForPayment?.tradePartyMappingId = request.organizationTradePartiesId ?: accountUtilizationDetail?.tradePartyMappingId
+                                accountUtilizationRepository.update(accountUtilizationForPayment)
+
+                                response?.put(
+                                    key = "accountUtilizationForPayment => ${accountUtilizationForPayment.id}",
+                                    value = ObjectMapper().writeValueAsString(accountUtilizationForPayment)
+                                )
+                            }
+                        }
+                    }
+
+                    if (journalVoucherIds != null) {
+                        journalVoucherIds.forEach { journalVoucherId ->
+                            val journalVoucher = journalVoucherRepository.findById(journalVoucherId)
+
+                            if (journalVoucher != null) {
+                                journalVoucher.tradePartyId = request.organizationTradePartyDetailId ?: journalVoucher.tradePartyId
+                                journalVoucher.tradePartyName = request.organizationTradePartyName ?: journalVoucher.tradePartyName
+                                journalVoucher.updatedBy = request.updatedBy
+
+                                journalVoucherRepository.update(journalVoucher)
+
+                                response?.put(
+                                    key = "journalVoucher => ${journalVoucher.id}",
+                                    value = ObjectMapper().writeValueAsString(journalVoucher)
+                                )
+
+                                val accountUtilizationForJournalVoucher = accountUtilizationRepository.getAccountUtilizationByDocNoAndAccMode(
+                                    documentValue = journalVoucher.jvNum,
+                                    documentNo = journalVoucher.id!!,
+                                    accMode = AP.name,
+                                    accType = VTDS.name,
+                                    serviceType = EXPENSE
+                                )
+
+                                if (accountUtilizationForJournalVoucher != null) {
+                                    accountUtilizationForJournalVoucher?.organizationId = request.organizationTradePartyDetailId ?: accountUtilizationForJournalVoucher.organizationId
+                                    accountUtilizationForJournalVoucher?.organizationName = request.organizationTradePartyName ?: accountUtilizationForJournalVoucher.organizationName
+                                    accountUtilizationForJournalVoucher?.taggedOrganizationId = request.organizationId ?: accountUtilizationForJournalVoucher.taggedOrganizationId
+                                    accountUtilizationForJournalVoucher?.orgSerialId = request.organizationTradePartySerialId ?: accountUtilizationForJournalVoucher.orgSerialId
+                                    accountUtilizationForJournalVoucher?.tradePartyMappingId = request.organizationTradePartiesId ?: accountUtilizationForJournalVoucher.tradePartyMappingId
+                                    accountUtilizationRepository.update(accountUtilizationForJournalVoucher)
+
+                                    response?.put(
+                                        key = "accountUtilizationForJournal => ${accountUtilizationForJournalVoucher.id}",
+                                        value = ObjectMapper().writeValueAsString(accountUtilizationForJournalVoucher)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            throw AresException(ERR_1002, ObjectMapper().writeValueAsString(ObjectMapper().writeValueAsString(request) + e))
+        }
+
+        logger().info("***** update vendor trade party data response $response")
+
+        return response
     }
 }

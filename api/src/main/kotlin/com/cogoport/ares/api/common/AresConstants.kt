@@ -257,13 +257,11 @@ object AresConstants {
 
     const val performedByUserNameForMail = "Business Finance Tech Team"
     const val SAGE_PLATFORM_REPORT = "sage_platform_report"
-    const val RECIPIENT_EMAIL_FOR_EVERYDAY_SAGE_PLATFORM_REPORT = "bhanugoban@cogoport.com"
+    const val RECIPIENT_EMAIL_FOR_EVERYDAY_SAGE_PLATFORM_REPORT = "vinod.talapa@cogoport.com"
 
     val CC_MAIL_ID_FOR_EVERYDAY_SAGE_PLATFORM_REPORT = mutableListOf<String>(
         "abhishek.kumar@cogoport.com",
-        "vivek.garg@cogoport.com",
-        "shikhar.tyagi@cogoport.com",
-        "suhas.latelwar@cogoport.com"
+        "vivek.garg@cogoport.com"
     )
 
     val MONTH = mapOf(

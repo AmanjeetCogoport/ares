@@ -18,6 +18,7 @@ import com.cogoport.ares.model.payment.request.DeletePaymentRequest
 import com.cogoport.ares.model.payment.request.LedgerSummaryRequest
 import com.cogoport.ares.model.payment.request.OnAccountTotalAmountRequest
 import com.cogoport.ares.model.payment.request.SaasInvoiceHookRequest
+import com.cogoport.ares.model.payment.request.UpdateOrganizationDetailAresSideRequest
 import com.cogoport.ares.model.payment.response.AccountCollectionResponse
 import com.cogoport.ares.model.payment.response.AccountUtilizationResponse
 import com.cogoport.ares.model.payment.response.BulkPaymentResponse
@@ -156,5 +157,13 @@ class OnAccountController {
     @Post("/saas-invoice-hook")
     suspend fun saasInvoiceHook(@Valid @Body req: SaasInvoiceHookRequest): SaasInvoiceHookResponse {
         return onAccountService.saasInvoiceHook(req)
+    }
+
+    @Post("/update-vendor-trade-party-data")
+    suspend fun updateVendorTradePartyData(
+        @Valid @Body
+        request: UpdateOrganizationDetailAresSideRequest
+    ): MutableMap<String, String>? {
+        return onAccountService.updateVendorTradePartyData(request)
     }
 }

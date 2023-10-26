@@ -673,7 +673,7 @@ open class ParentJVServiceImpl : ParentJVService {
 
             jvLineItems.map { lineItem ->
                 if (lineItem.tradePartyId != null) {
-                    val organization = railsClient.getListOrganizationTradePartyDetails(lineItem.tradePartyId)
+                    val organization = railsClient.getListOrganizationTradePartyDetails(lineItem.tradePartyId!!)
 
                     if (organization.list.isEmpty()) {
                         throw AresException(AresError.ERR_1530, "")
